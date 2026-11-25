@@ -1,4 +1,4 @@
-import { formatTime, type BuiltTrack, type DriftSnapshot } from '@sr/shared';
+import { formatTime, type BuiltTrack, type City, type DriftSnapshot } from '@sr/shared';
 
 export interface HudState {
   speedKmh: number;
@@ -93,17 +93,41 @@ export class Hud {
     this.map = q('.hud-map');
   }
 
-  setTrack(t: BuiltTrack): void {
+  setTrack(t: BuiltTrack, city: City | null = null): void {
     const size = 180;
     const pad = 12;
-    const w = t.bounds.maxX - t.bounds.minX;
-    const h = t.bounds.maxZ - t.bounds.minZ;
+    const bb = t.bounds;
+    const w = bb.maxX - bb.minX;
+    const h = bb.maxZ - bb.minZ;
     this.mapScale = (size - pad * 2) / Math.max(w, h);
-    this.mapOx = pad + (size - pad * 2 - w * this.mapScale) / 2 - t.bounds.minX * this.mapScale;
-    this.mapOz = pad + (size - pad * 2 - h * this.mapScale) / 2 - t.bounds.minZ * this.mapScale;
+    this.mapOx = pad + (size - pad * 2 - w * this.mapScale) / 2 - bb.minX * this.mapScale;
+    this.mapOz = pad + (size - pad * 2 - h * this.mapScale) / 2 - bb.minZ * this.mapScale;
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const g = c.getContext('2d')!;
+    if (city) {
+      // Улицы города — тонкими линиями под трассой
+      g.strokeStyle = 'rgba(140,150,180,0.35)';
+      g.lineCap = 'round';
+      for (const r of city.roads) {
+        g.lineWidth = Math.max(1, r.width * this.mapScale);
+        g.beginPath();
+        r.points.forEach(([x, z], i) => {
+          const px = this.mapOx + x * this.mapScale;
+          const pz = this.mapOz + z * this.mapScale;
+          if (i === 0) g.moveTo(px, pz);
+          else g.lineTo(px, pz);
+        });
+        g.stroke();
+      }
+      let attr = this.el.querySelector('.hud-attr') as HTMLElement | null;
+      if (!attr) {
+        attr = document.createElement('div');
+        attr.className = 'hud-attr';
+        this.el.appendChild(attr);
+      }
+      attr.textContent = city.attribution;
+    }
     g.lineJoin = 'round';
     const path = () => {
       g.beginPath();

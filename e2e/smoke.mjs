@@ -8,7 +8,11 @@ const SERVER_PORT = 2599;
 const base = `http://localhost:${CLIENT_PORT}/?q=low&server=ws://localhost:${SERVER_PORT}`;
 
 function start(cmd, args, env = {}) {
-  const p = spawn(cmd, args, { env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+  const p = spawn(cmd, args, {
+    env: { ...process.env, ...env },
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: true,
+  });
   p.stdout.on('data', () => {});
   p.stderr.on('data', () => {});
   return p;
@@ -29,7 +33,15 @@ async function waitFor(url, ms = 30000) {
 }
 
 const procs = [
-  start('pnpm', ['--filter', 'client', 'exec', 'vite', '--port', String(CLIENT_PORT), '--strictPort']),
+  start('pnpm', [
+    '--filter',
+    'client',
+    'exec',
+    'vite',
+    '--port',
+    String(CLIENT_PORT),
+    '--strictPort',
+  ]),
   start('pnpm', ['--filter', 'race-server', 'start'], { PORT: String(SERVER_PORT), BOT_FILL: '3' }),
 ];
 const failures = [];
@@ -41,7 +53,9 @@ const check = (name, ok, extra = '') => {
 try {
   await waitFor(`http://localhost:${CLIENT_PORT}/`);
   await waitFor(`http://localhost:${SERVER_PORT}/health`);
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const browser = await chromium.launch({
+    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+  });
   const errors = [];
   const page = await browser.newPage({ viewport: { width: 1000, height: 640 } });
   page.on('pageerror', (e) => errors.push(e.message));
@@ -57,11 +71,51 @@ try {
   await page.waitForTimeout(7000);
   const race = await page.evaluate(() => {
     const r = window.__app.current;
-    return { phase: r.tracker.phase, cars: r.session.cars.length, speed: r.player.vehicle.telemetry().speedKmh };
+    return {
+      phase: r.tracker.phase,
+      cars: r.session.cars.length,
+      speed: r.player.vehicle.telemetry().speedKmh,
+    };
   });
   await page.keyboard.up('KeyW');
-  check('гонка стартует, машина едет', race.phase === 'racing' && race.speed > 10, JSON.stringify(race));
+  check(
+    'гонка стартует, машина едет',
+    race.phase === 'racing' && race.speed > 10,
+    JSON.stringify(race),
+  );
   check('боты на трассе', race.cars > 1);
+
+  // 2б. Город: стриминг блоков и трасса по улицам
+  await page.evaluate(() =>
+    window.__app.start({
+      mode: 'sprint',
+      trackId: 'msk_sprint',
+      cityId: 'moscow_synth',
+      weather: 'wet',
+      carId: 'era2026_hatch',
+      bots: 3,
+      botLevel: 'medium',
+      laps: 1,
+      manual: false,
+      playerName: 'T',
+    }),
+  );
+  await page.keyboard.down('KeyW');
+  await page.waitForTimeout(7000);
+  const city = await page.evaluate(() => {
+    const r = window.__app.current;
+    return {
+      tiles: r.session.cityView?.loadedCount ?? 0,
+      phys: r.session.sim.tileKeys.length,
+      speed: r.player.vehicle.telemetry().speedKmh,
+    };
+  });
+  await page.keyboard.up('KeyW');
+  check(
+    'город: блоки грузятся, коллайдеры рядом, машина едет',
+    city.tiles > 4 && city.phys > 0 && city.speed > 10,
+    JSON.stringify(city),
+  );
 
   // 3. Пауза и выход в меню
   await page.keyboard.press('Escape');

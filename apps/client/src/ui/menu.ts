@@ -1,4 +1,5 @@
-import { BRAND, CARS, formatTime } from '@sr/shared';
+import { BRAND, CARS, WEATHER_NAMES, formatTime, type Weather } from '@sr/shared';
+import { CITIES } from '../city/city-view';
 import type { BotLevel } from '@sr/physics';
 import { MODES, type ModeId, type RaceResults, type RaceSetup } from '../game/race';
 import { loadGhost } from '../game/ghost';
@@ -12,7 +13,30 @@ export interface MenuSettings {
   botLevel: BotLevel;
   manual: boolean;
   playerName: string;
+  /** 'polygon' или id города. */
+  location: string;
+  weather: Weather;
 }
+
+/** Трассы городов по режимам (id трасс из city.json). */
+const CITY_TRACKS: Record<string, Record<ModeId, string>> = {
+  moscow_synth: {
+    circuit: 'msk_ring',
+    sprint: 'msk_sprint',
+    drift: 'msk_drift',
+    timeattack: 'msk_ring',
+    free: 'msk_ring',
+  },
+};
+
+const LOCATIONS = [
+  { id: 'polygon', title: 'Полигон', desc: 'Тестовая трасса 1×1 км' },
+  ...CITIES.map((c) => ({
+    id: c.id,
+    title: c.name,
+    desc: `${c.country} · ночной город, блоки 256 м`,
+  })),
+];
 
 const DEFAULTS: MenuSettings = {
   mode: 'circuit',
@@ -21,6 +45,8 @@ const DEFAULTS: MenuSettings = {
   botLevel: 'medium',
   manual: false,
   playerName: 'Игрок',
+  location: 'moscow_synth',
+  weather: 'snow',
 };
 
 export function loadSettings(): MenuSettings {
@@ -43,9 +69,12 @@ export function saveSettings(s: MenuSettings): void {
 
 export function setupFromSettings(s: MenuSettings): RaceSetup {
   const m = MODES[s.mode];
+  const city = CITY_TRACKS[s.location];
   return {
     mode: s.mode,
-    trackId: m.track,
+    trackId: city ? city[s.mode] : m.track,
+    cityId: city ? s.location : undefined,
+    weather: city ? s.weather : 'dry',
     carId: s.carId,
     bots: m.bots ? s.bots : 0,
     botLevel: s.botLevel,
@@ -78,6 +107,8 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
   const el = h(`<div class="screen"><div class="menu">
     <h1>${BRAND.title}</h1>
     <p class="tagline">${BRAND.tagline}</p>
+    <h2>Где</h2><div class="grid2" data-k="loc"></div>
+    <div data-k="weatherBlock"><h2>Погода</h2><div class="row" data-k="weather"></div></div>
     <h2>Режим</h2><div class="grid2" data-k="mode"></div>
     <h2>Машина</h2><div class="grid2" data-k="car"></div>
     <div data-k="botsBlock"><h2>Соперники</h2>
@@ -100,6 +131,31 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
   const q = (k: string) => el.querySelector(`[data-k="${k}"]`) as HTMLElement;
 
   const render = () => {
+    const locBox = q('loc');
+    locBox.innerHTML = '';
+    for (const l of LOCATIONS) {
+      const b = h(
+        `<button class="btn ${s.location === l.id ? 'sel' : ''}">${l.title}<small>${l.desc}</small></button>`,
+      );
+      b.onclick = () => {
+        s.location = l.id;
+        render();
+      };
+      locBox.appendChild(b);
+    }
+    q('weatherBlock').style.display = s.location === 'polygon' ? 'none' : '';
+    const wBox = q('weather');
+    wBox.innerHTML = '';
+    for (const w of ['dry', 'wet', 'snow'] as Weather[]) {
+      const b = h(
+        `<button class="btn ${s.weather === w ? 'sel' : ''}">${WEATHER_NAMES[w]}</button>`,
+      );
+      b.onclick = () => {
+        s.weather = w;
+        render();
+      };
+      wBox.appendChild(b);
+    }
     const modeBox = q('mode');
     modeBox.innerHTML = '';
     for (const [id, m] of Object.entries(MODES) as [ModeId, (typeof MODES)[ModeId]][]) {
@@ -115,7 +171,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     const carBox = q('car');
     carBox.innerHTML = '';
     for (const c of Object.values(CARS)) {
-      const ghost = loadGhost(MODES[s.mode].track, c.id);
+      const ghost = loadGhost(setupFromSettings(s).trackId, c.id);
       const drive = { rwd: 'задний', fwd: 'передний', awd: 'полный' }[c.drive];
       const b = h(`<button class="btn ${s.carId === c.id ? 'sel' : ''}">${c.name}
         <small>эпоха ${c.era} · ${drive} привод · 0–100 за ${c.specs.zeroTo100} с · ${c.specs.topSpeedKmh} км/ч${

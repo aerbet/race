@@ -7,6 +7,8 @@ import {
   getCar,
   getTrack,
   CAR_IDS,
+  type City,
+  type Weather,
   type RaceEvent,
   type RacerState,
 } from '@sr/shared';
@@ -39,6 +41,9 @@ export interface RaceSetup {
   rubberBand?: boolean;
   /** Слот решётки игрока (онлайн — назначает сервер). */
   slot?: number;
+  /** Город (трасса проходит по его улицам). */
+  cityId?: string;
+  weather?: Weather;
 }
 
 export const MODES: Record<
@@ -130,9 +135,10 @@ export class RaceController {
     quality: Quality,
     container: HTMLElement,
     input: InputManager,
+    city: City | null = null,
   ) {
     const track = getTrack(setup.trackId);
-    this.session = new Session(R, track, quality, container, input);
+    this.session = new Session(R, track, quality, container, input, city, setup.weather ?? 'dry');
     const free = setup.mode === 'free';
     this.tracker = new RaceTracker(track, setup.laps, free ? 0 : undefined);
     this.drift = setup.mode === 'drift' ? new DriftScorer() : null;

@@ -1,5 +1,6 @@
 import type { Rapier } from '@sr/physics';
-import { formatTime, type RaceEvent } from '@sr/shared';
+import { formatTime, type City, type RaceEvent } from '@sr/shared';
+import { loadCity } from './city/city-view';
 import { RaceController, type RaceResults, type RaceSetup } from './game/race';
 import type { Quality } from './render/quality';
 import { FpsCounter } from './render/fps';
@@ -57,6 +58,17 @@ export class App {
     }
   }
 
+  private cities = new Map<string, City>();
+
+  async loadCityCached(id: string): Promise<City> {
+    let c = this.cities.get(id);
+    if (!c) {
+      c = await loadCity(id);
+      this.cities.set(id, c);
+    }
+    return c;
+  }
+
   /** Закрыть текущий экран (меню, пауза, результаты). */
   closeScreens(): void {
     this.closeScreen?.();
@@ -72,12 +84,13 @@ export class App {
     });
   }
 
-  start(setup: RaceSetup): void {
+  async start(setup: RaceSetup): Promise<void> {
     this.closeScreen?.();
     this.closeScreen = null;
     this.endRace();
     this.lastSetup = setup;
-    const race = new RaceController(this.R, setup, this.quality, this.root, this.input);
+    const city = setup.cityId ? await this.loadCityCached(setup.cityId) : null;
+    const race = new RaceController(this.R, setup, this.quality, this.root, this.input, city);
     this.race = race;
     this.attach(race);
     race.session.start();
@@ -91,7 +104,7 @@ export class App {
     this.race = race;
     this.online = !!opts.online;
     const hud = new Hud(this.root);
-    hud.setTrack(race.session.track);
+    hud.setTrack(race.session.track, race.session.city);
     this.hud = hud;
     this.pauseBtn.classList.remove('hidden');
     this.input.touch.show(this.input.device === 'touch');

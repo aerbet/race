@@ -86,7 +86,14 @@ export class LevelView {
     readonly track: BuiltTrack,
     geom: LevelGeometry,
     readonly quality: Quality,
+    inCity = false,
   ) {
+    if (inCity) {
+      // Город рисует CityView; здесь только старт и чекпоинты поверх улиц
+      this.buildStartLine();
+      this.buildCheckpointMarkers();
+      return;
+    }
     this.buildGround(track.def.groundSize);
     this.buildRoad();
     this.buildWalls(geom);
@@ -94,6 +101,61 @@ export class LevelView {
     this.buildStartLine();
     this.buildLamps();
     this.buildCity();
+  }
+
+  /** Неоновые «ворота» на чекпоинтах — на городских улицах иначе не видно маршрута. */
+  private buildCheckpointMarkers(): void {
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x29e0ff,
+      toneMapped: false,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const post = new THREE.CylinderGeometry(0.15, 0.15, 4, 6);
+    for (const cp of this.track.checkpoints.slice(0, -1)) {
+      for (const side of [-1, 1]) {
+        const m = new THREE.Mesh(post, mat);
+        const off = side * (cp.halfWidth - 2);
+        m.position.set(cp.x - cp.tz * off, 2, cp.z + cp.tx * off);
+        this.group.add(m);
+      }
+    }
+    // Стрелки-шевроны на асфальте вдоль трассы
+    const chevTex = canvasTexture(64, 64, (g) => {
+      g.strokeStyle = 'rgba(41,224,255,0.9)';
+      g.lineWidth = 8;
+      g.beginPath();
+      g.moveTo(12, 44);
+      g.lineTo(32, 20);
+      g.lineTo(52, 44);
+      g.stroke();
+    });
+    const S = this.track.samples;
+    const every = 30;
+    const chev = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(4, 4),
+      new THREE.MeshBasicMaterial({
+        map: chevTex,
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+      Math.ceil(S.length / every),
+    );
+    const m = new THREE.Matrix4();
+    let n = 0;
+    for (let i = 0; i < S.length; i += every) {
+      const s = S[i]!;
+      const q = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(-Math.PI / 2, 0, Math.atan2(-s.tx, -s.tz), 'YXZ'),
+      );
+      q.setFromEuler(new THREE.Euler(-Math.PI / 2, Math.atan2(-s.tx, -s.tz), 0, 'YXZ'));
+      m.compose(new THREE.Vector3(s.x, 0.08, s.z), q, new THREE.Vector3(1, 1, 1));
+      chev.setMatrixAt(n++, m);
+    }
+    chev.count = n;
+    chev.renderOrder = 3;
+    this.group.add(chev);
   }
 
   private buildGround(size: number): void {

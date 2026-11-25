@@ -179,3 +179,22 @@ describe('walls', () => {
     expect(minSpeed).toBeGreaterThan(speedAtHit * 0.5);
   });
 });
+
+describe('weather grip', () => {
+  it('snow lengthens braking distance', () => {
+    const brake = (grip: number) => {
+      const sim = new Sim(R, strip);
+      const car = sim.addCar(CARS.era2000_coupe!);
+      car.surfaceGrip = grip;
+      settle(sim);
+      while (car.telemetry().speedKmh < 100) sim.tick([input({ throttle: 1 })]);
+      const z0 = car.position.z;
+      let n = 0;
+      while (car.telemetry().speedKmh > 1 && n++ < 600) sim.tick([input({ brake: 1 })]);
+      const d = Math.abs(car.position.z - z0);
+      sim.dispose();
+      return d;
+    };
+    expect(brake(0.72)).toBeGreaterThan(brake(1) * 1.15);
+  });
+});

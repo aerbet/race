@@ -113,6 +113,8 @@ export class Vehicle {
   needsReset = false;
   /** Касание стены / другой машины на последнем шаге (заполняет Sim). */
   wallContact = false;
+  /** Сцепление покрытия (погода): 1 — сухо, ~0,85 — мокро, ~0,7 — снег/слякоть. */
+  surfaceGrip = 1;
   carContact = false;
   /** Счётчик впрыска нитро за текущий прыжок (заряд начисляется при приземлении). */
   private pendingAirCharge = 0;
@@ -531,7 +533,8 @@ export class Vehicle {
       const vLat = dot(vp, wr);
       const share = m / 4;
 
-      const grip = wh.front ? cfg.tires.frontGrip : cfg.tires.rearGrip * rearGripScale;
+      const grip =
+        (wh.front ? cfg.tires.frontGrip : cfg.tires.rearGrip * rearGripScale) * this.surfaceGrip;
 
       // Продольная сила
       let driveShare = 0;

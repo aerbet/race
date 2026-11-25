@@ -12,7 +12,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseOverpass, type OverpassJson } from './osm';
 import { buildCity } from './build';
-import { synthDistrict } from './synth';
+import { synthDistrict, synthTracks } from './synth';
+import type { TrackDef } from '@sr/shared';
 
 const args = process.argv.slice(2);
 const arg = (k: string) => {
@@ -38,9 +39,13 @@ async function fetchOverpass(bbox: string): Promise<OverpassJson> {
 
 let data: OverpassJson;
 let attribution: string | undefined;
+let tracks: TrackDef[] = [];
+let origin: { lat: number; lon: number } | undefined;
 if (args.includes('--synth')) {
   data = synthDistrict(Number(arg('seed') ?? 1), half * 0.9);
   attribution = 'Процедурный район (собственные данные)';
+  tracks = synthTracks(half * 0.9);
+  origin = { lat: 55.75, lon: 37.6 };
 } else if (arg('bbox')) {
   data = await fetchOverpass(arg('bbox')!);
   writeFileSync(join(root, 'tools/osm-to-city/data', `${id}.json`), JSON.stringify(data));
@@ -51,13 +56,15 @@ if (args.includes('--synth')) {
   process.exit(1);
 }
 
-const parsed = parseOverpass(data);
+if (arg('tracks')) tracks = JSON.parse(readFileSync(resolve(arg('tracks')!), 'utf8')) as TrackDef[];
+const parsed = parseOverpass(data, origin);
 const { city, files } = buildCity(parsed.roads, parsed.buildings, {
   id,
   name,
   half,
   origin: { lat: parsed.lat0, lon: parsed.lon0 },
   attribution,
+  tracks,
 });
 const out = join(root, 'apps/client/public/cities', id);
 mkdirSync(join(out, 'tiles'), { recursive: true });

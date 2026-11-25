@@ -8,7 +8,9 @@ import {
   type CarConfig,
   type InputFrame,
 } from '@sr/shared';
-import { Sim, type Rapier, type Vehicle } from '@sr/physics';
+import { CityColliders, Sim, type Rapier, type Vehicle } from '@sr/physics';
+import { CityView } from '../city/city-view';
+import { WEATHER_GRIP, type City, type Weather } from '@sr/shared';
 import { SceneRenderer } from '../render/scene';
 import { LevelView } from '../render/level';
 import { CarView } from '../render/car';
@@ -81,6 +83,8 @@ export class Session {
   private running = false;
   private time = 0;
   readonly extraObjects = new THREE.Group();
+  cityView: CityView | null = null;
+  cityColliders: CityColliders | null = null;
 
   constructor(
     R: Rapier,
@@ -88,11 +92,24 @@ export class Session {
     readonly quality: Quality,
     readonly container: HTMLElement,
     readonly input: InputManager,
+    readonly city: City | null = null,
+    readonly weather: Weather = 'dry',
   ) {
     this.sim = new Sim(R, track);
     this.gfx = new SceneRenderer(container, quality);
-    this.level = new LevelView(track, this.sim.level.geometry, quality);
+    this.level = new LevelView(track, this.sim.level.geometry, quality, !!city);
     this.gfx.scene.add(this.level.group, this.extraObjects);
+    if (city) {
+      this.cityView = new CityView(city, quality, weather);
+      this.gfx.scene.add(this.cityView.group);
+      this.cityColliders = new CityColliders(city, this.sim);
+      if (weather !== 'dry') {
+        const fog = this.gfx.scene.fog as THREE.Fog;
+        fog.color.set(weather === 'snow' ? 0x2a2f3c : 0x10141f);
+        fog.far = Math.min(fog.far, weather === 'snow' ? 260 : 380);
+        this.gfx.scene.background = fog.color.clone();
+      }
+    }
     this.rig = new CameraRig(this.gfx.camera);
     this.skid = new SkidMarks(quality.skidMarks);
     this.smoke = new Smoke(quality.smokeParticles);
@@ -122,6 +139,7 @@ export class Session {
       neon: NEON_COLORS[slot % NEON_COLORS.length],
     });
     this.gfx.scene.add(view.root);
+    v.surfaceGrip = WEATHER_GRIP[this.weather];
     const c = new SessionCar(v, view, this.cars.length);
     c.name = opts.name ?? `Машина ${slot + 1}`;
     this.cars.push(c);
@@ -151,6 +169,9 @@ export class Session {
     for (const c of this.cars) {
       c.prev.p.copy(c.curr.p);
       c.prev.q.copy(c.curr.q);
+    }
+    if (this.cityColliders && step % 10 === 0) {
+      this.cityColliders.update(this.cars.map((c) => c.vehicle.position));
     }
     this.sim.tick(this.cars.map((c) => c.input));
     for (const c of this.cars) {
@@ -208,6 +229,10 @@ export class Session {
       this.gfx.setBlur(intensity * 0.06);
     }
     this.smoke.update(dt);
+    if (this.cityView) {
+      const cp = this.gfx.camera.position;
+      this.cityView.update(cp.x, cp.z, dt);
+    }
     this.hooks.frame?.(dt, a);
     this.gfx.render();
   }

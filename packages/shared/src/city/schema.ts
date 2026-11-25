@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TrackDefSchema } from '../tracks/schema';
 
 /** Классы дорог → ширина проезжей части (м). */
 export const ROAD_WIDTH: Record<string, number> = {
@@ -54,6 +55,8 @@ export const CitySchema = z.object({
   blockSize: z.number().positive(),
   roads: z.array(CityRoadSchema),
   tiles: z.array(CityTileSchema),
+  /** Трассы на улицах города. */
+  tracks: z.array(TrackDefSchema).default([]),
 });
 
 export type CityRoad = z.infer<typeof CityRoadSchema>;
@@ -78,3 +81,12 @@ export const tileOf = (x: number, z: number, size = BLOCK_SIZE): [number, number
   Math.floor(x / size),
   Math.floor(z / size),
 ];
+
+/** Погода: влияет на картинку и сцепление. */
+export type Weather = 'dry' | 'wet' | 'snow';
+export const WEATHER_GRIP: Record<Weather, number> = { dry: 1, wet: 0.86, snow: 0.72 };
+export const WEATHER_NAMES: Record<Weather, string> = {
+  dry: 'Сухо',
+  wet: 'Дождь, мокрый асфальт',
+  snow: 'Снег и слякоть',
+};

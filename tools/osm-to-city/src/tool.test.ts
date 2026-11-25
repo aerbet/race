@@ -3,7 +3,8 @@ import { parseCity } from '@sr/shared';
 import { orientedBox, polygonArea, simplify, triangulate, type P } from './geom';
 import { buildingHeight, makeProjection, parseOverpass, type OverpassJson } from './osm';
 import { buildCity, buildingColliders } from './build';
-import { synthDistrict } from './synth';
+import { synthDistrict, synthTracks } from './synth';
+import { buildTrack } from '@sr/shared';
 import { writeGlb } from './glb';
 
 describe('geometry', () => {
@@ -19,6 +20,16 @@ describe('geometry', () => {
       [0, 0],
       [10, 0],
     ]);
+  });
+
+  it('simplify keeps closed rings', () => {
+    const ring: P[] = [];
+    for (let i = 0; i <= 32; i++)
+      ring.push([Math.cos((i / 32) * Math.PI * 2) * 100, Math.sin((i / 32) * Math.PI * 2) * 100]);
+    const s = simplify(ring, 1);
+    expect(s.length).toBeGreaterThan(10);
+    expect(s[0]![0]).toBeCloseTo(s[s.length - 1]![0]);
+    expect(s[0]![1]).toBeCloseTo(s[s.length - 1]![1]);
   });
 
   it('triangulates an L-shape into 4 triangles of correct area', () => {
@@ -124,12 +135,13 @@ describe('osm parsing', () => {
 
 describe('city build', () => {
   const data = synthDistrict(3, 700);
-  const parsed = parseOverpass(data);
+  const parsed = parseOverpass(data, { lat: 55.75, lon: 37.6 });
   const { city, files } = buildCity(parsed.roads, parsed.buildings, {
     id: 't',
     name: 'T',
     half: 800,
     origin: { lat: parsed.lat0, lon: parsed.lon0 },
+    tracks: synthTracks(700),
   });
 
   it('produces a valid city with attribution', () => {
@@ -149,6 +161,31 @@ describe('city build', () => {
       expect(json.asset.version).toBe('2.0');
     }
     expect(city.blockSize).toBe(256);
+  });
+
+  it('tracks run along streets', () => {
+    expect(city.tracks.length).toBe(3);
+    for (const def of city.tracks) {
+      const t = buildTrack(def);
+      let sum = 0;
+      for (const sm of t.samples) {
+        let best = Infinity;
+        for (const r of city.roads)
+          for (let i = 1; i < r.points.length; i++) {
+            const [ax, az] = r.points[i - 1]!,
+              [bx, bz] = r.points[i]!;
+            const dx = bx - ax,
+              dz = bz - az;
+            const k = Math.max(
+              0,
+              Math.min(1, ((sm.x - ax) * dx + (sm.z - az) * dz) / (dx * dx + dz * dz || 1)),
+            );
+            best = Math.min(best, Math.hypot(sm.x - ax - dx * k, sm.z - az - dz * k));
+          }
+        sum += best;
+      }
+      expect(sum / t.samples.length, def.id).toBeLessThan(4);
+    }
   });
 
   it('buildings do not sit on roads (colliders keep clear of road axes)', () => {

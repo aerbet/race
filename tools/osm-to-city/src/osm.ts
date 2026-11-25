@@ -53,7 +53,10 @@ export function buildingHeight(tags: Record<string, string>): number {
   return 15;
 }
 
-export function parseOverpass(data: OverpassJson): {
+export function parseOverpass(
+  data: OverpassJson,
+  origin?: { lat: number; lon: number },
+): {
   roads: RawRoad[];
   buildings: RawBuilding[];
   lat0: number;
@@ -81,8 +84,8 @@ export function parseOverpass(data: OverpassJson): {
       maxLon = Math.max(maxLon, n.lon);
     }
   }
-  const lat0 = (minLat + maxLat) / 2,
-    lon0 = (minLon + maxLon) / 2;
+  const lat0 = origin?.lat ?? (minLat + maxLat) / 2;
+  const lon0 = origin?.lon ?? (minLon + maxLon) / 2;
   const proj = makeProjection(lat0, lon0);
   const roads: RawRoad[] = [];
   const buildings: RawBuilding[] = [];

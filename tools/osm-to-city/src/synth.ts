@@ -1,5 +1,6 @@
 import type { OverpassJson } from './osm';
 import type { P } from './geom';
+import type { TrackDef } from '@sr/shared';
 
 /**
  * Процедурный вымышленный район «по мотивам Москвы» в формате Overpass:
@@ -148,4 +149,90 @@ export function synthDistrict(seed = 1, half = 900, lat0 = 55.75, lon0 = 37.6): 
     }
   }
   return { elements };
+}
+
+/**
+ * Трассы на улицах процедурного района (те же формулы, что у дорог):
+ * кольцо по бульвару, спринт «проспект → бульвар → проспект», дрифт-сектор через площадь.
+ */
+export function synthTracks(half = 900): TrackDef[] {
+  const RR = half * 0.62;
+  const radials = 7;
+  const ringAt = (a: number): [number, number] => {
+    const wob = 1 + 0.05 * Math.sin(a * 3 + 1);
+    return [Math.cos(a) * RR * wob, Math.sin(a) * RR * wob];
+  };
+  const radialAt = (r: number, d: number): [number, number] => {
+    // Обратная к t: d = 40 + t/12·half·1.05
+    const t = ((d - 40) / (half * 1.05)) * 12;
+    const a = (r / radials) * Math.PI * 2 + 0.2 + 0.12 * Math.sin(t * 0.7 + r);
+    return [Math.cos(a) * d, Math.sin(a) * d];
+  };
+  const angleOf = (r: number) => (r / radials) * Math.PI * 2 + 0.2;
+  const base = { walls: false, wallOffset: 0, ramps: [], groundSize: half * 2.4 };
+
+  const ring: [number, number, number][] = [];
+  for (let i = 0; i < 48; i++) {
+    const [x, z] = ringAt((i / 48) * Math.PI * 2 + 0.05);
+    ring.push([x, z, 15]);
+  }
+
+  // Спринт: с окраины по проспекту 0 к бульвару, по бульвару до проспекта 2, по нему наружу
+  const sprint: [number, number, number][] = [];
+  for (let d = half * 1.0; d > RR + 25; d -= 40) sprint.push([...radialAt(0, d), 15]);
+  const a0 = angleOf(0),
+    a2 = angleOf(2);
+  for (let k = 1; k < 12; k++) sprint.push([...ringAt(a0 + ((a2 - a0) * k) / 12), 15]);
+  for (let d = RR + 30; d < half * 1.0; d += 40) sprint.push([...radialAt(2, d), 12]);
+
+  // Дрифт: сектор между проспектами 3 и 4 через центральную площадь
+  const drift: [number, number, number][] = [];
+  const a3 = angleOf(3),
+    a4 = angleOf(4);
+  for (let d = RR - 20; d > 90; d -= 45) drift.push([...radialAt(3, d), 15]);
+  for (let k = 0; k <= 6; k++) {
+    const a = a3 + ((a4 - a3) * k) / 6;
+    drift.push([Math.cos(a) * 62, Math.sin(a) * 62, 12]);
+  }
+  for (let d = 110; d < RR - 25; d += 45) drift.push([...radialAt(4, d), 13]);
+  for (let k = 1; k < 8; k++) drift.push([...ringAt(a4 - ((a4 - a3) * k) / 8), 15]);
+
+  return [
+    {
+      ...base,
+      id: 'msk_ring',
+      name: 'Кольцевой бульвар',
+      type: 'circuit',
+      laps: 2,
+      closed: true,
+      points: ring,
+      defaultWidth: 15,
+      checkpointSpacing: 90,
+      startS: 0,
+    },
+    {
+      ...base,
+      id: 'msk_sprint',
+      name: 'Проспект — бульвар — проспект',
+      type: 'sprint',
+      laps: 1,
+      closed: false,
+      points: sprint,
+      defaultWidth: 15,
+      checkpointSpacing: 100,
+      startS: 60,
+    },
+    {
+      ...base,
+      id: 'msk_drift',
+      name: 'Сектор через площадь',
+      type: 'drift',
+      laps: 2,
+      closed: true,
+      points: drift,
+      defaultWidth: 14,
+      checkpointSpacing: 80,
+      startS: 0,
+    },
+  ];
 }

@@ -3,7 +3,7 @@ import { FIXED_DT, quantizeInput, trackCoords, sampleAt } from '@sr/shared';
 import type { Rapier } from './rapier';
 import { createLevel, type PhysicsLevel } from './world';
 import { Vehicle, type VehicleOptions } from './vehicle';
-import type { RigidBody } from '@dimforge/rapier3d-compat';
+import type { Collider, RigidBody } from '@dimforge/rapier3d-compat';
 import { GROUP_CAR, GROUP_STATIC, groups } from './world';
 
 /** Чужая машина, положение которой задаётся извне (сеть): кинематическое тело. */
@@ -37,6 +37,47 @@ export class Sim {
     this.hints.push(-1);
     this.lastSafeS.push(trackCoords(this.track, g.x, g.z).s);
     return v;
+  }
+
+  private tiles = new Map<string, Collider[]>();
+
+  /**
+   * Коллайдеры зданий блока города: [cx, cz, hx, hz, yaw, height].
+   * Стриминг: блок добавляется, когда рядом есть машина, и убирается, когда все уехали.
+   */
+  addTile(key: string, boxes: readonly (readonly number[])[]): void {
+    if (this.tiles.has(key)) return;
+    const R = this.R;
+    const world = this.level.world;
+    const body = world.createRigidBody(R.RigidBodyDesc.fixed());
+    const list: Collider[] = [];
+    for (const b of boxes) {
+      const [cx, cz, hx, hz, yaw, h] = b as [number, number, number, number, number, number];
+      const c = world.createCollider(
+        R.ColliderDesc.cuboid(hx, h / 2, hz)
+          .setTranslation(cx, h / 2, cz)
+          .setRotation({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) })
+          .setFriction(0)
+          .setCollisionGroups(groups(GROUP_STATIC, 0xffff)),
+        body,
+      );
+      this.level.wallHandles.add(c.handle);
+      list.push(c);
+    }
+    this.tiles.set(key, list);
+  }
+
+  removeTile(key: string): void {
+    const list = this.tiles.get(key);
+    if (!list) return;
+    const body = list[0]?.parent();
+    for (const c of list) this.level.wallHandles.delete(c.handle);
+    if (body) this.level.world.removeRigidBody(body);
+    this.tiles.delete(key);
+  }
+
+  get tileKeys(): string[] {
+    return [...this.tiles.keys()];
   }
 
   /** Добавить кинематическую «тень» машины (удалённый игрок). */

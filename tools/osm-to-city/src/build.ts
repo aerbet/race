@@ -2,6 +2,8 @@ import {
   BLOCK_SIZE,
   OSM_ATTRIBUTION,
   ROAD_WIDTH,
+  buildTrack,
+  type TrackDef,
   type City,
   type CityRoad,
   type CityTile,
@@ -18,6 +20,7 @@ export interface BuildOptions {
   origin: { lat: number; lon: number };
   attribution?: string;
   blockSize?: number;
+  tracks?: TrackDef[];
 }
 
 export interface BuildResult {
@@ -216,10 +219,28 @@ export function buildCity(
         roads.push({ id: r.id, cls: r.cls, name: r.name, width, oneway: r.oneway, points: pts });
     }
   }
+  // Коридоры трасс: здания, залезающие на трассу (сплайн срезает углы), убираем
+  const corridor: { x: number; z: number; r: number }[] = [];
+  for (const t of opt.tracks ?? []) {
+    const bt = buildTrack(t);
+    for (let i = 0; i < bt.samples.length; i += 2) {
+      const sm = bt.samples[i]!;
+      corridor.push({ x: sm.x, z: sm.z, r: sm.width / 2 + 3 });
+    }
+  }
+  const onTrack = (fp: P[]) =>
+    corridor.some((c) => {
+      for (const [x, z] of fp) if (Math.hypot(x - c.x, z - c.z) < c.r) return true;
+      const [cx, cz] = centroid(fp);
+      return Math.hypot(cx - c.x, cz - c.z) < c.r;
+    });
   const buildings = rawBuildings.filter((b) => {
     const c = centroid(b.footprint);
     return (
-      Math.abs(c[0]) <= half && Math.abs(c[1]) <= half && Math.abs(polygonArea(b.footprint)) > 12
+      Math.abs(c[0]) <= half &&
+      Math.abs(c[1]) <= half &&
+      Math.abs(polygonArea(b.footprint)) > 12 &&
+      !onTrack(b.footprint)
     );
   });
 
@@ -314,6 +335,7 @@ export function buildCity(
     blockSize: size,
     roads,
     tiles: cityTiles.sort((a, b) => a.j - b.j || a.i - b.i),
+    tracks: opt.tracks ?? [],
   };
   return { city, files };
 }

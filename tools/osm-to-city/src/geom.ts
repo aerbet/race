@@ -3,6 +3,24 @@ export type P = [number, number];
 /** Упрощение ломаной (Дуглас–Пекер). */
 export function simplify(pts: P[], eps: number): P[] {
   if (pts.length <= 2) return pts.slice();
+  // Замкнутая ломаная: концы совпадают — делим на две половины по самой дальней точке
+  const f = pts[0]!,
+    l = pts[pts.length - 1]!;
+  if (Math.hypot(f[0] - l[0], f[1] - l[1]) < 1e-6) {
+    let far = 1;
+    let farD = -1;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const d = Math.hypot(pts[i]![0] - f[0], pts[i]![1] - f[1]);
+      if (d > farD) {
+        farD = d;
+        far = i;
+      }
+    }
+    if (far <= 0 || far >= pts.length - 1) return pts.slice();
+    const a = simplify(pts.slice(0, far + 1), eps);
+    const b = simplify(pts.slice(far), eps);
+    return [...a, ...b.slice(1)];
+  }
   const keep = new Uint8Array(pts.length);
   keep[0] = keep[pts.length - 1] = 1;
   const stack: [number, number][] = [[0, pts.length - 1]];
