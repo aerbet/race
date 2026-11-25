@@ -154,3 +154,28 @@ describe.each(Object.values(CARS))('nitro $id', (cfg) => {
     sim.dispose();
   });
 });
+
+describe('walls', () => {
+  it('car slides along a wall instead of stopping dead', () => {
+    const sim = new Sim(R, getTrack('polygon'));
+    const car = sim.addCar(CARS.era2000_coupe!, 0);
+    settle(sim);
+    // Разгон и уход в стену под небольшим углом
+    for (let i = 0; i < 60 * 4; i++) sim.tick([input({ throttle: 1 })]);
+    let touched = false;
+    let minSpeed = Infinity;
+    let speedAtHit = 0;
+    for (let i = 0; i < 60 * 3; i++) {
+      sim.tick([input({ throttle: 1, steer: i < 40 ? 0.35 : 0 })]);
+      if (car.wallContact && !touched) {
+        touched = true;
+        speedAtHit = car.telemetry().speedKmh;
+      }
+      if (touched) minSpeed = Math.min(minSpeed, car.telemetry().speedKmh);
+    }
+    sim.dispose();
+    expect(touched).toBe(true);
+    // Мягкие стены: скорость не обнуляется
+    expect(minSpeed).toBeGreaterThan(speedAtHit * 0.5);
+  });
+});

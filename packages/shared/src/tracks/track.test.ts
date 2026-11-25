@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { getTrack, trackCoords, nearestSample } from './index';
 
-describe('polygon track', () => {
-  const t = getTrack('polygon');
+describe.each(['polygon', 'night_sprint'])('track %s', (id) => {
+  const t = getTrack(id);
 
   it('has reasonable length and fits 1 km ground', () => {
-    expect(t.length).toBeGreaterThan(1800);
+    expect(t.length).toBeGreaterThan(1500);
     expect(t.length).toBeLessThan(3500);
     expect(t.bounds.minX).toBeGreaterThan(-500);
     expect(t.bounds.maxX).toBeLessThan(500);
@@ -22,7 +22,7 @@ describe('polygon track', () => {
     }
   });
 
-  it('last checkpoint is the finish line at start', () => {
+  it.skipIf(id !== 'polygon')('last checkpoint is the finish line at start', () => {
     const last = t.checkpoints[t.checkpoints.length - 1]!;
     expect(Math.hypot(last.x - t.samples[0]!.x, last.z - t.samples[0]!.z)).toBeLessThan(3);
   });
@@ -31,7 +31,8 @@ describe('polygon track', () => {
     const S = t.samples;
     for (let i = 0; i < S.length; i += 3) {
       for (let j = i + 40; j < S.length; j += 3) {
-        const ds = Math.min(Math.abs(S[i]!.s - S[j]!.s), t.length - Math.abs(S[i]!.s - S[j]!.s));
+        const raw = Math.abs(S[i]!.s - S[j]!.s);
+        const ds = t.def.closed ? Math.min(raw, t.length - raw) : raw;
         if (ds < 120) continue;
         const d = Math.hypot(S[i]!.x - S[j]!.x, S[i]!.z - S[j]!.z);
         expect(d, `samples ${i} and ${j}`).toBeGreaterThan((S[i]!.width + S[j]!.width) / 2 + 6);
@@ -43,7 +44,8 @@ describe('polygon track', () => {
     for (const g of t.grid) {
       const c = trackCoords(t, g.x, g.z);
       expect(Math.abs(c.lateral)).toBeLessThan(6);
-      expect(c.s).toBeGreaterThan(t.length - 60);
+      if (t.def.closed) expect(c.s).toBeGreaterThan(t.length - 60);
+      else expect(c.s).toBeLessThan(t.def.startS);
     }
   });
 

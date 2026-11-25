@@ -50,6 +50,18 @@ export class Sim {
     this.level.world.step();
     for (let i = 0; i < this.cars.length; i++) {
       const car = this.cars[i]!;
+      // Контакты: стена / другая машина
+      car.wallContact = false;
+      car.carContact = false;
+      this.level.world.contactPairsWith(car.collider, (other) => {
+        let touching = false;
+        this.level.world.contactPair(car.collider, other, (m) => {
+          if (m.numContacts() > 0) touching = true;
+        });
+        if (!touching) return;
+        if (this.level.wallHandles.has(other.handle)) car.wallContact = true;
+        else if (other.parent()?.isDynamic()) car.carContact = true;
+      });
       const p = car.position;
       const c = trackCoords(this.track, p.x, p.z, this.hints[i]);
       this.hints[i] = c.i;

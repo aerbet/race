@@ -131,7 +131,8 @@ export function buildTrack(def: TrackDef): BuiltTrack {
 
   // Чекпоинты: равномерно, последний — финиш (s = startS)
   const startIdx = Math.round(def.startS / STEP) % N;
-  const usable = def.closed ? length : length - def.startS;
+  // Спринт: финиш за 50 м до конца дороги — зона торможения
+  const usable = def.closed ? length : length - def.startS - 50;
   const count = Math.max(2, Math.round(usable / def.checkpointSpacing));
   const checkpoints: Checkpoint[] = [];
   for (let c = 1; c <= count; c++) {

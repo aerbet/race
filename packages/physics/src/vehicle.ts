@@ -111,6 +111,9 @@ export class Vehicle {
   /** Время в «застрявшем» состоянии; при ≥ autoReset.seconds — needsReset. */
   stuckTime = 0;
   needsReset = false;
+  /** Касание стены / другой машины на последнем шаге (заполняет Sim). */
+  wallContact = false;
+  carContact = false;
   /** Счётчик впрыска нитро за текущий прыжок (заряд начисляется при приземлении). */
   private pendingAirCharge = 0;
   slipAngle = 0;

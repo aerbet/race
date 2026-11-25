@@ -6,6 +6,8 @@ import { levelGeometry, type LevelGeometry } from './level';
 export interface PhysicsLevel {
   world: World;
   geometry: LevelGeometry;
+  /** Хэндлы коллайдеров стен — для событий удара. */
+  wallHandles: Set<number>;
 }
 
 export const GROUP_STATIC = 0x0001;
@@ -19,6 +21,7 @@ export function createLevel(R: Rapier, track: BuiltTrack, wallFriction = 0.0): P
   world.timestep = 1 / 60;
   const geometry = levelGeometry(track);
   const ground = world.createRigidBody(R.RigidBodyDesc.fixed());
+  const wallHandles = new Set<number>();
   for (const b of geometry.boxes) {
     const half = b.yaw / 2;
     const d = R.ColliderDesc.cuboid(b.hx, b.hy, b.hz)
@@ -27,7 +30,8 @@ export function createLevel(R: Rapier, track: BuiltTrack, wallFriction = 0.0): P
       .setCollisionGroups(groups(GROUP_STATIC, 0xffff))
       .setFriction(b.kind === 'wall' ? wallFriction : 0.9)
       .setRestitution(0);
-    world.createCollider(d, ground);
+    const col = world.createCollider(d, ground);
+    if (b.kind === 'wall') wallHandles.add(col.handle);
   }
   for (const w of geometry.wedges) {
     const d = R.ColliderDesc.convexHull(new Float32Array(w.vertices));
@@ -35,5 +39,5 @@ export function createLevel(R: Rapier, track: BuiltTrack, wallFriction = 0.0): P
     d.setCollisionGroups(groups(GROUP_STATIC, 0xffff)).setFriction(0.9);
     world.createCollider(d, ground);
   }
-  return { world, geometry };
+  return { world, geometry, wallHandles };
 }

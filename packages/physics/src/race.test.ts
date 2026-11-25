@@ -151,3 +151,44 @@ describe('race tracker', { timeout: 60_000 }, () => {
     expect(ww).toBe(true);
   });
 });
+
+describe('sprint track', { timeout: 60_000 }, () => {
+  it('bot finishes night_sprint without resets', () => {
+    const t = getTrack('night_sprint');
+    const sim = new Sim(R, t);
+    const car = sim.addCar(CARS.era2026_hatch!, 0);
+    const race = new RaceTracker(t, 1, 0);
+    race.addRacer('p', car.position.x, car.position.z);
+    const bot = new Bot(car, t, { level: 'medium' });
+    let resets = 0;
+    for (let s = 0; s < 60 * 200 && race.phase !== 'finished'; s++) {
+      if (car.needsReset) resets++;
+      sim.tick([bot.think()]);
+      const p = car.position;
+      const v = car.body.linvel();
+      race.updateRacer('p', p.x, p.z, v.x, v.z);
+      race.tick();
+    }
+    const r = race.racers.get('p')!;
+    if (process.env.MEASURE)
+      console.log(
+        'sprint',
+        r.finishStep / 60,
+        'resets',
+        resets,
+        'cp',
+        r.nextCp,
+        '/',
+        t.checkpoints.length,
+        'pos',
+        car.position,
+        'progress',
+        r.progress,
+        'len',
+        t.length,
+      );
+    sim.dispose();
+    expect(r.finished).toBe(true);
+    expect(resets).toBe(0);
+  });
+});

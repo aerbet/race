@@ -1,12 +1,17 @@
 export * from './schema';
 export * from './build';
 export * from './polygon';
+export * from './sprint';
 
 import { buildTrack } from './build';
 import { POLYGON_TRACK } from './polygon';
+import { SPRINT_TRACK } from './sprint';
 import type { BuiltTrack, TrackDef } from './index';
 
-export const TRACKS: Record<string, TrackDef> = { polygon: POLYGON_TRACK };
+export const TRACKS: Record<string, TrackDef> = {
+  polygon: POLYGON_TRACK,
+  night_sprint: SPRINT_TRACK,
+};
 
 const cache = new Map<string, BuiltTrack>();
 export function getTrack(id: string): BuiltTrack {
