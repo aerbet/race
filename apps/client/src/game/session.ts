@@ -73,6 +73,8 @@ export class Session {
   player: SessionCar | null = null;
   /** Ввод игрока заморожен (обратный отсчёт, финиш). */
   playerFrozen = false;
+  /** После финиша машиной игрока управляет бот. */
+  autopilot = false;
   hooks: SessionHooks = {};
   private raf = 0;
   private lastT = 0;
@@ -134,7 +136,10 @@ export class Session {
 
   private step(_dt: number, step: number): void {
     for (const c of this.cars) {
-      if (c === this.player) {
+      if (c === this.player && this.autopilot && c.controller) {
+        this.input.sample(FIXED_DT);
+        c.input = c.controller(step);
+      } else if (c === this.player) {
         const inp = this.input.sample(FIXED_DT);
         // Во время отсчёта машина стоит на ручнике
         c.input = this.playerFrozen ? { ...emptyInput(), handbrake: 1 } : inp;
