@@ -6,9 +6,14 @@ export const TrackDefSchema = z.object({
   type: z.enum(['sprint', 'circuit', 'drift']),
   laps: z.number().int().min(1),
   closed: z.boolean(),
-  /** Контрольные точки сплайна: [x, z, ширина?]. */
+  /** Контрольные точки сплайна: [x, z, ширина?, высота?]. */
   points: z
-    .array(z.tuple([z.number(), z.number()]).or(z.tuple([z.number(), z.number(), z.number()])))
+    .array(
+      z
+        .tuple([z.number(), z.number()])
+        .or(z.tuple([z.number(), z.number(), z.number()]))
+        .or(z.tuple([z.number(), z.number(), z.number(), z.number()])),
+    )
     .min(3),
   defaultWidth: z.number().positive(),
   /** Расстояние между чекпоинтами, м. */

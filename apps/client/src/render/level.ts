@@ -94,13 +94,86 @@ export class LevelView {
       this.buildCheckpointMarkers();
       return;
     }
-    this.buildGround(track.def.groundSize);
+    if (track.elevated) this.buildMountain(track.def.groundSize);
+    else this.buildGround(track.def.groundSize);
     this.buildRoad();
     this.buildWalls(geom);
     this.buildRamps(geom);
     this.buildStartLine();
     this.buildLamps();
-    this.buildCity();
+    if (!track.elevated) this.buildCity();
+  }
+
+  /**
+   * Склон горы под серпантином: высота — от ближайшего участка дороги, ниже полотна
+   * у края и с рельефом вдали; сосны-конусы на склонах. Только визуал.
+   */
+  private buildMountain(size: number): void {
+    const S = this.track.samples;
+    const res = this.quality.name === 'low' ? 80 : 140;
+    const g = new THREE.PlaneGeometry(size, size, res, res);
+    g.rotateX(-Math.PI / 2);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    const noise = (x: number, z: number) =>
+      Math.sin(x * 0.013) * Math.cos(z * 0.011) * 9 + Math.sin(x * 0.041 + z * 0.023) * 3;
+    const heightAt = (x: number, z: number) => {
+      let best = Infinity;
+      let by = 0;
+      let bw = 10;
+      for (let i = 0; i < S.length; i += 2) {
+        const sm = S[i]!;
+        const d = (sm.x - x) ** 2 + (sm.z - z) ** 2;
+        if (d < best) {
+          best = d;
+          by = sm.y;
+          bw = sm.width;
+        }
+      }
+      const d = Math.sqrt(best);
+      const edge = Math.max(0, d - bw / 2 - 4);
+      // У дороги — чуть ниже полотна, дальше — рельеф и спад
+      return by - 0.4 - edge * 0.12 + noise(x, z) * Math.min(1, edge / 50);
+    };
+    for (let i = 0; i < pos.count; i++) pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)));
+    g.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x1d2a22,
+      roughness: 0.95,
+      flatShading: true,
+    });
+    const m = new THREE.Mesh(g, mat);
+    m.receiveShadow = this.quality.shadows;
+    this.group.add(m);
+
+    // Сосны
+    let seed = 77;
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32;
+    const count = this.quality.name === 'low' ? 500 : 1400;
+    const trees = new THREE.InstancedMesh(
+      new THREE.ConeGeometry(2.2, 9, 6),
+      new THREE.MeshStandardMaterial({ color: 0x14301f, roughness: 0.9, flatShading: true }),
+      count,
+    );
+    const mx = new THREE.Matrix4();
+    let n = 0;
+    for (let tries = 0; n < count && tries < count * 6; tries++) {
+      const x = (rnd() - 0.5) * size * 0.95;
+      const z = (rnd() - 0.5) * size * 0.95;
+      let near = Infinity;
+      for (let i = 0; i < S.length; i += 6)
+        near = Math.min(near, (S[i]!.x - x) ** 2 + (S[i]!.z - z) ** 2);
+      if (near < 14 ** 2) continue;
+      const sc = 0.7 + rnd() * 0.8;
+      mx.compose(
+        new THREE.Vector3(x, heightAt(x, z) + 4.5 * sc, z),
+        new THREE.Quaternion(),
+        new THREE.Vector3(sc, sc, sc),
+      );
+      trees.setMatrixAt(n++, mx);
+    }
+    trees.count = n;
+    trees.castShadow = this.quality.shadows;
+    this.group.add(trees);
   }
 
   /** Неоновые «ворота» на чекпоинтах — на городских улицах иначе не видно маршрута. */
@@ -189,7 +262,7 @@ export class LevelView {
         rz = s.tx;
       const a = offsetA(s.width),
         b = offsetB(s.width);
-      pos.set([s.x + rx * a, y, s.z + rz * a, s.x + rx * b, y, s.z + rz * b], k * 6);
+      pos.set([s.x + rx * a, y + s.y, s.z + rz * a, s.x + rx * b, y + s.y, s.z + rz * b], k * 6);
       uv.set([0, sv / vScale, 1, sv / vScale], k * 4);
       if (k < n - 1) {
         const i = k * 2;
@@ -251,9 +324,8 @@ export class LevelView {
     );
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
-    const up = new THREE.Vector3(0, 1, 0);
     walls.forEach((b, i) => {
-      q.setFromAxisAngle(up, b.yaw);
+      q.setFromEuler(new THREE.Euler(b.pitch ?? 0, b.yaw, 0, 'YXZ'));
       m.compose(
         new THREE.Vector3(b.x, b.y, b.z),
         q,
@@ -261,7 +333,7 @@ export class LevelView {
       );
       inst.setMatrixAt(i, m);
       m.compose(
-        new THREE.Vector3(b.x, b.hy * 2 - 0.25, b.z),
+        new THREE.Vector3(b.x, b.y + b.hy - 0.25, b.z),
         q,
         new THREE.Vector3(b.hx * 2 + 0.04, 0.06, b.hz * 2),
       );
@@ -305,7 +377,7 @@ export class LevelView {
     );
     m.rotation.x = -Math.PI / 2;
     m.rotation.z = Math.atan2(-s0.tx, -s0.tz);
-    m.position.set(s0.x, 0.04, s0.z);
+    m.position.set(s0.x, s0.y + 0.04, s0.z);
     this.group.add(m);
     // Арка старта
     const arch = new THREE.Group();
@@ -326,7 +398,7 @@ export class LevelView {
     const beamNeon = new THREE.Mesh(new THREE.BoxGeometry(hw * 2 + 0.6, 0.15, 0.85), neon);
     beamNeon.position.y = 6.35;
     arch.add(beam, beamNeon);
-    arch.position.set(s0.x, 0, s0.z);
+    arch.position.set(s0.x, s0.y, s0.z);
     arch.rotation.y = Math.atan2(-s0.tx, -s0.tz);
     this.group.add(arch);
   }
@@ -334,7 +406,7 @@ export class LevelView {
   private buildLamps(): void {
     const S = this.track.samples;
     const every = 18; // ~36 м
-    const spots: { x: number; z: number; yaw: number }[] = [];
+    const spots: { x: number; z: number; yaw: number; y: number }[] = [];
     for (let i = 0; i < S.length; i += every) {
       const s = S[i]!;
       const side = (i / every) % 2 === 0 ? 1 : -1;
@@ -343,6 +415,7 @@ export class LevelView {
         x: s.x - s.tz * off,
         z: s.z + s.tx * off,
         yaw: Math.atan2(-s.tz * side, s.tx * side),
+        y: s.y,
       });
     }
     const pole = new THREE.InstancedMesh(
@@ -379,13 +452,13 @@ export class LevelView {
     const flat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
     spots.forEach((s, i) => {
       q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), s.yaw);
-      m.compose(new THREE.Vector3(s.x, 4, s.z), q, one);
+      m.compose(new THREE.Vector3(s.x, s.y + 4, s.z), q, one);
       pole.setMatrixAt(i, m);
       const hx = s.x - Math.sin(s.yaw) * -1.2,
         hz = s.z - Math.cos(s.yaw) * -1.2;
-      m.compose(new THREE.Vector3(hx, 8, hz), q, one);
+      m.compose(new THREE.Vector3(hx, s.y + 8, hz), q, one);
       head.setMatrixAt(i, m);
-      m.compose(new THREE.Vector3(hx, 0.05, hz), flat, one);
+      m.compose(new THREE.Vector3(hx, s.y + 0.05, hz), flat, one);
       glow.setMatrixAt(i, m);
     });
     glow.renderOrder = 1;

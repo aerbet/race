@@ -192,3 +192,42 @@ describe('sprint track', { timeout: 60_000 }, () => {
     expect(resets).toBe(0);
   });
 });
+
+describe('mountain pass (elevation)', { timeout: 120_000 }, () => {
+  it('bot climbs jp_touge to the finish without resets', () => {
+    const t = getTrack('jp_touge');
+    const sim = new Sim(R, t);
+    const car = sim.addCar(CARS.era2000_coupe!, 0);
+    const race = new RaceTracker(t, 1, 0);
+    race.addRacer('p', car.position.x, car.position.z);
+    const bot = new Bot(car, t, { level: 'medium' });
+    let resets = 0;
+    let maxY = -Infinity;
+    for (let s = 0; s < 60 * 300 && race.phase !== 'finished'; s++) {
+      if (car.needsReset) resets++;
+      sim.tick([bot.think()]);
+      const p = car.position;
+      maxY = Math.max(maxY, p.y);
+      const v = car.body.linvel();
+      race.updateRacer('p', p.x, p.z, v.x, v.z);
+      race.tick();
+    }
+    const r = race.racers.get('p')!;
+    if (process.env.MEASURE)
+      console.log(
+        'touge',
+        r.finishStep / 60,
+        'resets',
+        resets,
+        'maxY',
+        maxY,
+        'cp',
+        r.nextCp,
+        t.checkpoints.length,
+      );
+    sim.dispose();
+    expect(r.finished).toBe(true);
+    expect(resets).toBe(0);
+    expect(maxY).toBeGreaterThan(t.maxY - 10);
+  });
+});

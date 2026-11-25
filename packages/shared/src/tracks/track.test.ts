@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getTrack, trackCoords, nearestSample } from './index';
 
-describe.each(['polygon', 'night_sprint'])('track %s', (id) => {
+describe.each(['polygon', 'night_sprint', 'jp_touge'])('track %s', (id) => {
   const t = getTrack(id);
 
   it('has reasonable length and fits 1 km ground', () => {
@@ -52,5 +52,18 @@ describe.each(['polygon', 'night_sprint'])('track %s', (id) => {
   it('nearestSample local search agrees with global', () => {
     const s = t.samples[100]!;
     expect(nearestSample(t, s.x + 1, s.z, 95)).toBe(nearestSample(t, s.x + 1, s.z));
+  });
+});
+
+describe('touge elevation', () => {
+  it('climbs ~140 m with sane grades', () => {
+    const t = getTrack('jp_touge');
+    expect(t.elevated).toBe(true);
+    expect(t.maxY - t.minY).toBeGreaterThan(120);
+    for (let i = 1; i < t.samples.length; i++) {
+      const a = t.samples[i - 1]!,
+        b = t.samples[i]!;
+      expect(Math.abs(b.y - a.y) / 2, `grade at ${i}`).toBeLessThan(0.14);
+    }
   });
 });

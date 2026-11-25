@@ -2,15 +2,18 @@ export * from './schema';
 export * from './build';
 export * from './polygon';
 export * from './sprint';
+export * from './touge';
 
 import { buildTrack } from './build';
 import { POLYGON_TRACK } from './polygon';
 import { SPRINT_TRACK } from './sprint';
+import { TOUGE_TRACK } from './touge';
 import type { BuiltTrack, TrackDef } from './index';
 
 export const TRACKS: Record<string, TrackDef> = {
   polygon: POLYGON_TRACK,
   night_sprint: SPRINT_TRACK,
+  jp_touge: TOUGE_TRACK,
 };
 
 const cache = new Map<string, BuiltTrack>();

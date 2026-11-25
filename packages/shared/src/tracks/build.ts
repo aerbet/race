@@ -11,6 +11,8 @@ export interface TrackSample {
   s: number;
   /** Кривизна, 1/м (знак: + поворот вправо). */
   k: number;
+  /** Высота дороги, м (0 на плоских трассах). */
+  y: number;
 }
 
 export interface Checkpoint {
@@ -28,6 +30,7 @@ export interface GridSlot {
   z: number;
   /** Угол рыскания: машина смотрит вдоль −Z локально; yaw — поворот вокруг Y. */
   yaw: number;
+  y: number;
 }
 
 export interface BuiltTrack {
@@ -37,11 +40,15 @@ export interface BuiltTrack {
   checkpoints: Checkpoint[];
   grid: GridSlot[];
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
+  /** Есть ли перепады высот (серпантин): дорога — отдельный коллайдер. */
+  elevated: boolean;
+  minY: number;
+  maxY: number;
 }
 
 const STEP = 2;
 
-type P = [number, number, number];
+type P = [number, number, number, number];
 
 function catmull(p0: P, p1: P, p2: P, p3: P, t: number): P {
   const t2 = t * t;
@@ -52,24 +59,25 @@ function catmull(p0: P, p1: P, p2: P, p3: P, t: number): P {
     f(p0[0], p1[0], p2[0], p3[0]),
     f(p0[1], p1[1], p2[1], p3[1]),
     f(p0[2], p1[2], p2[2], p3[2]),
+    f(p0[3], p1[3], p2[3], p3[3]),
   ];
 }
 
 /** Строит дискретную осевую линию с шагом ~2 м, чекпоинты и стартовую решётку. */
 export function buildTrack(def: TrackDef): BuiltTrack {
-  const pts: P[] = def.points.map((p) => [p[0], p[1], p[2] ?? def.defaultWidth]);
+  const pts: P[] = def.points.map((p) => [p[0], p[1], p[2] ?? def.defaultWidth, p[3] ?? 0]);
   const n = pts.length;
   const get = (i: number): P => {
     if (def.closed) return pts[((i % n) + n) % n]!;
     if (i < 0) {
       const a = pts[0]!,
         b = pts[1]!;
-      return [2 * a[0] - b[0], 2 * a[1] - b[1], a[2]];
+      return [2 * a[0] - b[0], 2 * a[1] - b[1], a[2], 2 * a[3] - b[3]];
     }
     if (i >= n) {
       const a = pts[n - 1]!,
         b = pts[n - 2]!;
-      return [2 * a[0] - b[0], 2 * a[1] - b[1], a[2]];
+      return [2 * a[0] - b[0], 2 * a[1] - b[1], a[2], 2 * a[3] - b[3]];
     }
     return pts[i]!;
   };
@@ -89,7 +97,7 @@ export function buildTrack(def: TrackDef): BuiltTrack {
   else dense.push(dense[0]!);
 
   // Пересэмплирование по длине дуги
-  const out: { x: number; z: number; w: number; s: number }[] = [];
+  const out: { x: number; z: number; w: number; y: number; s: number }[] = [];
   let acc = 0;
   let nextS = 0;
   for (let i = 0; i < dense.length - 1; i++) {
@@ -102,6 +110,7 @@ export function buildTrack(def: TrackDef): BuiltTrack {
         x: a[0] + (b[0] - a[0]) * t,
         z: a[1] + (b[1] - a[1]) * t,
         w: a[2] + (b[2] - a[2]) * t,
+        y: a[3] + (b[3] - a[3]) * t,
         s: nextS,
       });
       nextS += STEP;
@@ -118,7 +127,7 @@ export function buildTrack(def: TrackDef): BuiltTrack {
     const dx = next.x - prev.x,
       dz = next.z - prev.z;
     const l = Math.hypot(dx, dz) || 1;
-    return { x: p.x, z: p.z, tx: dx / l, tz: dz / l, width: p.w, s: p.s, k: 0 };
+    return { x: p.x, z: p.z, tx: dx / l, tz: dz / l, width: p.w, s: p.s, k: 0, y: p.y };
   });
   for (let i = 0; i < N; i++) {
     const a = samples[def.closed ? (i - 2 + N) % N : Math.max(0, i - 2)]!;
@@ -163,7 +172,7 @@ export function buildTrack(def: TrackDef): BuiltTrack {
     const nx = -sm.tz,
       nz = sm.tx; // нормаль вправо
     const off = side * sm.width * 0.22;
-    grid.push({ x: sm.x + nx * off, z: sm.z + nz * off, yaw: Math.atan2(-sm.tx, -sm.tz) });
+    grid.push({ x: sm.x + nx * off, z: sm.z + nz * off, yaw: Math.atan2(-sm.tx, -sm.tz), y: sm.y });
   }
 
   let minX = Infinity,
@@ -177,7 +186,23 @@ export function buildTrack(def: TrackDef): BuiltTrack {
     maxZ = Math.max(maxZ, s.z);
   }
 
-  return { def, samples, length, checkpoints, grid, bounds: { minX, maxX, minZ, maxZ } };
+  let minY = Infinity,
+    maxY = -Infinity;
+  for (const sm of samples) {
+    minY = Math.min(minY, sm.y);
+    maxY = Math.max(maxY, sm.y);
+  }
+  return {
+    def,
+    samples,
+    length,
+    checkpoints,
+    grid,
+    bounds: { minX, maxX, minZ, maxZ },
+    elevated: maxY - minY > 0.5 || Math.abs(minY) > 0.5,
+    minY,
+    maxY,
+  };
 }
 
 /** Ближайший сэмпл; hint — индекс с прошлого шага (локальный поиск). */

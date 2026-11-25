@@ -1,7 +1,7 @@
 import type { BuiltTrack } from '@sr/shared';
 import type { Rapier } from './rapier';
 import type { World } from '@dimforge/rapier3d-compat';
-import { levelGeometry, type LevelGeometry } from './level';
+import { levelGeometry, yawPitchQuat, type LevelGeometry } from './level';
 
 export interface PhysicsLevel {
   world: World;
@@ -23,15 +23,23 @@ export function createLevel(R: Rapier, track: BuiltTrack, wallFriction = 0.0): P
   const ground = world.createRigidBody(R.RigidBodyDesc.fixed());
   const wallHandles = new Set<number>();
   for (const b of geometry.boxes) {
-    const half = b.yaw / 2;
     const d = R.ColliderDesc.cuboid(b.hx, b.hy, b.hz)
       .setTranslation(b.x, b.y, b.z)
-      .setRotation({ x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) })
+      .setRotation(yawPitchQuat(b.yaw, b.pitch ?? 0))
       .setCollisionGroups(groups(GROUP_STATIC, 0xffff))
       .setFriction(b.kind === 'wall' ? wallFriction : 0.9)
       .setRestitution(0);
     const col = world.createCollider(d, ground);
     if (b.kind === 'wall') wallHandles.add(col.handle);
+  }
+  if (geometry.road) {
+    const d = R.ColliderDesc.trimesh(
+      new Float32Array(geometry.road.vertices),
+      new Uint32Array(geometry.road.indices),
+    )
+      .setCollisionGroups(groups(GROUP_STATIC, 0xffff))
+      .setFriction(0.9);
+    world.createCollider(d, ground);
   }
   for (const w of geometry.wedges) {
     const d = R.ColliderDesc.convexHull(new Float32Array(w.vertices));

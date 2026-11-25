@@ -30,6 +30,9 @@ const CITY_TRACKS: Record<string, Record<ModeId, string>> = {
   },
 };
 
+/** Локации без города (горные трассы): все режимы на одной трассе. */
+const TRACK_LOCATIONS: Record<string, string> = { jp_touge: 'jp_touge' };
+
 const LOCATIONS = [
   { id: 'polygon', title: 'Полигон', desc: 'Тестовая трасса 1×1 км' },
   ...CITIES.map((c) => ({
@@ -37,6 +40,11 @@ const LOCATIONS = [
     title: c.name,
     desc: `${c.country} · ночной город, блоки 256 м`,
   })),
+  {
+    id: 'jp_touge',
+    title: 'Япония: горный перевал',
+    desc: 'Серпантин в гору, 6 шпилек, подъём 140 м',
+  },
 ];
 
 const DEFAULTS: MenuSettings = {
@@ -73,7 +81,7 @@ export function setupFromSettings(s: MenuSettings): RaceSetup {
   const city = CITY_TRACKS[s.location];
   return {
     mode: s.mode,
-    trackId: city ? city[s.mode] : m.track,
+    trackId: city ? city[s.mode] : (TRACK_LOCATIONS[s.location] ?? m.track),
     cityId: city ? s.location : undefined,
     weather: city ? s.weather : 'dry',
     carId: s.carId,
@@ -153,7 +161,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
       };
       locBox.appendChild(b);
     }
-    q('weatherBlock').style.display = s.location === 'polygon' ? 'none' : '';
+    q('weatherBlock').style.display = CITY_TRACKS[s.location] ? '' : 'none';
     const wBox = q('weather');
     wBox.innerHTML = '';
     for (const w of ['dry', 'wet', 'snow'] as Weather[]) {

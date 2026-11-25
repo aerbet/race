@@ -32,7 +32,14 @@ export class Sim {
 
   addCar(cfg: CarConfig, slot = 0, opts: VehicleOptions = {}): Vehicle {
     const g = this.track.grid[slot % this.track.grid.length]!;
-    const v = new Vehicle(this.R, this.level.world, cfg, { x: g.x, y: 1.0, z: g.z }, g.yaw, opts);
+    const v = new Vehicle(
+      this.R,
+      this.level.world,
+      cfg,
+      { x: g.x, y: g.y + 1.0, z: g.z },
+      g.yaw,
+      opts,
+    );
     this.cars.push(v);
     this.hints.push(-1);
     this.lastSafeS.push(trackCoords(this.track, g.x, g.z).s);
@@ -155,7 +162,7 @@ export class Sim {
       const sm = this.track.samples[c.i]!;
       if (Math.abs(c.lateral) < sm.width / 2 && car.grounded >= 3 && car.up().y > 0.9)
         this.lastSafeS[i] = c.s;
-      if (car.needsReset || p.y < -20) this.resetCar(i);
+      if (car.needsReset || p.y < this.track.minY - 20) this.resetCar(i);
     }
     this.step++;
   }
@@ -163,7 +170,7 @@ export class Sim {
   /** Сброс на трассу в последнюю безопасную точку. */
   resetCar(i: number, s = this.lastSafeS[i]!): void {
     const sm = sampleAt(this.track, s);
-    this.cars[i]!.teleport({ x: sm.x, y: 1.0, z: sm.z }, Math.atan2(-sm.tx, -sm.tz));
+    this.cars[i]!.teleport({ x: sm.x, y: sm.y + 1.0, z: sm.z }, Math.atan2(-sm.tx, -sm.tz));
   }
 
   dispose(): void {
