@@ -1,5 +1,5 @@
 import type { BuiltTrack, CarConfig, InputFrame } from '@sr/shared';
-import { FIXED_DT, trackCoords, sampleAt } from '@sr/shared';
+import { FIXED_DT, quantizeInput, trackCoords, sampleAt } from '@sr/shared';
 import type { Rapier } from './rapier';
 import { createLevel, type PhysicsLevel } from './world';
 import { Vehicle, type VehicleOptions } from './vehicle';
@@ -44,7 +44,8 @@ export class Sim {
     for (let i = 0; i < this.cars.length; i++) {
       const car = this.cars[i]!;
       const inp = inputs[i];
-      if (inp) car.update(inp, FIXED_DT);
+      // Квантование — физика видит ровно то, что попадёт в запись ввода
+      if (inp) car.update(quantizeInput(inp), FIXED_DT);
     }
     this.level.world.step();
     for (let i = 0; i < this.cars.length; i++) {

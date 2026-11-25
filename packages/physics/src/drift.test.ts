@@ -1,12 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import {
-  CARS,
-  buildTrack,
-  cloneCar,
-  emptyInput,
-  parseTrackDef,
-  type CarConfig,
-} from '@sr/shared';
+import { CARS, buildTrack, cloneCar, emptyInput, parseTrackDef, type CarConfig } from '@sr/shared';
 import { initPhysics, type Rapier } from './rapier';
 import { Sim } from './sim';
 import { driftBot } from './dev/drift-bot';
