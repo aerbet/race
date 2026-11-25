@@ -35,8 +35,8 @@ public abstract class TestBase {
   protected JsonNode json(MockHttpServletRequestBuilder req, int status) throws Exception {
     var res = mvc.perform(req).andReturn().getResponse();
     if (res.getStatus() != status)
-      throw new AssertionError("ожидали " + status + ", пришло " + res.getStatus() + ": " + res.getContentAsString());
-    String body = res.getContentAsString();
+      throw new AssertionError("ожидали " + status + ", пришло " + res.getStatus() + ": " + res.getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+    String body = res.getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
     return body.isEmpty() ? om.nullNode() : om.readTree(body);
   }
 

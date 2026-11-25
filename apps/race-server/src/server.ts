@@ -15,6 +15,7 @@ import {
 import type { Rapier } from '@sr/physics';
 import { Room } from './room';
 import { FreeRoam } from './freeroam';
+import { verifyRun, type VerifyRequest } from './verify';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +27,8 @@ export interface ServerOptions {
   botFillSeconds?: number;
   log?: (msg: string) => void;
   cities?: City[];
+  /** Ключ для внутренних вызовов (проверка рекордов из API). */
+  internalKey?: string;
 }
 
 /** Города берём из того же места, откуда их раздаёт клиент. */
@@ -137,6 +140,38 @@ export function startServer(
     if (req.url === '/health') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: true, rooms: manager.rooms.size, protocol: PROTOCOL_VERSION }));
+      return;
+    }
+    if (req.url === '/verify' && req.method === 'POST') {
+      if (
+        req.headers['x-internal-key'] !==
+        (opts.internalKey ?? process.env.INTERNAL_KEY ?? 'dev-internal-key')
+      ) {
+        res.writeHead(403);
+        res.end();
+        return;
+      }
+      const chunks: Buffer[] = [];
+      let size = 0;
+      req.on('data', (c: Buffer) => {
+        size += c.length;
+        if (size > 2_000_000) req.destroy();
+        else chunks.push(c);
+      });
+      req.on('end', () => {
+        let out;
+        try {
+          out = verifyRun(
+            R,
+            manager.cities,
+            JSON.parse(Buffer.concat(chunks).toString('utf8')) as VerifyRequest,
+          );
+        } catch {
+          out = { ok: false, error: 'bad_request' };
+        }
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(out));
+      });
       return;
     }
     res.writeHead(404);
