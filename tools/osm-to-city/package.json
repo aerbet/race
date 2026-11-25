@@ -1,0 +1,13 @@
+{
+  "name": "osm-to-city",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@sr/shared": "workspace:*",
+    "tsx": "4.19.2"
+  }
+}

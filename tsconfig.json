@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": { "types": ["node", "vite/client"] },
-  "include": ["apps/*/src", "packages/*/src", "apps/*/*.ts", "*.ts"]
+  "include": ["apps/*/src", "packages/*/src", "tools/*/src", "apps/*/*.ts", "*.ts"]
 }

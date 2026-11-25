@@ -101,6 +101,15 @@ importers:
         specifier: 3.24.1
         version: 3.24.1
 
+  tools/osm-to-city:
+    dependencies:
+      '@sr/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      tsx:
+        specifier: 4.19.2
+        version: 4.19.2
+
 packages:
 
   '@dimforge/rapier3d-compat@0.14.0':
