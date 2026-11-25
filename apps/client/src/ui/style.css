@@ -602,3 +602,15 @@ body.touch-ui .hud-attr {
   transform: translateX(-50%);
   bottom: 0;
 }
+
+/* Приглашение на гонку в свободной езде */
+.invite {
+  position: fixed;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  z-index: 26;
+  font: 600 18px var(--font);
+  text-align: center;
+  min-width: 300px;
+}

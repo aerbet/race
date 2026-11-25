@@ -108,6 +108,7 @@ export class CarView {
     if (!opts.ghost) {
       // Фары
       const head = new THREE.MeshBasicMaterial({ color: 0xf4f7ff, toneMapped: false });
+      this.headMat = head;
       for (const s of [-1, 1]) {
         const f = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.1, 0.05), head);
         f.position.set(s * (W / 2 - 0.3), -H / 2 + H * 0.38, -L / 2 - 0.06);
@@ -201,6 +202,21 @@ export class CarView {
       this.wheels.push(wg);
       this.root.add(wg);
     }
+  }
+
+  private headMat: THREE.MeshBasicMaterial | null = null;
+  private flashT = 0;
+
+  /** Мигнуть фарами: ярче на `seconds` секунд (через bloom выглядит как вспышка). */
+  flash(seconds: number): void {
+    this.flashT = performance.now() + seconds * 1000;
+    this.headMat?.color.setRGB(6, 6, 6);
+    setTimeout(
+      () => {
+        if (performance.now() >= this.flashT) this.headMat?.color.setHex(0xf4f7ff);
+      },
+      seconds * 1000 + 20,
+    );
   }
 
   setBraking(on: boolean): void {

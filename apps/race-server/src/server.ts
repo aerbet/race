@@ -6,11 +6,18 @@ import {
   PROTOCOL_VERSION,
   SERVER_TICK_HZ,
   decodeClient,
+  parseCity,
+  registerTrack,
+  type City,
   encodeServer,
   type NetConditions,
 } from '@sr/shared';
 import type { Rapier } from '@sr/physics';
 import { Room } from './room';
+import { FreeRoam } from './freeroam';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export interface ServerOptions {
   port: number;
@@ -18,6 +25,20 @@ export interface ServerOptions {
   net?: NetConditions;
   botFillSeconds?: number;
   log?: (msg: string) => void;
+  cities?: City[];
+}
+
+/** Города берём из того же места, откуда их раздаёт клиент. */
+export function loadCities(
+  dir = resolve(dirname(fileURLToPath(import.meta.url)), '../../client/public/cities'),
+): City[] {
+  if (!existsSync(dir)) return [];
+  const out: City[] = [];
+  for (const id of readdirSync(dir)) {
+    const f = join(dir, id, 'city.json');
+    if (existsSync(f)) out.push(parseCity(JSON.parse(readFileSync(f, 'utf8'))));
+  }
+  return out;
 }
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -30,11 +51,46 @@ function makeCode(): string {
 /** Менеджер комнат: быстрый поиск, приватные комнаты по коду. */
 export class RoomManager {
   readonly rooms = new Map<string, Room>();
+  readonly freeroams = new Map<string, FreeRoam>();
+  readonly cities = new Map<string, City>();
 
   constructor(
     readonly R: Rapier,
-    readonly opts: { botFillSeconds?: number } = {},
-  ) {}
+    readonly opts: { botFillSeconds?: number; cities?: City[] } = {},
+  ) {
+    for (const c of opts.cities ?? []) {
+      this.cities.set(c.id, c);
+      for (const t of c.tracks) registerTrack(t);
+    }
+  }
+
+  /** Свободная езда: зона города с местом; при заполнении создаётся следующая. */
+  freeroam(cityId: string): FreeRoam | undefined {
+    const city = this.cities.get(cityId);
+    if (!city) return undefined;
+    for (const f of this.freeroams.values()) if (f.city.id === cityId && !f.full) return f;
+    let code = makeCode();
+    while (this.freeroams.has(code) || this.rooms.has(code)) code = makeCode();
+    const f = new FreeRoam(city, code, (trackId, cid) => this.createRace(trackId, cid));
+    this.freeroams.set(code, f);
+    return f;
+  }
+
+  /** Приватная гонка-вызов на городской трассе (2 человека, без ботов). */
+  createRace(trackId: string, cityId: string): Room {
+    let code = makeCode();
+    while (this.rooms.has(code)) code = makeCode();
+    const r = new Room(this.R, code, {
+      isPrivate: true,
+      trackId,
+      cityId,
+      laps: 1,
+      botFillSeconds: 60,
+      minRacers: 2,
+    });
+    this.rooms.set(code, r);
+    return r;
+  }
 
   quick(): Room {
     for (const r of this.rooms.values()) if (!r.isPrivate && r.joinable) return r;
@@ -54,6 +110,10 @@ export class RoomManager {
   }
 
   tick(): void {
+    for (const [code, f] of this.freeroams) {
+      f.tick();
+      if (f.empty) this.freeroams.delete(code);
+    }
     for (const [code, r] of this.rooms) {
       r.tick();
       if (r.empty && (r.phase !== 'lobby' || r.lobbySteps > 0)) {
@@ -69,7 +129,10 @@ export function startServer(
   opts: ServerOptions,
 ): { http: Server; wss: WebSocketServer; manager: RoomManager; stop: () => void } {
   const log = opts.log ?? ((m: string) => console.log(`[race-server] ${m}`));
-  const manager = new RoomManager(R, { botFillSeconds: opts.botFillSeconds });
+  const manager = new RoomManager(R, {
+    botFillSeconds: opts.botFillSeconds,
+    cities: opts.cities ?? loadCities(),
+  });
   const http = createServer((req, res) => {
     if (req.url === '/health') {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -82,7 +145,7 @@ export function startServer(
   const wss = new WebSocketServer({ server: http, maxPayload: 4096 });
 
   wss.on('connection', (ws: WebSocket) => {
-    let room: Room | null = null;
+    let room: Pick<Room, 'handle' | 'leave' | 'code'> | null = null;
     let playerId = 0;
     const out = new DelayedChannel<Uint8Array>(
       opts.net ?? { latency: 0, jitter: 0, loss: 0 },
@@ -112,11 +175,13 @@ export function startServer(
             `версия протокола ${msg.version}, сервер ждёт ${PROTOCOL_VERSION} — обновите страницу`,
           );
         const target =
-          msg.mode === 'join'
-            ? manager.get(msg.room)
-            : msg.mode === 'create'
-              ? manager.create(true)
-              : manager.quick();
+          msg.mode === 'freeroam'
+            ? manager.freeroam(msg.room)
+            : msg.mode === 'join'
+              ? manager.get(msg.room)
+              : msg.mode === 'create'
+                ? manager.create(true)
+                : manager.quick();
         if (!target) return fail('room', 'комната не найдена');
         const p = target.join(msg.name, msg.carId, send);
         if (!p) return fail('room', 'комната заполнена или гонка уже идёт');

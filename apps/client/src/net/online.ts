@@ -2,6 +2,7 @@ import {
   CARS,
   Msg,
   PROTOCOL_VERSION,
+  type City,
   type LobbyMsg,
   type ServerMsg,
   type WelcomeMsg,
@@ -11,6 +12,9 @@ import { loadSettings } from '../ui/menu';
 import { escapeHtml } from '../ui/menu';
 import { NetClient } from './client';
 import { OnlineRace } from './online-race';
+
+/** Совпадает с серверным CHALLENGE_RANGE. */
+const CHALLENGE_RANGE_CLIENT = 45;
 
 function h(html: string): HTMLElement {
   const t = document.createElement('template');
@@ -46,6 +50,7 @@ export function startOnline(app: App): void {
       <div class="btnrow" style="flex-direction:column">
         <button class="btn" data-k="quick">Быстрая игра<small>Случайная открытая комната</small></button>
         <button class="btn" data-k="create">Создать приватную комнату<small>Получите ссылку для друзей</small></button>
+        <button class="btn" data-k="freeroam">Свободная езда по городу<small>До 16 игроков · мигните фарами (H) рядом с соперником, чтобы вызвать на гонку</small></button>
       </div>
       <h2>Код комнаты</h2>
       <div class="row"><input type="text" maxlength="6" data-k="code" placeholder="ABC123" style="flex:1;text-transform:uppercase" />
@@ -57,6 +62,7 @@ export function startOnline(app: App): void {
     const q = (k: string) => el.querySelector(`[data-k="${k}"]`) as HTMLElement;
     q('quick').onclick = () => connect('quick', '');
     q('create').onclick = () => connect('create', '');
+    q('freeroam').onclick = () => connect('freeroam', 'moscow_synth');
     q('join').onclick = () =>
       connect('join', (q('code') as HTMLInputElement).value.trim().toUpperCase());
     q('back').onclick = () => {
@@ -65,7 +71,11 @@ export function startOnline(app: App): void {
     };
   };
 
-  const connect = async (mode: 'quick' | 'create' | 'join', code: string) => {
+  const connect = async (
+    mode: 'quick' | 'create' | 'join' | 'freeroam',
+    code: string,
+    opts: { autoReady?: boolean } = {},
+  ) => {
     const settings = loadSettings();
     show(
       h(`<div class="screen"><div class="menu panel"><p class="sub">Подключение…</p></div></div>`),
@@ -75,6 +85,36 @@ export function startOnline(app: App): void {
     let lobby: LobbyMsg | null = null;
     let race: OnlineRace | null = null;
     let ready = false;
+    let city: City | null = null;
+    let inviteEl: HTMLElement | null = null;
+    let pendingInvite: { from: number } | null = null;
+    const freeroam = mode === 'freeroam';
+
+    const reply = (accept: boolean) => {
+      if (!pendingInvite) return;
+      net.send({ type: Msg.ChallengeReply, from: pendingInvite.from, accept });
+      pendingInvite = null;
+      inviteEl?.remove();
+      inviteEl = null;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (!race || !freeroam) return;
+      if (e.code === 'KeyH') {
+        race.flashLights();
+        const t = race.nearestAhead(CHALLENGE_RANGE_CLIENT);
+        if (t) {
+          net.send({ type: Msg.Challenge, target: t.id });
+          app.toast(`Вызов отправлен: ${t.name}`);
+        }
+      }
+      if (e.code === 'KeyY') reply(true);
+      if (e.code === 'KeyN') reply(false);
+    };
+    window.addEventListener('keydown', onKey);
+    const cleanup = () => {
+      window.removeEventListener('keydown', onKey);
+      inviteEl?.remove();
+    };
 
     const fail = (text: string) => {
       race = null;
@@ -87,7 +127,47 @@ export function startOnline(app: App): void {
     };
 
     net.onClose = (reason) => {
-      if (race && !race.done) fail(`Соединение потеряно: ${reason}`);
+      cleanup();
+      if (race && !race.done && !switching) fail(`Соединение потеряно: ${reason}`);
+    };
+    let switching = false;
+
+    const makeRace = (players: LobbyMsg['players']) => {
+      const w = welcome!;
+      const slot = freeroam ? w.playerId % 8 : players.findIndex((p) => p.id === w.playerId);
+      race = new OnlineRace(
+        app.R,
+        {
+          mode: freeroam ? 'free' : 'circuit',
+          trackId: w.trackId,
+          carId: settings.carId,
+          bots: 0,
+          botLevel: 'medium',
+          laps: freeroam ? 999 : w.laps,
+          manual: settings.manual,
+          playerName: settings.playerName,
+          slot,
+          cityId: w.city || undefined,
+          weather: w.city ? settings.weather : 'dry',
+        },
+        app.quality,
+        app.root,
+        app.input,
+        net,
+        w.playerId,
+        freeroam ? [] : players,
+        city,
+      );
+      app.attach(race, {
+        online: true,
+        onResults: (r) => {
+          cleanup();
+          net.close();
+          setTimeout(() => app.showResultsPublic(r, () => startOnline(app)), 600);
+        },
+      });
+      race.session.start();
+      if (freeroam) app.toast('Свободная езда · H — мигнуть фарами / вызвать на гонку', 4);
     };
 
     const renderLobby = () => {
@@ -128,55 +208,73 @@ export function startOnline(app: App): void {
       };
     };
 
-    net.onMessage = (m: ServerMsg) => {
+    const handle = async (m: ServerMsg) => {
       if (m.type === Msg.Error) return fail(m.message);
       if (m.type === Msg.Welcome) {
         welcome = m;
+        if (m.city) city = await app.loadCityCached(m.city);
+        if (freeroam) {
+          close();
+          makeRace([]);
+          return;
+        }
         history.replaceState(
           null,
           '',
           `?room=${m.room}${location.search.replace(/^\?/, '&').replace(/&?room=[^&]*/, '')}`,
         );
+        if (opts.autoReady) {
+          ready = true;
+          net.send({ type: Msg.Ready, ready: true });
+        }
+        return;
+      }
+      if (m.type === Msg.ChallengeInvite) {
+        pendingInvite = { from: m.from };
+        inviteEl?.remove();
+        inviteEl = h(`<div class="invite panel"><b>${escapeHtml(m.name)}</b> вызывает на гонку
+          <div class="btnrow"><button class="btn" data-k="yes">Принять (Y)</button><button class="btn" data-k="no">Отказ (N)</button></div></div>`);
+        root.appendChild(inviteEl);
+        (inviteEl.querySelector('[data-k="yes"]') as HTMLElement).onclick = () => reply(true);
+        (inviteEl.querySelector('[data-k="no"]') as HTMLElement).onclick = () => reply(false);
+        const el = inviteEl;
+        setTimeout(() => {
+          if (inviteEl === el) {
+            el.remove();
+            inviteEl = null;
+            pendingInvite = null;
+          }
+        }, 12000);
+        return;
+      }
+      if (m.type === Msg.ChallengeStart) {
+        switching = true;
+        cleanup();
+        net.close();
+        app.endRace();
+        app.toast('Гонка-вызов!');
+        void connect('join', m.room, { autoReady: true });
         return;
       }
       if (m.type === Msg.Lobby) {
         lobby = m;
+        if (m.phase === 'freeroam') {
+          race?.syncPlayers(m.players);
+          return;
+        }
         if (m.phase === 'lobby') renderLobby();
         if (m.phase === 'countdown' && !race && welcome) {
           close();
-          const slot = m.players.findIndex((p) => p.id === welcome!.playerId);
-          race = new OnlineRace(
-            app.R,
-            {
-              mode: 'circuit',
-              trackId: welcome.trackId,
-              carId: settings.carId,
-              bots: 0,
-              botLevel: 'medium',
-              laps: welcome.laps,
-              manual: settings.manual,
-              playerName: settings.playerName,
-              slot,
-            },
-            app.quality,
-            app.root,
-            app.input,
-            net,
-            welcome.playerId,
-            m.players,
-          );
-          app.attach(race, {
-            online: true,
-            onResults: (r) => {
-              net.close();
-              setTimeout(() => app.showResultsPublic(r, () => startOnline(app)), 600);
-            },
-          });
-          race.session.start();
+          makeRace(m.players);
         }
         return;
       }
       race?.onServer(m);
+    };
+    // Сообщения обрабатываются строго по очереди (загрузка города асинхронная)
+    let chain = Promise.resolve();
+    net.onMessage = (m: ServerMsg) => {
+      chain = chain.then(() => handle(m)).catch((e) => console.error(e));
     };
 
     try {

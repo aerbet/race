@@ -57,6 +57,16 @@ describe('protocol', () => {
       { type: Msg.Ping, t: 123456.789 },
       { type: Msg.Leave },
       { type: Msg.StartNow },
+      { type: Msg.Challenge, target: 12 },
+      { type: Msg.ChallengeReply, from: 3, accept: true },
+      {
+        type: Msg.Hello,
+        version: PROTOCOL_VERSION,
+        name: 'x',
+        carId: 'c',
+        mode: 'freeroam',
+        room: 'moscow_synth',
+      },
     ];
     for (const m of msgs) expect(decodeClient(encodeClient(m))).toEqual(m);
     const st = decodeClient(encodeClient({ type: Msg.State, step: 4321, seq: 99, car }));
@@ -76,7 +86,10 @@ describe('protocol', () => {
         room: 'XYZ',
         trackId: 'polygon',
         laps: 3,
+        city: 'moscow_synth',
       },
+      { type: Msg.ChallengeInvite, from: 4, name: 'Вега', trackId: 'msk_sprint' },
+      { type: Msg.ChallengeStart, room: 'ABC123', trackId: 'msk_sprint' },
       {
         type: Msg.Lobby,
         phase: 'countdown',

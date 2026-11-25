@@ -69,6 +69,11 @@ export class App {
     return c;
   }
 
+  /** Короткое сообщение поверх HUD. */
+  toast(text: string, seconds = 2.5): void {
+    this.hud?.showToast(text, seconds);
+  }
+
   /** Закрыть текущий экран (меню, пауза, результаты). */
   closeScreens(): void {
     this.closeScreen?.();

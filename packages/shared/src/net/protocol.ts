@@ -1,12 +1,14 @@
 import { ProtocolError, Reader, Writer } from './codec';
 
 /** Версия протокола. Меняется при любом несовместимом изменении формата. */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 /** Частота сервера, Гц (снимки и обработка). */
 export const SERVER_TICK_HZ = 30;
 /** Частота отправки состояния клиентом, Гц. */
 export const CLIENT_SEND_HZ = 30;
 export const MAX_PLAYERS = 8;
+/** Свободная езда: игроков в одной зоне. */
+export const MAX_FREEROAM = 16;
 /** Через сколько секунд ожидания в комнату добавляются боты. */
 export const BOT_FILL_SECONDS = 30;
 
@@ -18,6 +20,9 @@ export enum Msg {
   Ping = 4,
   Leave = 5,
   StartNow = 6,
+  /** Вызов на гонку (мигнул фарами рядом с игроком). */
+  Challenge = 7,
+  ChallengeReply = 8,
   // Сервер → клиент
   Welcome = 64,
   Lobby = 65,
@@ -27,9 +32,11 @@ export enum Msg {
   Pong = 69,
   Correction = 70,
   Error = 71,
+  ChallengeInvite = 72,
+  ChallengeStart = 73,
 }
 
-export type JoinMode = 'quick' | 'create' | 'join';
+export type JoinMode = 'quick' | 'create' | 'join' | 'freeroam';
 
 export interface HelloMsg {
   type: Msg.Hello;
@@ -49,6 +56,8 @@ export const enum CarFlags {
   /** Машина была сброшена на трассу (разрешённый «телепорт»). */
   Reset = 8,
   Finished = 16,
+  /** Мигание фарами (вызов на гонку). */
+  Lights = 32,
 }
 
 /** Состояние машины — и в пакете клиента, и в снимке сервера. */
@@ -89,6 +98,8 @@ export interface WelcomeMsg {
   room: string;
   trackId: string;
   laps: number;
+  /** Город (пусто — полигон). */
+  city: string;
 }
 
 export interface LobbyPlayer {
@@ -100,8 +111,8 @@ export interface LobbyPlayer {
   ping: number;
 }
 
-export type RoomPhase = 'lobby' | 'countdown' | 'racing' | 'finished';
-export const ROOM_PHASES: RoomPhase[] = ['lobby', 'countdown', 'racing', 'finished'];
+export type RoomPhase = 'lobby' | 'countdown' | 'racing' | 'finished' | 'freeroam';
+export const ROOM_PHASES: RoomPhase[] = ['lobby', 'countdown', 'racing', 'finished', 'freeroam'];
 
 export interface LobbyMsg {
   type: Msg.Lobby;
@@ -185,7 +196,23 @@ export type ClientMsg =
   | StateMsg
   | PingMsg
   | { type: Msg.Leave }
-  | { type: Msg.StartNow };
+  | { type: Msg.StartNow }
+  | { type: Msg.Challenge; target: number }
+  | { type: Msg.ChallengeReply; from: number; accept: boolean };
+
+export interface ChallengeInviteMsg {
+  type: Msg.ChallengeInvite;
+  from: number;
+  name: string;
+  trackId: string;
+}
+
+/** Обе стороны согласились: идём в приватную комнату гонки. */
+export interface ChallengeStartMsg {
+  type: Msg.ChallengeStart;
+  room: string;
+  trackId: string;
+}
 
 export type ServerMsg =
   | WelcomeMsg
@@ -195,7 +222,9 @@ export type ServerMsg =
   | ResultsMsg
   | PongMsg
   | CorrectionMsg
-  | ErrorMsg;
+  | ErrorMsg
+  | ChallengeInviteMsg
+  | ChallengeStartMsg;
 
 // --- машина: 12×f32 позиции/скорости заменены на компактный формат: 41 байт
 function writeCar(w: Writer, c: CarState): void {
@@ -230,7 +259,7 @@ function readCar(r: Reader): CarState {
   };
 }
 
-const JOIN_MODES: JoinMode[] = ['quick', 'create', 'join'];
+const JOIN_MODES: JoinMode[] = ['quick', 'create', 'join', 'freeroam'];
 
 export function encodeClient(m: ClientMsg): Uint8Array {
   const w = new Writer(64);
@@ -251,6 +280,12 @@ export function encodeClient(m: ClientMsg): Uint8Array {
       break;
     case Msg.Leave:
     case Msg.StartNow:
+      break;
+    case Msg.Challenge:
+      w.u16(m.target);
+      break;
+    case Msg.ChallengeReply:
+      w.u16(m.from).u8(m.accept ? 1 : 0);
       break;
   }
   return w.finish();
@@ -278,6 +313,10 @@ export function decodeClient(data: Uint8Array): ClientMsg {
       return { type };
     case Msg.StartNow:
       return { type };
+    case Msg.Challenge:
+      return { type, target: r.u16() };
+    case Msg.ChallengeReply:
+      return { type, from: r.u16(), accept: r.u8() === 1 };
     default:
       throw new ProtocolError(`неизвестный тип сообщения клиента: ${type}`);
   }
@@ -288,7 +327,7 @@ export function encodeServer(m: ServerMsg): Uint8Array {
   w.u8(m.type);
   switch (m.type) {
     case Msg.Welcome:
-      w.u16(m.version).u16(m.playerId).str(m.room).str(m.trackId).u8(m.laps);
+      w.u16(m.version).u16(m.playerId).str(m.room).str(m.trackId).u8(m.laps).str(m.city);
       break;
     case Msg.Lobby:
       w.u8(ROOM_PHASES.indexOf(m.phase)).f32(m.timer).u16(m.hostId).u8(m.players.length);
@@ -331,6 +370,12 @@ export function encodeServer(m: ServerMsg): Uint8Array {
     case Msg.Error:
       w.str(m.code).str(m.message);
       break;
+    case Msg.ChallengeInvite:
+      w.u16(m.from).str(m.name).str(m.trackId);
+      break;
+    case Msg.ChallengeStart:
+      w.str(m.room).str(m.trackId);
+      break;
   }
   return w.finish();
 }
@@ -347,6 +392,7 @@ export function decodeServer(data: Uint8Array): ServerMsg {
         room: r.str(),
         trackId: r.str(),
         laps: r.u8(),
+        city: r.str(),
       };
     case Msg.Lobby: {
       const phase = ROOM_PHASES[r.u8()] ?? 'lobby';
@@ -405,6 +451,10 @@ export function decodeServer(data: Uint8Array): ServerMsg {
       return { type, reason: r.str(), car: readCar(r) };
     case Msg.Error:
       return { type, code: r.str(), message: r.str() };
+    case Msg.ChallengeInvite:
+      return { type, from: r.u16(), name: r.str(), trackId: r.str() };
+    case Msg.ChallengeStart:
+      return { type, room: r.str(), trackId: r.str() };
     default:
       throw new ProtocolError(`неизвестный тип сообщения сервера: ${type}`);
   }

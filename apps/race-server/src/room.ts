@@ -75,6 +75,10 @@ export interface RoomOptions {
   laps?: number;
   isPrivate?: boolean;
   botFillSeconds?: number;
+  /** Город, по улицам которого идёт трасса. */
+  cityId?: string;
+  /** До скольких участников добивать ботами (вызов фарами — 2, без ботов). */
+  minRacers?: number;
 }
 
 export class Room {
@@ -84,6 +88,8 @@ export class Room {
   readonly track: BuiltTrack;
   readonly laps: number;
   readonly isPrivate: boolean;
+  readonly cityId: string;
+  readonly minRacers: number;
   readonly botFillSteps: number;
   tracker: RaceTracker | null = null;
   sim: Sim | null = null;
@@ -101,6 +107,8 @@ export class Room {
     opts: RoomOptions = {},
   ) {
     this.track = getTrack(opts.trackId ?? 'polygon');
+    this.cityId = opts.cityId ?? '';
+    this.minRacers = opts.minRacers ?? MIN_RACERS;
     this.laps = opts.laps ?? this.track.def.laps;
     this.isPrivate = !!opts.isPrivate;
     this.botFillSteps = (opts.botFillSeconds ?? BOT_FILL_SECONDS) * PHYSICS_HZ;
@@ -145,6 +153,7 @@ export class Room {
       room: this.code,
       trackId: this.track.def.id,
       laps: this.laps,
+      city: this.cityId,
     });
     this.broadcastLobby();
     return p;
@@ -220,7 +229,7 @@ export class Room {
     this.sim = new Sim(this.R, this.track);
     const sim = this.sim;
     this.reslot();
-    const toAdd = Math.max(0, Math.min(MAX_PLAYERS, MIN_RACERS) - this.humans.size);
+    const toAdd = Math.max(0, Math.min(MAX_PLAYERS, this.minRacers) - this.humans.size);
     let slot = this.humans.size;
     for (let i = 0; i < toAdd; i++) {
       const carId = CAR_IDS[i % CAR_IDS.length]!;

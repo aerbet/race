@@ -142,6 +142,24 @@ try {
   });
   check('онлайн: гонка с ботами сервера', !!online && online.remotes >= 3, JSON.stringify(online));
 
+  // 6. Свободная езда по городу (онлайн)
+  await page.goto(base);
+  await page.waitForSelector('[data-k="online"]');
+  await page.click('[data-k="online"]');
+  await page.click('[data-k="freeroam"]');
+  await page.waitForTimeout(5000);
+  const fr = await page.evaluate(() => {
+    const r = window.__app.current;
+    return r
+      ? { mode: r.setup.mode, city: r.setup.cityId, tiles: r.session.cityView?.loadedCount ?? 0 }
+      : null;
+  });
+  check(
+    'онлайн: свободная езда по городу',
+    !!fr && fr.mode === 'free' && fr.city === 'moscow_synth' && fr.tiles > 0,
+    JSON.stringify(fr),
+  );
+
   check('нет ошибок на странице', errors.length === 0, errors.slice(0, 3).join(' | '));
   await browser.close();
 } catch (e) {

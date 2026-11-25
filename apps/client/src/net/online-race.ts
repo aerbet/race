@@ -5,6 +5,7 @@ import {
   RaceEventType,
   getCar,
   type CarState,
+  type City,
   type LobbyPlayer,
   type ServerMsg,
 } from '@sr/shared';
@@ -60,46 +61,96 @@ export class OnlineRace extends RaceController {
     readonly net: NetClient,
     readonly myId: number,
     players: LobbyPlayer[],
+    city: City | null = null,
   ) {
-    super(R, setup, quality, container, input);
+    super(R, setup, quality, container, input, city);
     this.localResults = false;
     const p0 = this.player.vehicle.position;
     this.lastPos.set(p0.x, p0.y, p0.z);
-    let k = 0;
-    players.forEach((p, slot) => {
-      if (p.id === myId) return;
-      const cfg = getCar(p.carId);
-      const color = REMOTE_COLORS[k++ % REMOTE_COLORS.length]!;
-      const view = new CarView(cfg, { color, neon: 0xff2bd6 });
-      this.session.gfx.scene.add(view.root);
-      const g = this.session.track.grid[slot]!;
-      view.root.position.set(g.x, 0.8, g.z);
-      view.root.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), g.yaw);
-      const proxy = this.session.sim.addProxy(cfg, g.x, g.z);
-      this.remotes.set(p.id, {
-        id: p.id,
-        name: p.name,
-        bot: p.bot,
-        view,
-        proxy,
-        buf: new InterpBuffer(),
-        lap: 0,
-        position: 0,
-        color: '#' + color.toString(16).padStart(6, '0'),
-        spin: 0,
-        audio: (() => {
-          const a = audio();
-          return a ? new CarAudio(a.ctx, cfg.engine.sound, a.master, 0) : null;
-        })(),
-      });
-      this.names.set(String(p.id), p.name);
-    });
+    players.forEach((p, slot) => this.addRemote(p, slot));
     const prevAfter = this.session.hooks.afterStep!;
     this.session.hooks.afterStep = (step) => {
       prevAfter(step);
       this.netStep();
     };
   }
+
+  private colorIdx = 0;
+
+  /** Добавить чужую машину (в гонке — на её слот решётки, в свободной езде — по первому снимку). */
+  addRemote(p: LobbyPlayer, slot: number): void {
+    if (p.id === this.myId || this.remotes.has(p.id)) return;
+    const cfg = getCar(p.carId);
+    const color = REMOTE_COLORS[this.colorIdx++ % REMOTE_COLORS.length]!;
+    const view = new CarView(cfg, { color, neon: 0xff2bd6 });
+    this.session.gfx.scene.add(view.root);
+    const g0 = this.session.track.grid[slot % this.session.track.grid.length]!;
+    // Свободная езда: до первого снимка машина «спрятана» под землёй — не сталкиваемся вслепую
+    const g =
+      this.setup.mode === 'free' ? { x: g0.x, z: g0.z, yaw: g0.yaw, y: -50 } : { ...g0, y: 0.8 };
+    view.root.position.set(g.x, g.y, g.z);
+    view.root.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), g.yaw);
+    const proxy = this.session.sim.addProxy(cfg, g.x, g.z);
+    if (g.y < 0)
+      this.session.sim.moveProxy(proxy, { x: g.x, y: g.y, z: g.z }, { x: 0, y: 0, z: 0, w: 1 });
+    this.remotes.set(p.id, {
+      id: p.id,
+      name: p.name,
+      bot: p.bot,
+      view,
+      proxy,
+      buf: new InterpBuffer(),
+      lap: 0,
+      position: 0,
+      color: '#' + color.toString(16).padStart(6, '0'),
+      spin: 0,
+      audio: (() => {
+        const a = audio();
+        return a ? new CarAudio(a.ctx, cfg.engine.sound, a.master, 0) : null;
+      })(),
+    });
+    this.names.set(String(p.id), p.name);
+  }
+
+  removeRemote(id: number): void {
+    const r = this.remotes.get(id);
+    if (!r) return;
+    this.session.gfx.scene.remove(r.view.root);
+    this.session.sim.removeProxy(r.proxy);
+    r.audio?.dispose();
+    this.remotes.delete(id);
+  }
+
+  /** Свободная езда: состав игроков меняется на лету. */
+  syncPlayers(players: LobbyPlayer[]): void {
+    const ids = new Set(players.map((p) => p.id));
+    for (const id of [...this.remotes.keys()]) if (!ids.has(id)) this.removeRemote(id);
+    players.forEach((p) => this.addRemote(p, p.id));
+  }
+
+  /** Ближайшая чужая машина в радиусе (для вызова фарами); только с известной позицией. */
+  nearestAhead(range: number): { id: number; name: string } | null {
+    const p = this.player.vehicle.position;
+    let best: { id: number; name: string } | null = null;
+    let bestD = range;
+    for (const r of this.remotes.values()) {
+      if (r.bot || !r.buf.latest) continue;
+      const q = r.view.root.position;
+      const d = Math.hypot(q.x - p.x, q.z - p.z);
+      if (d < bestD) {
+        bestD = d;
+        best = { id: r.id, name: r.name };
+      }
+    }
+    return best;
+  }
+
+  /** Мигнуть фарами (видно другим через флаг в состоянии). */
+  flashLights(): void {
+    this.flashUntil = performance.now() + 600;
+    this.player.view.flash(0.6);
+  }
+  private flashUntil = 0;
 
   onServer(m: ServerMsg): void {
     switch (m.type) {
@@ -218,6 +269,7 @@ export class OnlineRace extends RaceController {
       if (t.nitroActive) flags |= CarFlags.Nitro;
       if (inp.handbrake > 0.5) flags |= CarFlags.Handbrake;
       if (this.resetPending) flags |= CarFlags.Reset;
+      if (performance.now() < this.flashUntil) flags |= CarFlags.Lights;
       if (this.playerState().finished) flags |= CarFlags.Finished;
       this.resetPending = false;
       this.net.send({
@@ -254,6 +306,7 @@ export class OnlineRace extends RaceController {
       r.view.root.position.set(st.x, st.y, st.z);
       r.view.root.quaternion.set(st.qx, st.qy, st.qz, st.qw);
       r.view.setBraking(!!(st.flags & CarFlags.Brake));
+      if (st.flags & CarFlags.Lights) r.view.flash(0.2);
       r.view.setNitro(!!(st.flags & CarFlags.Nitro), performance.now() / 1000);
       // Колёса: поворот по рулю, вращение по скорости
       const cfg = r.view.cfg;
@@ -299,6 +352,7 @@ export class OnlineRace extends RaceController {
   }
 
   override positionInfo(): { position: number; total: number } {
+    if (this.setup.mode === 'free') return { position: 1, total: 1 };
     const total = this.remotes.size + 1;
     return { position: this.serverPosition || super.positionInfo().position, total };
   }
