@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/racer_test}
+  flyway:
+    clean-disabled: false
+  data:
+    redis:
+      database: 1
+app:
+  telegram:
+    bot-token: test-bot-token
+  internal-key: test-internal-key

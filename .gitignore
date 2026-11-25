@@ -7,3 +7,4 @@ coverage
 test-results
 playwright-report
 tools/osm-to-city/data/
+apps/api/target/

@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/racer}
+    username: ${DB_USER:racer}
+    password: ${DB_PASSWORD:racer}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DB:0}
+server:
+  port: ${PORT:8080}
+app:
+  jwt:
+    # HS256: не меньше 32 байт. В продакшене — только через переменную окружения.
+    secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
+    ttl-hours: ${JWT_TTL_HOURS:168}
+  telegram:
+    bot-token: ${TELEGRAM_BOT_TOKEN:}
+  internal-key: ${INTERNAL_KEY:dev-internal-key}
+  # Сервис повторной проверки заездов (race-server, детерминированный реплей)
+  verifier-url: ${VERIFIER_URL:http://localhost:2567/verify}
+  cors-origins: ${CORS_ORIGINS:http://localhost:5173}
+  starting-credits: 20000
