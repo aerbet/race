@@ -21,6 +21,8 @@ export interface BuildOptions {
   attribution?: string;
   blockSize?: number;
   tracks?: TrackDef[];
+  /** Стиль застройки: палитра фасадов и плотность неона в клиенте. */
+  style?: 'moscow' | 'tokyo';
 }
 
 export interface BuildResult {
@@ -42,7 +44,16 @@ const ROAD_RANK: Record<string, number> = {
 };
 
 /** Палитра фасадов «по мотивам Москвы»: охра, беж, серый панельный, кирпич, белый. */
-const FACADES: [number, number, number][] = [
+/** Палитра «по мотивам Токио»: светлый бетон, стекло, тёмная плитка. */
+const FACADES_TOKYO: [number, number, number][] = [
+  [0.82, 0.83, 0.86],
+  [0.55, 0.6, 0.68],
+  [0.38, 0.42, 0.5],
+  [0.9, 0.9, 0.88],
+  [0.62, 0.58, 0.55],
+  [0.3, 0.33, 0.38],
+];
+const FACADES_MOSCOW: [number, number, number][] = [
   [0.78, 0.66, 0.48],
   [0.86, 0.8, 0.68],
   [0.62, 0.63, 0.66],
@@ -155,9 +166,17 @@ function addRoad(
 }
 
 /** Здание: стены с UV под сетку окон (u — метры/4, v — этажи) и плоская крыша. */
-function addBuilding(walls: MeshBuilder, roofs: MeshBuilder, fp: P[], h: number, seed: number) {
+function addBuilding(
+  walls: MeshBuilder,
+  roofs: MeshBuilder,
+  fp: P[],
+  h: number,
+  seed: number,
+  style: 'moscow' | 'tokyo' = 'moscow',
+) {
   const pts = polygonArea(fp) < 0 ? fp.slice().reverse() : fp; // против часовой (в плоскости x,z)
-  const base = FACADES[Math.floor(hash(seed) * FACADES.length)]!;
+  const pal = style === 'tokyo' ? FACADES_TOKYO : FACADES_MOSCOW;
+  const base = pal[Math.floor(hash(seed) * pal.length)]!;
   const shade = 0.85 + hash(seed + 7) * 0.2;
   const col: [number, number, number] = [base[0] * shade, base[1] * shade, base[2] * shade];
   let u = 0;
@@ -291,7 +310,7 @@ export function buildCity(
   for (const b of buildings) {
     const c = centroid(b.footprint);
     const t = tileAt(c[0], c[1]);
-    addBuilding(t.walls, t.roofs, b.footprint, b.height, b.id);
+    addBuilding(t.walls, t.roofs, b.footprint, b.height, b.id, opt.style);
     t.colliders.push(...buildingColliders(b.footprint, b.height));
     t.buildings++;
   }
@@ -336,6 +355,7 @@ export function buildCity(
     roads,
     tiles: cityTiles.sort((a, b) => a.j - b.j || a.i - b.i),
     tracks: opt.tracks ?? [],
+    style: opt.style ?? 'moscow',
   };
   return { city, files };
 }

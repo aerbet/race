@@ -57,6 +57,8 @@ export const CitySchema = z.object({
   tiles: z.array(CityTileSchema),
   /** Трассы на улицах города. */
   tracks: z.array(TrackDefSchema).default([]),
+  /** Стиль: палитра и плотность неона. */
+  style: z.enum(['moscow', 'tokyo']).default('moscow'),
 });
 
 export type CityRoad = z.infer<typeof CityRoadSchema>;

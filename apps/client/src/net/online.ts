@@ -52,7 +52,8 @@ export function startOnline(app: App): void {
       <div class="btnrow" style="flex-direction:column">
         <button class="btn" data-k="quick">Быстрая игра<small>Случайная открытая комната</small></button>
         <button class="btn" data-k="create">Создать приватную комнату<small>Получите ссылку для друзей</small></button>
-        <button class="btn" data-k="freeroam">Свободная езда по городу<small>До 16 игроков · мигните фарами (H) рядом с соперником, чтобы вызвать на гонку</small></button>
+        <button class="btn" data-k="freeroam">Свободная езда: Москва<small>До 16 игроков · мигните фарами (H) рядом с соперником, чтобы вызвать на гонку</small></button>
+        <button class="btn" data-k="freeroam_tyo">Свободная езда: Токио<small>Неоновый квартал, вызов фарами (H)</small></button>
       </div>
       <h2>Код комнаты</h2>
       <div class="row"><input type="text" maxlength="6" data-k="code" placeholder="ABC123" style="flex:1;text-transform:uppercase" />
@@ -65,6 +66,7 @@ export function startOnline(app: App): void {
     q('quick').onclick = () => connect('quick', '');
     q('create').onclick = () => connect('create', '');
     q('freeroam').onclick = () => connect('freeroam', 'moscow_synth');
+    q('freeroam_tyo').onclick = () => connect('freeroam', 'tokyo_synth');
     q('join').onclick = () =>
       connect('join', (q('code') as HTMLInputElement).value.trim().toUpperCase());
     q('back').onclick = () => {

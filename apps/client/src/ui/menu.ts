@@ -28,6 +28,13 @@ const CITY_TRACKS: Record<string, Record<ModeId, string>> = {
     timeattack: 'msk_ring',
     free: 'msk_ring',
   },
+  tokyo_synth: {
+    circuit: 'tyo_ring',
+    sprint: 'tyo_sprint',
+    drift: 'tyo_drift',
+    timeattack: 'tyo_ring',
+    free: 'tyo_ring',
+  },
 };
 
 /** Локации без города (горные трассы): все режимы на одной трассе. */

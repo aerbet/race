@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { parseOverpass, type OverpassJson } from './osm';
 import { buildCity } from './build';
 import { synthDistrict, synthTracks } from './synth';
+import { synthTokyo, tokyoTracks } from './synth-tokyo';
 import type { TrackDef } from '@sr/shared';
 
 const args = process.argv.slice(2);
@@ -41,7 +42,14 @@ let data: OverpassJson;
 let attribution: string | undefined;
 let tracks: TrackDef[] = [];
 let origin: { lat: number; lon: number } | undefined;
-if (args.includes('--synth')) {
+let style: 'moscow' | 'tokyo' = 'moscow';
+if (arg('synth') === 'tokyo') {
+  data = synthTokyo(Number(arg('seed') ?? 7), half * 0.76);
+  attribution = 'Процедурный квартал (собственные данные)';
+  tracks = tokyoTracks(half * 0.76);
+  origin = { lat: 35.68, lon: 139.76 };
+  style = 'tokyo';
+} else if (args.includes('--synth')) {
   data = synthDistrict(Number(arg('seed') ?? 1), half * 0.9);
   attribution = 'Процедурный район (собственные данные)';
   tracks = synthTracks(half * 0.9);
@@ -65,6 +73,7 @@ const { city, files } = buildCity(parsed.roads, parsed.buildings, {
   origin: { lat: parsed.lat0, lon: parsed.lon0 },
   attribution,
   tracks,
+  style,
 });
 const out = join(root, 'apps/client/public/cities', id);
 mkdirSync(join(out, 'tiles'), { recursive: true });

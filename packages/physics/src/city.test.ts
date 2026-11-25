@@ -77,3 +77,59 @@ describe('city tracks', { timeout: 120_000 }, () => {
     sim.dispose();
   });
 });
+
+const tokyo = parseCity(
+  JSON.parse(
+    readFileSync(
+      new URL('../../../apps/client/public/cities/tokyo_synth/city.json', import.meta.url),
+      'utf8',
+    ),
+  ),
+);
+
+describe('tokyo tracks', { timeout: 120_000 }, () => {
+  it.each(tokyo.tracks.map((t) => [t.id, t] as const))(
+    'bot finishes %s among buildings',
+    (_id, def) => {
+      const track = buildTrack({ ...def, laps: 1 });
+      const sim = new Sim(R, track);
+      const car = sim.addCar(CARS.era2026_hatch!, 0);
+      const cc = new CityColliders(tokyo, sim);
+      const race = new RaceTracker(track, 1, 0);
+      race.addRacer('b', car.position.x, car.position.z);
+      const bot = new Bot(car, track, { level: 'medium' });
+      let resets = 0;
+      let wallSteps = 0;
+      for (let s = 0; s < 60 * 240 && race.phase !== 'finished'; s++) {
+        if (s % 10 === 0) cc.update([car.position]);
+        if (car.needsReset) resets++;
+        sim.tick([bot.think()]);
+        if (car.wallContact) wallSteps++;
+        const p = car.position;
+        const v = car.body.linvel();
+        race.updateRacer('b', p.x, p.z, v.x, v.z);
+        race.tick();
+      }
+      const r = race.racers.get('b')!;
+      if (process.env.MEASURE)
+        console.log(
+          def.id,
+          r.finishStep / 60,
+          'resets',
+          resets,
+          'wall',
+          wallSteps,
+          'pos',
+          car.position,
+          'cp',
+          r.nextCp,
+          'grid',
+          track.grid[0],
+        );
+      sim.dispose();
+      expect(r.finished).toBe(true);
+      expect(resets).toBe(0);
+      expect(wallSteps).toBeLessThan(60);
+    },
+  );
+});

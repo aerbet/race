@@ -12,7 +12,10 @@ export async function loadCity(id: string): Promise<City> {
   return city;
 }
 
-export const CITIES = [{ id: 'moscow_synth', name: 'Москва (процедурная)', country: 'Россия' }];
+export const CITIES = [
+  { id: 'moscow_synth', name: 'Москва (процедурная)', country: 'Россия' },
+  { id: 'tokyo_synth', name: 'Токио (процедурный)', country: 'Япония' },
+];
 
 function canvasTexture(
   w: number,
@@ -251,24 +254,59 @@ export class CityView {
   }
 
   /** Неоновые вывески на фасадах, обращённых к дороге (из коллайдеров блока). */
+  private signMats = new Map<number, THREE.MeshBasicMaterial>();
+  private signMat(c: number): THREE.MeshBasicMaterial {
+    let m = this.signMats.get(c);
+    if (!m) {
+      m = new THREE.MeshBasicMaterial({ color: c, toneMapped: false });
+      this.signMats.set(c, m);
+    }
+    return m;
+  }
+
+  /**
+   * Неоновые вывески на фасадах (по коллайдерам блока): горизонтальные над первым этажом,
+   * в стиле «Токио» — чаще и ещё вертикальные «столбы» на углах.
+   */
   private signsFor(tile: City['tiles'][number]): THREE.Object3D {
     const g = new THREE.Group();
-    const colors = [0xff2bd6, 0x29e0ff, 0x8cff3a, 0xffb02b, 0xff4d5e];
+    const tokyo = this.city.style === 'tokyo';
+    const colors = tokyo
+      ? [0xff2bd6, 0x29e0ff, 0xff4d5e, 0xffe14d, 0x8cff3a, 0xb56dff]
+      : [0xff2bd6, 0x29e0ff, 0x8cff3a, 0xffb02b, 0xff4d5e];
+    const every = tokyo ? 2 : 4;
     tile.colliders.forEach(([cx, cz, hx, hz, yaw, h], k) => {
-      if ((tile.i * 31 + tile.j * 17 + k) % 4 !== 0 || hx < 3 || h < 9) return;
-      const geo = new THREE.BoxGeometry(Math.min(hx, hz) * 1.2, 1.1, 0.25);
-      const sign = new THREE.Mesh(
-        geo,
-        new THREE.MeshBasicMaterial({ color: colors[k % colors.length]!, toneMapped: false }),
-      );
-      // На длинную сторону бокса
+      if ((tile.i * 31 + tile.j * 17 + k) % every !== 0 || Math.max(hx, hz) < 3 || h < 9) return;
       const longX = hx >= hz;
       const nx = longX ? Math.sin(yaw) : Math.cos(yaw);
       const nz = longX ? Math.cos(yaw) : -Math.sin(yaw);
       const d = (longX ? hz : hx) + 0.2;
+      const rot = longX ? yaw : yaw + Math.PI / 2;
+      const sign = new THREE.Mesh(
+        new THREE.BoxGeometry(Math.min(Math.max(hx, hz) * 1.2, 14), 1.1, 0.25),
+        this.signMat(colors[k % colors.length]!),
+      );
       sign.position.set(cx + nx * d, Math.min(h - 1.5, 5 + (k % 3) * 2.5), cz + nz * d);
-      sign.rotation.y = longX ? yaw : yaw + Math.PI / 2;
+      sign.rotation.y = rot;
       g.add(sign);
+      if (tokyo && h > 20 && k % 3 !== 2) {
+        // Вертикальная вывеска у края фасада
+        const tx = longX ? Math.cos(yaw) : -Math.sin(yaw);
+        const tz = longX ? -Math.sin(yaw) : -Math.cos(yaw);
+        const side = (longX ? hx : hz) - 0.8;
+        const vh = Math.min(h * 0.5, 16);
+        const v = new THREE.Mesh(
+          new THREE.BoxGeometry(0.9, vh, 0.35),
+          this.signMat(colors[(k + 2) % colors.length]!),
+        );
+        v.position.set(
+          cx + nx * (d + 0.5) + tx * side,
+          8 + vh / 2,
+          cz + nz * (d + 0.5) + tz * side,
+        );
+        v.rotation.y = rot;
+        g.add(v);
+      }
     });
     return g;
   }
