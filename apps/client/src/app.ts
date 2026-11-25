@@ -10,6 +10,7 @@ import { showMenu, showPause, showResults } from './ui/menu';
 import { DebugPanel } from './ui/debug-panel';
 import { InputDebug } from './ui/input-debug';
 import { CarAudio, audio } from './audio/engine-audio';
+import { MusicWidget } from './ui/music-ui';
 import { account } from './meta/account';
 import { ApiError, activeCar, api } from './meta/api';
 import {
@@ -56,6 +57,7 @@ export class App {
     this.pauseBtn.onclick = () => this.togglePause();
     root.appendChild(this.pauseBtn);
     window.addEventListener('keydown', (e) => this.onKey(e));
+    new MusicWidget(root);
   }
 
   private onKey(e: KeyboardEvent): void {

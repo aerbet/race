@@ -670,3 +670,63 @@ body.touch-ui .hud-attr {
   min-height: 110px;
   margin: 14px 0;
 }
+
+/* Плеер своей музыки */
+.music {
+  position: fixed;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(6, 8, 18, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font: 12px var(--font);
+  max-width: calc(100vw - 340px);
+}
+.music .mbtn {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 3px 5px;
+}
+.music .mbtn.active {
+  color: var(--accent);
+}
+.music .mname {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.music.on .mname {
+  color: var(--accent);
+}
+.music:not(.has) [data-k='prev'],
+.music:not(.has) [data-k='play'],
+.music:not(.has) [data-k='next'],
+.music:not(.has) [data-k='shuffle'],
+.music:not(.has) [data-k='vol'] {
+  display: none;
+}
+.music input[type='range'] {
+  width: 60px;
+  padding: 0;
+}
+@media (max-width: 720px) {
+  .music {
+    top: auto;
+    bottom: 4px;
+    max-width: 60vw;
+  }
+  .music .mname {
+    max-width: 80px;
+  }
+}
