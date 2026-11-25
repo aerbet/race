@@ -1,0 +1,85 @@
+{
+  "id": "era2026_hatch",
+  "name": "Arden Hexa RS",
+  "era": "2026",
+  "drive": "awd",
+  "awdRearShare": 0.62,
+  "mass": 1480,
+  "body": { "width": 1.82, "height": 1.42, "length": 4.15 },
+  "centerOfMass": { "y": -0.28, "z": -0.05 },
+  "inertiaScale": 1.0,
+  "wheels": { "radius": 0.33, "width": 0.24, "wheelbase": 2.62, "track": 1.56, "mountY": -0.22 },
+  "suspension": {
+    "restLength": 0.38,
+    "travel": 0.2,
+    "stiffness": 52000,
+    "damping": 4300,
+    "antiRoll": 17000
+  },
+  "engine": {
+    "idleRpm": 850,
+    "redlineRpm": 7000,
+    "torqueCurve": [
+      [850, 220],
+      [2000, 420],
+      [5000, 430],
+      [6200, 390],
+      [7000, 330]
+    ],
+    "engineBrake": 90,
+    "sound": "v6"
+  },
+  "gearbox": {
+    "ratios": [3.6, 2.3, 1.65, 1.28, 1.02, 0.84, 0.7],
+    "reverse": 3.3,
+    "final": 3.7,
+    "shiftTime": 0.08,
+    "autoUpRpm": 6600,
+    "autoDownRpm": 3000
+  },
+  "tires": {
+    "longitudinal": [
+      [0, 0],
+      [0.12, 1.25],
+      [0.3, 1.08],
+      [1, 0.9]
+    ],
+    "lateral": [
+      [0, 0],
+      [6, 1.15],
+      [12, 1.2],
+      [30, 1.0],
+      [90, 0.85]
+    ],
+    "frontGrip": 1.05,
+    "rearGrip": 1.0,
+    "rollingResistance": 0.012
+  },
+  "brakes": { "maxForce": 16500, "frontBias": 0.6, "handbrakeForce": 6000 },
+  "aero": { "drag": 0.4, "downforce": 0.9 },
+  "steering": { "maxAngleDeg": 33, "keyboardRate": 4.5, "keyboardReturnRate": 6 },
+  "assists": {
+    "speedSteer": { "enabled": true, "minAngleDeg": 6.5, "speedRefKmh": 190 },
+    "turnAssist": { "enabled": true, "yawAccel": 1.4 },
+    "driftInit": { "enabled": true, "rearGripScale": 0.48, "minSpeedKmh": 40, "attackRate": 4.5 },
+    "driftHold": {
+      "enabled": true,
+      "minAngleDeg": 20,
+      "maxAngleDeg": 45,
+      "strength": 8,
+      "speedKeep": 0.7
+    },
+    "driftExit": { "enabled": true, "recoverRate": 1.8, "yawDamp": 3 },
+    "airStabilize": { "enabled": true, "strength": 14, "damping": 4 },
+    "softWalls": { "enabled": true, "friction": 0.05, "restitution": 0.15 },
+    "autoReset": { "enabled": true, "seconds": 3 }
+  },
+  "nitro": {
+    "capacity": 2.6,
+    "boost": 0.3,
+    "chargePerDriftSecond": 0.2,
+    "chargePerAirSecond": 0.35,
+    "chargePerOvertake": 0.15
+  },
+  "specs": { "zeroTo100": 4.9, "topSpeedKmh": 255 }
+}
