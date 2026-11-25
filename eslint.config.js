@@ -8,6 +8,19 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
+    // Дымовые тесты — обычный JS для Node, внутри evaluate() — код браузера
+    files: ['e2e/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        window: 'readonly',
+      },
+    },
+  },
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',
