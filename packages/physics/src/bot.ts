@@ -33,8 +33,8 @@ export class Bot {
   rubberBand: boolean;
   /** Отставание от лидера в метрах (заполняет гоночная логика, если rubberBand). */
   gapToLeader = 0;
-  /** Другие машины — для объезда. */
-  others: Vehicle[] = [];
+  /** Другие машины (свои и сетевые тени) — для объезда. */
+  others: { position: { x: number; z: number } }[] = [];
 
   constructor(
     readonly car: Vehicle,
@@ -87,7 +87,7 @@ export class Bot {
     let offset = this.lane + inside;
     // Объезд машины впереди
     for (const o of this.others) {
-      if (o === car) continue;
+      if (o === (car as unknown)) continue;
       const op = o.position;
       const oc = trackCoords(this.track, op.x, op.z);
       let ds = oc.s - c.s;

@@ -3,6 +3,14 @@ import { FIXED_DT, quantizeInput, trackCoords, sampleAt } from '@sr/shared';
 import type { Rapier } from './rapier';
 import { createLevel, type PhysicsLevel } from './world';
 import { Vehicle, type VehicleOptions } from './vehicle';
+import type { RigidBody } from '@dimforge/rapier3d-compat';
+import { GROUP_CAR, GROUP_STATIC, groups } from './world';
+
+/** Чужая машина, положение которой задаётся извне (сеть): кинематическое тело. */
+export interface ProxyCar {
+  body: RigidBody;
+  position: { x: number; y: number; z: number };
+}
 
 /** Мир физики: уровень + машины. Один шаг = 1/60 с. */
 export class Sim {
@@ -13,6 +21,7 @@ export class Sim {
   private hints: number[] = [];
   /** Последняя «безопасная» дистанция на трассе для каждой машины — для автосброса. */
   readonly lastSafeS: number[] = [];
+  readonly proxies: ProxyCar[] = [];
 
   constructor(
     readonly R: Rapier,
@@ -28,6 +37,43 @@ export class Sim {
     this.hints.push(-1);
     this.lastSafeS.push(trackCoords(this.track, g.x, g.z).s);
     return v;
+  }
+
+  /** Добавить кинематическую «тень» машины (удалённый игрок). */
+  addProxy(cfg: CarConfig, x: number, z: number): ProxyCar {
+    const R = this.R;
+    const body = this.level.world.createRigidBody(
+      R.RigidBodyDesc.kinematicPositionBased().setTranslation(x, 1, z),
+    );
+    const b = cfg.body;
+    this.level.world.createCollider(
+      R.ColliderDesc.cuboid(b.width / 2, (b.height / 2) * 0.6, b.length / 2)
+        .setTranslation(0, b.height * 0.12, 0)
+        .setFriction(0.05)
+        .setCollisionGroups(groups(GROUP_CAR, GROUP_STATIC | GROUP_CAR)),
+      body,
+    );
+    const proxy: ProxyCar = { body, position: { x, y: 1, z } };
+    this.proxies.push(proxy);
+    return proxy;
+  }
+
+  /** Положение тени на следующий шаг. */
+  moveProxy(
+    p: ProxyCar,
+    pos: { x: number; y: number; z: number },
+    rot: { x: number; y: number; z: number; w: number },
+  ): void {
+    p.body.setNextKinematicTranslation(pos);
+    p.body.setNextKinematicRotation(rot);
+    p.position = { ...pos };
+  }
+
+  removeProxy(p: ProxyCar): void {
+    const i = this.proxies.indexOf(p);
+    if (i < 0) return;
+    this.level.world.removeRigidBody(p.body);
+    this.proxies.splice(i, 1);
   }
 
   removeCar(v: Vehicle): void {
