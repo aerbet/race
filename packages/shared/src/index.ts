@@ -8,3 +8,4 @@ export * from './race/index';
 export * from './net/index';
 export * from './city/index';
 export * from './tuning/index';
+export * from './story/index';

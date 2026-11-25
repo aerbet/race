@@ -10,7 +10,20 @@ import org.springframework.web.client.RestClient;
 /** Повтор заезда на сервере гонок (та же физика, что у клиента) — единственный источник правды о времени. */
 @Component
 public class ReplayVerifier {
-  private final RestClient http = RestClient.create();
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReplayVerifier.class);
+  /**
+   * Только HTTP/1.1: JDK-клиент по умолчанию пробует апгрейд до h2c, а WebSocket-сервер гонок
+   * перехватывает любой Upgrade и отвечает 405.
+   */
+  private final RestClient http =
+      RestClient.builder()
+          .requestFactory(
+              new org.springframework.http.client.JdkClientHttpRequestFactory(
+                  java.net.http.HttpClient.newBuilder()
+                      .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                      .connectTimeout(java.time.Duration.ofSeconds(5))
+                      .build()))
+          .build();
   private final AppProperties props;
 
   public ReplayVerifier(AppProperties props) {
@@ -32,6 +45,7 @@ public class ReplayVerifier {
       if (r == null) return new Verdict(false, false, 0, "empty");
       return new Verdict(r.path("ok").asBoolean(), r.path("finished").asBoolean(), r.path("bestLapSteps").asInt(), r.path("error").asText(null));
     } catch (Exception e) {
+      log.warn("сервер проверки недоступен: {}", e.toString());
       return new Verdict(false, false, 0, "verifier_unavailable");
     }
   }

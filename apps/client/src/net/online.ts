@@ -13,6 +13,7 @@ import { escapeHtml } from '../ui/menu';
 import { NetClient } from './client';
 import { OnlineRace } from './online-race';
 import { account } from '../meta/account';
+import { activeCar } from '../meta/api';
 
 /** Совпадает с серверным CHALLENGE_RANGE. */
 const CHALLENGE_RANGE_CLIENT = 45;
@@ -133,6 +134,9 @@ export function startOnline(app: App): void {
     };
     let switching = false;
 
+    // Машина из гаража (если вошли) — тюнинг и окраска
+    const garageCar = await activeCar().catch(() => null);
+    if (garageCar) account.ownedCarId = garageCar.id;
     const makeRace = (players: LobbyMsg['players']) => {
       const w = welcome!;
       const slot = freeroam ? w.playerId % 8 : players.findIndex((p) => p.id === w.playerId);
@@ -141,7 +145,11 @@ export function startOnline(app: App): void {
         {
           mode: freeroam ? 'free' : 'circuit',
           trackId: w.trackId,
-          carId: settings.carId,
+          carId: garageCar?.carId ?? settings.carId,
+          parts: garageCar?.parts,
+          paint: garageCar?.visual.paint,
+          neon: garageCar?.visual.neon,
+          ownedCarId: garageCar?.id,
           bots: 0,
           botLevel: 'medium',
           laps: freeroam ? 999 : w.laps,
@@ -287,7 +295,7 @@ export function startOnline(app: App): void {
       type: Msg.Hello,
       version: PROTOCOL_VERSION,
       name: settings.playerName,
-      carId: settings.carId,
+      carId: garageCar?.carId ?? settings.carId,
       mode,
       room: code,
       token: account.token ?? '',

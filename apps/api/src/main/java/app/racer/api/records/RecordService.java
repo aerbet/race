@@ -72,8 +72,10 @@ public class RecordService {
       req.put("laps", Math.max(1, s.laps()));
       req.put("inputs", s.inputs());
       var v = verifier.verify(req);
-      if (!v.ok() || !v.finished())
-        throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "verification_failed", "заезд не воспроизводится: " + v.error());
+      if (!v.ok())
+        throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "verification_failed", "проверка не удалась: " + v.error());
+      if (!v.finished())
+        throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "verification_failed", "по записи заезд не доходит до финиша");
       // Время берём из повтора, а не из заявки
       if (v.bestLapSteps() != s.lapSteps())
         throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "verification_failed", "время не совпадает с повтором");

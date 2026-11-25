@@ -8,6 +8,8 @@ import {
   getTrack,
   CAR_IDS,
   type City,
+  type PartLevels,
+  applyTuning,
   type Weather,
   type RaceEvent,
   type RacerState,
@@ -44,6 +46,11 @@ export interface RaceSetup {
   /** Город (трасса проходит по его улицам). */
   cityId?: string;
   weather?: Weather;
+  /** Машина из гаража: детали, окраска, неон, id владения (для рекордов и рейтинга). */
+  parts?: PartLevels;
+  paint?: string;
+  neon?: string;
+  ownedCarId?: string;
 }
 
 export const MODES: Record<
@@ -146,12 +153,18 @@ export class RaceController {
     // Игрок — в конце решётки при гонке с ботами (интереснее обгонять)
     const nBots = MODES[setup.mode].bots ? setup.bots : 0;
     const playerSlot = setup.slot ?? (nBots > 0 ? Math.min(nBots, 7) : 0);
-    const pc = this.session.addCar(getCar(setup.carId), playerSlot, {
-      player: true,
-      manual: setup.manual,
-      name: setup.playerName,
-      color: 0xe8eef7,
-    });
+    const pc = this.session.addCar(
+      applyTuning(getCar(setup.carId), setup.parts ?? {}),
+      playerSlot,
+      {
+        player: true,
+        manual: setup.manual,
+        name: setup.playerName,
+        color: setup.paint ? parseInt(setup.paint.slice(1), 16) : 0xe8eef7,
+        neon:
+          setup.neon === 'off' ? null : setup.neon ? parseInt(setup.neon.slice(1), 16) : undefined,
+      },
+    );
     this.register(pc, 'player', setup.playerName);
     // Автопилот игрока после финиша
     const autoBot = new Bot(pc.vehicle, track, { level: 'medium' });

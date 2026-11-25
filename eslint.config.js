@@ -17,6 +17,7 @@ export default tseslint.config(
         fetch: 'readonly',
         setTimeout: 'readonly',
         window: 'readonly',
+        localStorage: 'readonly',
       },
     },
   },

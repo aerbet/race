@@ -1,5 +1,6 @@
 import { BRAND, CARS, WEATHER_NAMES, formatTime, type Weather } from '@sr/shared';
 import { CITIES } from '../city/city-view';
+import { account } from '../meta/account';
 import type { BotLevel } from '@sr/physics';
 import { MODES, type ModeId, type RaceResults, type RaceSetup } from '../game/race';
 import { loadGhost } from '../game/ghost';
@@ -99,12 +100,21 @@ function h(html: string): HTMLElement {
 export interface MenuActions {
   start: (setup: RaceSetup) => void;
   online: () => void;
+  /** Экраны метаигры (профиль, гараж, рекорды, рейтинг, диспетчер). */
+  meta: (screen: 'profile' | 'garage' | 'records' | 'ratings' | 'dispatcher') => void;
 }
 
 /** Главное меню: режим, машина, соперники. */
 export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
   const s = loadSettings();
   const el = h(`<div class="screen"><div class="menu">
+    <div class="topbar">
+      <button class="btn" data-meta="profile">${account.token ? `👤 ${escapeHtml(account.name ?? '')}` : 'Войти'}</button>
+      <button class="btn" data-meta="garage">Гараж</button>
+      <button class="btn" data-meta="records">Рекорды</button>
+      <button class="btn" data-meta="ratings">Рейтинг</button>
+      <button class="btn" data-meta="dispatcher">Диспетчер</button>
+    </div>
     <h1>${BRAND.title}</h1>
     <p class="tagline">${BRAND.tagline}</p>
     <h2>Где</h2><div class="grid2" data-k="loc"></div>
@@ -170,7 +180,15 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     }
     const carBox = q('car');
     carBox.innerHTML = '';
-    for (const c of Object.values(CARS)) {
+    if (account.token) {
+      // Вошли: едем на машине из гаража (с тюнингом)
+      const b = h(
+        `<button class="btn sel">Машина из гаража<small>выбор и тюнинг — в «Гараже»</small></button>`,
+      );
+      b.onclick = () => actions.meta('garage');
+      carBox.appendChild(b);
+    }
+    for (const c of account.token ? [] : Object.values(CARS)) {
       const ghost = loadGhost(setupFromSettings(s).trackId, c.id);
       const drive = { rwd: 'задний', fwd: 'передний', awd: 'полный' }[c.drive];
       const b = h(`<button class="btn ${s.carId === c.id ? 'sel' : ''}">${c.name}
@@ -233,6 +251,12 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     saveSettings(s);
     actions.online();
   };
+  el.querySelectorAll<HTMLElement>('[data-meta]').forEach((b) => {
+    b.onclick = () => {
+      saveSettings(s);
+      actions.meta(b.dataset.meta as Parameters<MenuActions['meta']>[0]);
+    };
+  });
   return () => el.remove();
 }
 

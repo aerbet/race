@@ -58,6 +58,8 @@ try {
   });
   const errors = [];
   const page = await browser.newPage({ viewport: { width: 1000, height: 640 } });
+  // Диалог «Диспетчера» при первом запуске проверяется отдельно — здесь сразу меню
+  await page.addInitScript(() => localStorage.setItem('sr:dispatcher-seen', '1'));
   page.on('pageerror', (e) => errors.push(e.message));
 
   // 1. Меню

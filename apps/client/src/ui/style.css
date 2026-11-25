@@ -614,3 +614,59 @@ body.touch-ui .hud-attr {
   text-align: center;
   min-width: 300px;
 }
+
+/* Метаигра */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.topbar .btn {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  cursor: pointer;
+  color: #fff;
+  font: 700 14px var(--font);
+}
+.swatch.sel {
+  border-color: #fff;
+  box-shadow: 0 0 10px var(--accent);
+}
+.btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.results table .btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.dispatcher .panel {
+  border-color: rgba(140, 255, 58, 0.4);
+}
+.radio {
+  font: 700 12px var(--mono);
+  letter-spacing: 0.14em;
+  color: #8cff3a;
+  text-transform: uppercase;
+}
+.radio .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8cff3a;
+  margin-right: 8px;
+  animation: blink 0.8s infinite alternate;
+}
+.dispatcher .line {
+  font: 17px/1.55 var(--font);
+  min-height: 110px;
+  margin: 14px 0;
+}

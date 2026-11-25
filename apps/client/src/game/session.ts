@@ -131,12 +131,18 @@ export class Session {
   addCar(
     cfg: CarConfig,
     slot: number,
-    opts: { player?: boolean; color?: number; name?: string; manual?: boolean } = {},
+    opts: {
+      player?: boolean;
+      color?: number;
+      neon?: number | null;
+      name?: string;
+      manual?: boolean;
+    } = {},
   ): SessionCar {
     const v = this.sim.addCar(cfg, slot, { manualGearbox: opts.manual });
     const view = new CarView(cfg, {
       color: opts.color ?? CAR_COLORS[slot % CAR_COLORS.length]!,
-      neon: NEON_COLORS[slot % NEON_COLORS.length],
+      neon: opts.neon === null ? undefined : (opts.neon ?? NEON_COLORS[slot % NEON_COLORS.length]),
     });
     this.gfx.scene.add(view.root);
     v.surfaceGrip = WEATHER_GRIP[this.weather];

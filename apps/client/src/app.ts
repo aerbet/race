@@ -1,5 +1,5 @@
 import type { Rapier } from '@sr/physics';
-import { formatTime, type City, type RaceEvent } from '@sr/shared';
+import { formatTime, toBase64, type City, type RaceEvent } from '@sr/shared';
 import { loadCity } from './city/city-view';
 import { RaceController, type RaceResults, type RaceSetup } from './game/race';
 import type { Quality } from './render/quality';
@@ -10,6 +10,16 @@ import { showMenu, showPause, showResults } from './ui/menu';
 import { DebugPanel } from './ui/debug-panel';
 import { InputDebug } from './ui/input-debug';
 import { CarAudio, audio } from './audio/engine-audio';
+import { account } from './meta/account';
+import { ApiError, activeCar, api } from './meta/api';
+import {
+  dispatcherSeen,
+  showDispatcher,
+  showGarage,
+  showProfile,
+  showRatings,
+  showRecords,
+} from './meta/screens';
 
 const DOT_COLORS = ['#ff4d5e', '#4d9bff', '#ffc23d', '#3ddc84', '#b56dff', '#ff8a3d', '#3de0d6'];
 
@@ -84,15 +94,47 @@ export class App {
     this.endRace();
     this.closeScreen?.();
     this.closeScreen = showMenu(this.root, {
-      start: (setup) => this.start(setup),
+      start: (setup) => void this.start(setup),
       online: () => this.onOnline(),
+      meta: (m) => {
+        this.closeScreens();
+        const back = () => this.menu();
+        if (m === 'profile') showProfile(this.root, back);
+        if (m === 'garage') showGarage(this.root, back);
+        if (m === 'records') showRecords(this.root, back);
+        if (m === 'ratings') showRatings(this.root, back);
+        if (m === 'dispatcher') showDispatcher(this.root, back);
+      },
     });
+    // Первый запуск — знакомство с «Диспетчером»
+    if (!dispatcherSeen()) {
+      this.closeScreens();
+      showDispatcher(this.root, () => this.menu());
+    }
   }
 
   async start(setup: RaceSetup): Promise<void> {
     this.closeScreen?.();
     this.closeScreen = null;
     this.endRace();
+    // Вошли — едем на машине из гаража (тюнинг, окраска); API недоступен — на стоковой
+    if (account.token && !setup.ownedCarId) {
+      try {
+        const car = await activeCar();
+        if (car) {
+          setup = {
+            ...setup,
+            carId: car.carId,
+            parts: car.parts,
+            paint: car.visual.paint,
+            neon: car.visual.neon,
+            ownedCarId: car.id,
+          };
+        }
+      } catch {
+        /* офлайн */
+      }
+    }
     this.lastSetup = setup;
     const city = setup.cityId ? await this.loadCityCached(setup.cityId) : null;
     const race = new RaceController(this.R, setup, this.quality, this.root, this.input, city);
@@ -311,9 +353,40 @@ export class App {
   private showResults(r: RaceResults): void {
     this.closeScreen?.();
     this.closeScreen = showResults(this.root, r, {
-      restart: () => this.lastSetup && this.start(this.lastSetup),
+      restart: () => this.lastSetup && void this.start(this.lastSetup),
       menu: () => this.menu(),
     });
+    void this.submitRecord(r);
+  }
+
+  /** Заезд на время → рекорд в API (с записью ввода: сервер повторит заезд и сверит время). */
+  private async submitRecord(r: RaceResults): Promise<void> {
+    const race = this.race;
+    const s = r.setup;
+    if (!race || s.mode !== 'timeattack' || !account.token || !s.ownedCarId) return;
+    const me = race.playerState();
+    if (!me.finished || !me.bestLapSteps) return;
+    const note = document.createElement('p');
+    note.className = 'sub record-note';
+    note.textContent = 'Отправляем рекорд на проверку…';
+    this.root.querySelector('.results')?.appendChild(note);
+    try {
+      const res = await api<{ verified: boolean; rank: number; carClass: string }>('/api/records', {
+        body: {
+          trackId: s.trackId,
+          ownedCarId: s.ownedCarId,
+          weather: s.weather ?? 'dry',
+          laps: s.laps,
+          lapSteps: me.bestLapSteps,
+          manual: s.manual,
+          inputs: toBase64(race.session.recorder.toBytes()),
+        },
+      });
+      note.textContent = `Рекорд принят: ${res.rank} место в классе ${res.carClass}${res.verified ? ' (проверен повтором)' : ''}`;
+    } catch (e) {
+      note.textContent =
+        e instanceof ApiError ? `Рекорд не принят: ${e.message}` : 'Рекорд не отправлен';
+    }
   }
 
   endRace(): void {
