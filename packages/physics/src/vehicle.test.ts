@@ -116,3 +116,41 @@ describe('polygon', () => {
     sim.dispose();
   });
 });
+
+describe.each(Object.values(CARS))('nitro $id', (cfg) => {
+  const accel = (nitro: boolean) => {
+    const sim = new Sim(R, strip);
+    const car = sim.addCar(cfg);
+    settle(sim);
+    car.nitro = 1;
+    while (car.telemetry().speedKmh < 60) sim.tick([input({ throttle: 1 })]);
+    let t = 0;
+    while (car.telemetry().speedKmh < 110 && t < 20) {
+      sim.tick([input({ throttle: 1, nitro: nitro ? 1 : 0 })]);
+      t += 1 / 60;
+    }
+    const left = car.nitro;
+    sim.dispose();
+    return { t, left };
+  };
+
+  it('boosts acceleration and drains the tank', () => {
+    const base = accel(false);
+    const boosted = accel(true);
+    expect(boosted.t).toBeLessThan(base.t * 0.87);
+    expect(boosted.left).toBeLessThan(1);
+    expect(base.left).toBe(1);
+  });
+
+  it('charges from drifting', () => {
+    const sim = new Sim(R, strip);
+    const car = sim.addCar(cfg);
+    settle(sim);
+    car.nitro = 0;
+    for (let i = 0; i < 60 * 4; i++) sim.tick([input({ throttle: 1 })]);
+    for (let i = 0; i < 25; i++) sim.tick([input({ throttle: 0.6, steer: 1, handbrake: 1 })]);
+    for (let i = 0; i < 60 * 2; i++) sim.tick([input({ throttle: 0.75, steer: 0.55 })]);
+    expect(car.nitro).toBeGreaterThan(0.2);
+    sim.dispose();
+  });
+});

@@ -102,6 +102,9 @@ export class Vehicle {
   private driftLatch = 0;
   private throttleHist = 0;
   private liftTimer = 0;
+  private prevAbsBeta = 0;
+  private lowAngleTime = 0;
+  private exitIntent = 0;
   nitro = 0.35;
   nitroActive = false;
   airTime = 0;
@@ -350,6 +353,8 @@ export class Vehicle {
       }
     }
     wheelOmega /= Math.max(1, nd);
+    // Ручник/занос не должны «ронять» обороты: берём не меньше скорости кузова
+    wheelOmega = Math.max(wheelOmega, Math.abs(fwdSpeed) / R);
     const idle = cfg.engine.idleRpm;
     const red = cfg.engine.redlineRpm;
     let targetRpm = (wheelOmega * totalRatio * 60) / (2 * Math.PI);
@@ -364,7 +369,13 @@ export class Vehicle {
     if (!this.manual && this.gear > 0 && this.shiftTimer <= 0 && this.grounded > 0) {
       if (this.rpm > cfg.gearbox.autoUpRpm && this.gear < nG && driveInput > 0.1)
         this.shiftTo(this.gear + 1);
-      else if (this.rpm < cfg.gearbox.autoDownRpm && this.gear > 1) this.shiftTo(this.gear - 1);
+      else if (
+        this.rpm < cfg.gearbox.autoDownRpm &&
+        this.gear > 1 &&
+        this.driftFactor < 0.2 &&
+        inp.handbrake < 0.5
+      )
+        this.shiftTo(this.gear - 1);
     }
 
     // --- Момент двигателя
@@ -409,13 +420,19 @@ export class Vehicle {
       const hb = inp.handbrake > 0.5 && steerAbs > 0.2;
       const lift = this.liftTimer > 0 && steerAbs > 0.6;
       const brakeThrottle = inp.brake > 0.3 && inp.throttle > 0.5 && steerAbs > 0.3;
-      if (hb || lift || brakeThrottle) this.driftLatch = 1;
-      // Удержание: продолжаем пока есть угол и газ
-      const sustain = absBeta > (8 * Math.PI) / 180 && inp.throttle > 0.25;
-      if (!sustain && !hb && this.driftFactor > 0.2 && absBeta < (6 * Math.PI) / 180)
-        this.driftLatch = 0;
+      // Срыв «мощностью»: машина уже идёт боком и газ нажат
+      const powerOver = absBeta > (12 * Math.PI) / 180 && inp.throttle > 0.4 && steerAbs > 0.2;
+      if (hb || lift || brakeThrottle || powerOver) this.driftLatch = 1;
+      // Выход: угол мал какое-то время, или газ брошен надолго
+      this.lowAngleTime = absBeta < (7 * Math.PI) / 180 ? this.lowAngleTime + dt : 0;
+      if (!hb && this.driftFactor > 0.2 && this.lowAngleTime > 0.25) this.driftLatch = 0;
+      // Руль прямо или в обратную сторону — игрок выходит из дрифта
+      const driftDir = absBeta > 0.05 ? -Math.sign(beta) : 0;
+      const steerAlong = inp.steer * driftDir;
+      this.exitIntent = driftDir !== 0 && steerAlong < 0.15 && !hb ? this.exitIntent + dt : 0;
+      if (this.exitIntent > 0.15) this.driftLatch = 0;
       if (inp.throttle < 0.1 && !hb && inp.brake < 0.1 && this.liftTimer === 0)
-        this.driftLatch = Math.max(0, this.driftLatch - dt * 2);
+        this.driftLatch = Math.max(0, this.driftLatch - dt * 1.5);
       driftTarget = this.driftLatch > 0.5 ? 1 : 0;
     } else {
       this.driftLatch = 0;
@@ -481,7 +498,7 @@ export class Vehicle {
     }
 
     const downforce = cfg.aero.downforce * speed * speed;
-    let rearLatForceSum = 0;
+    let latForceSum = 0;
     for (let i = 0; i < 4; i++) {
       const wh = this.wheels[i]!;
       wh.load = loads[i]!;
@@ -552,7 +569,7 @@ export class Vehicle {
       // Боковая сила не больше той, что гасит боковую скорость за шаг
       const needed = (Math.abs(vLat) * share) / dt;
       const Fy = -Math.sign(vLat) * Math.min(FyMax, needed);
-      if (!wh.front) rearLatForceSum += Math.abs(Fy);
+      latForceSum += Math.abs(Fy);
 
       wh.slip = Math.max(
         slipRatio > 0.13 ? (slipRatio - 0.1) * 2 : 0,
@@ -598,23 +615,25 @@ export class Vehicle {
         const along = inp.steer * dir; // +1 — руль в сторону дрифта, −1 — контрруление
         const target = lerp(minA, maxA, clamp(0.5 + along * 0.5, 0, 1));
         const err = target - absBeta;
+        const betaRate = (absBeta - this.prevAbsBeta) / dt;
         const explicitError = inp.handbrake > 0.5 && along > 0.9 && absBeta > maxA;
-        let gain = A.driftHold.strength * this.driftFactor;
-        if (absBeta > maxA) gain *= 2.2;
+        // PD-регулятор угла заноса: kp — из конфига, kd — около критического демпфирования
+        let kp = A.driftHold.strength * this.driftFactor;
+        if (absBeta > maxA) kp *= 1.8;
+        const kd = 1.8 * Math.sqrt(Math.max(kp, 0.01));
         if (!explicitError) {
-          // поворот носа «в сторону дрифта» = −dir вокруг up
-          torqueYaw(-dir * err * gain);
-          // гасим лишнюю угловую скорость рыскания, чтобы не раскачивало
-          torqueYaw(-yawRate * 0.9 * this.driftFactor);
+          // поворот носа «в сторону дрифта» (= рост угла) — это −dir вокруг up
+          torqueYaw(-dir * (kp * err - kd * betaRate));
         }
-        // Сохранение скорости в дрифте: возвращаем часть потерь от бокового трения
+        // Сохранение скорости: возвращаем часть «тормоза боком» (проекция боковых сил на скорость)
         const vdir = norm(v);
-        const keep =
-          A.driftHold.speedKeep * this.driftFactor * rearLatForceSum * Math.sin(absBeta) * 0.9;
+        const keep = A.driftHold.speedKeep * this.driftFactor * latForceSum * Math.sin(absBeta);
         body.addForce(scale(vdir, keep), true);
-        // Подкрутка вектора скорости к носу — машина «едет по дуге», а не тормозит боком
-        const latV = scale(right, latSpeed);
-        body.addForce(scale(latV, -m * 0.6 * this.driftFactor), true);
+        // Подкрутка вектора скорости к носу без потери модуля — машина «едет по дуге»
+        const toward = sub(fwd, scale(vdir, dot(fwd, vdir)));
+        if (len(toward) > 1e-3) {
+          body.addForce(scale(norm(toward), m * speed * 0.35 * this.driftFactor), true);
+        }
       }
 
       // --- Выход из дрифта / стабилизация рыскания без дрифта
@@ -626,6 +645,8 @@ export class Vehicle {
         torqueYaw(-excess * k);
       }
     }
+
+    this.prevAbsBeta = absBeta;
 
     // --- Стабилизация в воздухе
     if (grounded === 0) {

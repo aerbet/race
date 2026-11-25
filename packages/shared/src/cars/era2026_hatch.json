@@ -102,8 +102,8 @@
       "enabled": true,
       "minAngleDeg": 20,
       "maxAngleDeg": 45,
-      "strength": 8,
-      "speedKeep": 0.7
+      "strength": 26,
+      "speedKeep": 0.82
     },
     "driftExit": {
       "enabled": true,
