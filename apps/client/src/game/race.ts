@@ -37,6 +37,8 @@ export interface RaceSetup {
   playerName: string;
   /** Притяжение ботов к лидеру (только карьера). */
   rubberBand?: boolean;
+  /** Слот решётки игрока (онлайн — назначает сервер). */
+  slot?: number;
 }
 
 export const MODES: Record<
@@ -119,6 +121,8 @@ export class RaceController {
   onEvent: (e: RaceEvent) => void = () => {};
   onResults: (r: RaceResults) => void = () => {};
   private newBest = false;
+  /** Показывать результаты по локальному трекеру (онлайн — результаты даёт сервер). */
+  protected localResults = true;
 
   constructor(
     R: Rapier,
@@ -135,7 +139,7 @@ export class RaceController {
 
     // Игрок — в конце решётки при гонке с ботами (интереснее обгонять)
     const nBots = MODES[setup.mode].bots ? setup.bots : 0;
-    const playerSlot = nBots > 0 ? Math.min(nBots, 7) : 0;
+    const playerSlot = setup.slot ?? (nBots > 0 ? Math.min(nBots, 7) : 0);
     const pc = this.session.addCar(getCar(setup.carId), playerSlot, {
       player: true,
       manual: setup.manual,
@@ -191,6 +195,19 @@ export class RaceController {
     return this.tracker.racers.get('player')!;
   }
 
+  /** Позиция игрока и число участников (онлайн переопределяет по данным сервера). */
+  positionInfo(): { position: number; total: number } {
+    return { position: this.playerState().position, total: this.tracker.racers.size };
+  }
+
+  /** Доп. точки мини-карты (сетевые машины). */
+  extraDots(): { x: number; z: number; color: string }[] {
+    return [];
+  }
+
+  /** Каждый кадр (онлайн: интерполяция чужих машин). */
+  frame(_dt: number, _alpha: number): void {}
+
   private loadGhost(): void {
     const g = loadGhost(this.setup.trackId, this.setup.carId);
     if (!g) return;
@@ -234,7 +251,7 @@ export class RaceController {
 
     for (const e of t.drain()) this.handleEvent(e);
 
-    if (this.finishedAt >= 0 && !this.done) {
+    if (this.finishedAt >= 0 && !this.done && this.localResults) {
       const allDone = t.phase === 'finished';
       if (
         allDone ||

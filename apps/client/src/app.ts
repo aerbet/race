@@ -24,6 +24,8 @@ export class App {
   private audios: CarAudio[] = [];
   private lastSetup: RaceSetup | null = null;
   private paused = false;
+  /** Онлайн: пауза не останавливает симуляцию, «заново» недоступно. */
+  private online = false;
   private pauseBtn: HTMLButtonElement;
   /** Внешний хук для онлайн-режима. */
   onOnline: () => void = () => {};
@@ -55,6 +57,12 @@ export class App {
     }
   }
 
+  /** Закрыть текущий экран (меню, пауза, результаты). */
+  closeScreens(): void {
+    this.closeScreen?.();
+    this.closeScreen = null;
+  }
+
   menu(): void {
     this.endRace();
     this.closeScreen?.();
@@ -76,8 +84,12 @@ export class App {
   }
 
   /** Подключить HUD, звук и обработчики к уже созданной гонке (используется и онлайн-режимом). */
-  attach(race: RaceController, opts: { onResults?: (r: RaceResults) => void } = {}): void {
+  attach(
+    race: RaceController,
+    opts: { onResults?: (r: RaceResults) => void; online?: boolean } = {},
+  ): void {
     this.race = race;
+    this.online = !!opts.online;
     const hud = new Hud(this.root);
     hud.setTrack(race.session.track);
     this.hud = hud;
@@ -128,6 +140,8 @@ export class App {
     this.fps.tick(dt, this.quality.name);
     this.inputDebug?.update();
     race.updateGhost(alpha);
+    race.frame(dt, alpha);
+    const pinfo = race.positionInfo();
     const pv = race.player.vehicle;
     const tel = pv.telemetry();
     const st = race.playerState();
@@ -149,8 +163,8 @@ export class App {
         redline: pv.cfg.engine.redlineRpm,
         nitro: tel.nitro,
         nitroActive: tel.nitroActive,
-        position: st.position,
-        total: tr.racers.size,
+        position: pinfo.position,
+        total: pinfo.total,
         lap: st.lap,
         laps: tr.laps,
         time,
@@ -164,14 +178,17 @@ export class App {
         mode: race.setup.mode,
         manual: race.setup.manual,
       },
-      race.session.cars.map(
-        (c, i): MinimapDot => ({
-          x: c.vehicle.position.x,
-          z: c.vehicle.position.z,
-          color: c === race.player ? '#29e0ff' : DOT_COLORS[i % DOT_COLORS.length]!,
-          player: c === race.player,
-        }),
-      ),
+      [
+        ...race.extraDots(),
+        ...race.session.cars.map(
+          (c, i): MinimapDot => ({
+            x: c.vehicle.position.x,
+            z: c.vehicle.position.z,
+            color: c === race.player ? '#29e0ff' : DOT_COLORS[i % DOT_COLORS.length]!,
+            player: c === race.player,
+          }),
+        ),
+      ],
       dt,
     );
 
@@ -207,15 +224,18 @@ export class App {
   togglePause(): void {
     if (!this.race || this.race.done) return;
     this.paused = !this.paused;
-    this.race.session.setPaused(this.paused);
-    const a = audio();
-    if (a) void (this.paused ? a.ctx.suspend() : a.ctx.resume());
+    if (!this.online) {
+      this.race.session.setPaused(this.paused);
+      const a = audio();
+      if (a) void (this.paused ? a.ctx.suspend() : a.ctx.resume());
+    }
     if (this.paused) {
       this.closeScreen = showPause(this.root, {
         resume: () => this.togglePause(),
         restart: () => {
           this.paused = false;
-          if (this.lastSetup) this.start(this.lastSetup);
+          if (this.online) this.menu();
+          else if (this.lastSetup) this.start(this.lastSetup);
         },
         menu: () => {
           this.paused = false;
@@ -240,6 +260,20 @@ export class App {
     }
   }
 
+  /** Результаты с собственным действием «ещё раз» (онлайн). */
+  showResultsPublic(r: RaceResults, again: () => void): void {
+    this.closeScreen?.();
+    this.closeScreen = showResults(this.root, r, {
+      restart: () => {
+        this.closeScreen?.();
+        this.closeScreen = null;
+        this.endRace();
+        again();
+      },
+      menu: () => this.menu(),
+    });
+  }
+
   private showResults(r: RaceResults): void {
     this.closeScreen?.();
     this.closeScreen = showResults(this.root, r, {
@@ -258,6 +292,7 @@ export class App {
     this.race?.dispose();
     this.race = null;
     this.paused = false;
+    this.online = false;
     this.pauseBtn.classList.add('hidden');
     this.input.touch.show(false);
     const a = audio();

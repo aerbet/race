@@ -26,7 +26,8 @@ async function boot() {
     startOnline(app);
   };
   (window as unknown as { __app: App }).__app = app;
-  app.menu();
+  if (params.has('room')) app.onOnline();
+  else app.menu();
 }
 
 void boot();

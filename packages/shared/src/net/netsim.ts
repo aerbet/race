@@ -17,6 +17,9 @@ export const GOOD_NETWORK: NetConditions = { latency: 0, jitter: 0, loss: 0 };
 export class DelayedChannel<T> {
   private lastDelivery = 0;
   private rnd: () => number;
+  /** Своя очередь FIFO: таймеры браузера округляют задержки и могут переставить сообщения. */
+  private queue: { at: number; msg: T }[] = [];
+  private timerArmed = false;
 
   constructor(
     public cond: NetConditions,
@@ -35,7 +38,7 @@ export class DelayedChannel<T> {
   }
 
   send(msg: T): void {
-    if (!this.active) {
+    if (!this.active && this.queue.length === 0) {
       this.deliver(msg);
       return;
     }
@@ -46,7 +49,23 @@ export class DelayedChannel<T> {
     // TCP доставляет по порядку: не раньше предыдущего
     const at = Math.max(t + Math.max(0, delay), this.lastDelivery);
     this.lastDelivery = at;
-    this.schedule(() => this.deliver(msg), at - t);
+    this.queue.push({ at, msg });
+    this.arm();
+  }
+
+  private arm(): void {
+    if (this.timerArmed || this.queue.length === 0) return;
+    this.timerArmed = true;
+    const wait = Math.max(0, this.queue[0]!.at - this.now());
+    this.schedule(() => this.drain(), wait);
+  }
+
+  private drain(): void {
+    this.timerArmed = false;
+    const t = this.now();
+    // Допуск 1 мс на округление таймера
+    while (this.queue.length && this.queue[0]!.at <= t + 1) this.deliver(this.queue.shift()!.msg);
+    this.arm();
   }
 }
 
