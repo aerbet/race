@@ -17,7 +17,7 @@ import {
   type ServerMsg,
 } from '@sr/shared';
 import { Bot, Sim, initPhysics, type Rapier, type Vehicle } from '@sr/physics';
-import { Room } from './room';
+import { Room, type RaceReport } from './room';
 
 let R: Rapier;
 beforeAll(async () => {
@@ -104,8 +104,8 @@ class TestClient {
     );
   }
 
-  join() {
-    const p = this.room.join(this.name, 'era2026_hatch', (d) => this.toClient.send(d));
+  join(identity: { userId: string; ownedCarId: string | null } | null = null) {
+    const p = this.room.join(this.name, 'era2026_hatch', (d) => this.toClient.send(d), identity);
     this.id = p!.id;
   }
 
@@ -375,4 +375,28 @@ describe('network race (checkpoint 3, scaled)', { timeout: 120_000 }, () => {
 // Флаги используются в протоколе — проверка, что сброс помечается корректно
 it('reset flag constant', () => {
   expect(CarFlags.Reset).toBe(8);
+});
+
+describe('race report to API', { timeout: 120_000 }, () => {
+  it('reports a ranked result for logged-in players', () => {
+    const clock = new Clock();
+    const reports: RaceReport[] = [];
+    const room = new Room(R, 'REP001', { laps: 1, report: (r) => reports.push(r) });
+    const net = { latency: 30, jitter: 5, loss: 0 };
+    const a = new TestClient(room, 'A', clock, net, 11);
+    const b = new TestClient(room, 'B', clock, net, 12);
+    a.join({ userId: 'user-a', ownedCarId: 'car-a' });
+    b.join({ userId: 'user-b', ownedCarId: null });
+    for (const c of [a, b]) c.send({ type: Msg.Ready, ready: true });
+    runRace(room, [a, b], clock, 200);
+    expect(reports.length).toBe(1);
+    const r = reports[0]!;
+    expect(r.ranked).toBe(true);
+    expect(r.raceId).toMatch(/^REP001-/);
+    expect(r.rows.map((x) => x.userId).sort()).toEqual(['user-a', 'user-b']);
+    expect(r.rows.find((x) => x.userId === 'user-a')!.ownedCarId).toBe('car-a');
+    expect(new Set(r.rows.map((x) => x.position)).size).toBe(2);
+    room.dispose();
+    for (const c of [a, b]) c.sim?.dispose();
+  });
 });

@@ -12,6 +12,7 @@ import { loadSettings } from '../ui/menu';
 import { escapeHtml } from '../ui/menu';
 import { NetClient } from './client';
 import { OnlineRace } from './online-race';
+import { account } from '../meta/account';
 
 /** Совпадает с серверным CHALLENGE_RANGE. */
 const CHALLENGE_RANGE_CLIENT = 45;
@@ -289,6 +290,8 @@ export function startOnline(app: App): void {
       carId: settings.carId,
       mode,
       room: code,
+      token: account.token ?? '',
+      ownedCarId: account.ownedCarId ?? '',
     });
   };
 

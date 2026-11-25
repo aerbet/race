@@ -1,7 +1,7 @@
 import { ProtocolError, Reader, Writer } from './codec';
 
 /** Версия протокола. Меняется при любом несовместимом изменении формата. */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 /** Частота сервера, Гц (снимки и обработка). */
 export const SERVER_TICK_HZ = 30;
 /** Частота отправки состояния клиентом, Гц. */
@@ -46,6 +46,10 @@ export interface HelloMsg {
   mode: JoinMode;
   /** Код приватной комнаты (для join). */
   room: string;
+  /** JWT игрока из API (пусто — гость: без наград и рейтинга). */
+  token: string;
+  /** id машины из гаража (для класса рейтинга). */
+  ownedCarId: string;
 }
 
 /** Флаги состояния машины. */
@@ -267,6 +271,8 @@ export function encodeClient(m: ClientMsg): Uint8Array {
   switch (m.type) {
     case Msg.Hello:
       w.u16(m.version).str(m.name).str(m.carId).u8(JOIN_MODES.indexOf(m.mode)).str(m.room);
+      // JWT длиннее 255 байт — как байты с длиной u16
+      w.bytes(new TextEncoder().encode(m.token)).str(m.ownedCarId);
       break;
     case Msg.Ready:
       w.u8(m.ready ? 1 : 0);
@@ -301,7 +307,12 @@ export function decodeClient(data: Uint8Array): ClientMsg {
       const carId = r.str();
       const mode = JOIN_MODES[r.u8()];
       if (!mode) throw new ProtocolError('неизвестный режим входа');
-      return { type, version, name, carId, mode, room: r.str() };
+      const room = r.str();
+      // Клиент старой версии не пришлёт токен — ответим ошибкой версии, а не падением разбора
+      if (r.remaining === 0)
+        return { type, version, name, carId, mode, room, token: '', ownedCarId: '' };
+      const token = new TextDecoder().decode(r.bytes());
+      return { type, version, name, carId, mode, room, token, ownedCarId: r.str() };
     }
     case Msg.Ready:
       return { type, ready: r.u8() === 1 };

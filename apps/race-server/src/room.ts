@@ -59,6 +59,16 @@ export interface HumanPlayer {
   proxy: ProxyCar | null;
   dnf: boolean;
   slot: number;
+  /** Пользователь API (проверенный JWT) и его машина из гаража; null — гость. */
+  userId: string | null;
+  ownedCarId: string | null;
+}
+
+/** Итог гонки для API (награды, рейтинг). */
+export interface RaceReport {
+  raceId: string;
+  ranked: boolean;
+  rows: { userId: string; ownedCarId: string | null; position: number; finished: boolean }[];
 }
 
 interface BotPlayer {
@@ -79,6 +89,8 @@ export interface RoomOptions {
   cityId?: string;
   /** До скольких участников добивать ботами (вызов фарами — 2, без ботов). */
   minRacers?: number;
+  /** Куда отправить итог гонки (API). */
+  report?: (r: RaceReport) => void;
 }
 
 export class Room {
@@ -88,6 +100,8 @@ export class Room {
   readonly track: BuiltTrack;
   readonly laps: number;
   readonly isPrivate: boolean;
+  private readonly report?: (r: RaceReport) => void;
+  raceId = '';
   readonly cityId: string;
   readonly minRacers: number;
   readonly botFillSteps: number;
@@ -111,6 +125,7 @@ export class Room {
     this.minRacers = opts.minRacers ?? MIN_RACERS;
     this.laps = opts.laps ?? this.track.def.laps;
     this.isPrivate = !!opts.isPrivate;
+    this.report = opts.report;
     this.botFillSteps = (opts.botFillSeconds ?? BOT_FILL_SECONDS) * PHYSICS_HZ;
   }
 
@@ -122,7 +137,12 @@ export class Room {
     return this.phase === 'lobby' && this.size < MAX_PLAYERS;
   }
 
-  join(name: string, carId: string, send: (d: Uint8Array) => void): HumanPlayer | null {
+  join(
+    name: string,
+    carId: string,
+    send: (d: Uint8Array) => void,
+    identity: { userId: string; ownedCarId: string | null } | null = null,
+  ): HumanPlayer | null {
     if (!this.joinable) return null;
     const id = ++this.ids;
     const cfg = CAR_IDS.includes(carId) ? getCar(carId) : getCar(CAR_IDS[0]!);
@@ -143,6 +163,8 @@ export class Room {
       proxy: null,
       dnf: false,
       slot: this.size,
+      userId: identity?.userId ?? null,
+      ownedCarId: identity?.ownedCarId ?? null,
     };
     this.humans.set(id, p);
     if (!this.hostId) this.hostId = id;
@@ -260,6 +282,7 @@ export class Room {
     const others = [...sim.cars, ...sim.proxies];
     for (const b of this.bots) b.bot.others = others;
     this.phase = 'countdown';
+    this.raceId = `${this.code}-${Date.now().toString(36)}`;
     this.broadcastLobby();
     this.broadcast({
       type: Msg.RaceEvent,
@@ -454,6 +477,23 @@ export class Room {
     });
     this.broadcast({ type: Msg.Results, rows });
     this.broadcastLobby();
+    // Итог — в API: награды всем вошедшим, рейтинг — в открытых гонках от 2 человек с аккаунтом
+    const authed = [...this.humans.values()].filter((h) => h.userId);
+    if (this.report && authed.length > 0) {
+      this.report({
+        raceId: this.raceId,
+        ranked: !this.isPrivate && authed.length >= 2,
+        rows: authed.map((h) => {
+          const r = t.racers.get(String(h.id))!;
+          return {
+            userId: h.userId!,
+            ownedCarId: h.ownedCarId,
+            position: r.position,
+            finished: r.finished,
+          };
+        }),
+      });
+    }
   }
 
   private snapshotEntries(): SnapshotEntry[] {

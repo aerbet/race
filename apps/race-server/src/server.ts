@@ -13,7 +13,8 @@ import {
   type NetConditions,
 } from '@sr/shared';
 import type { Rapier } from '@sr/physics';
-import { Room } from './room';
+import { Room, type RaceReport } from './room';
+import { verifyJwt } from './auth';
 import { FreeRoam } from './freeroam';
 import { verifyRun, type VerifyRequest } from './verify';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -29,6 +30,10 @@ export interface ServerOptions {
   cities?: City[];
   /** Ключ для внутренних вызовов (проверка рекордов из API). */
   internalKey?: string;
+  /** Базовый адрес API (итоги гонок); без него награды не начисляются. */
+  apiUrl?: string;
+  /** Секрет JWT API — для проверки токена игрока. */
+  jwtSecret?: string;
 }
 
 /** Города берём из того же места, откуда их раздаёт клиент. */
@@ -59,7 +64,11 @@ export class RoomManager {
 
   constructor(
     readonly R: Rapier,
-    readonly opts: { botFillSeconds?: number; cities?: City[] } = {},
+    readonly opts: {
+      botFillSeconds?: number;
+      cities?: City[];
+      report?: (r: RaceReport) => void;
+    } = {},
   ) {
     for (const c of opts.cities ?? []) {
       this.cities.set(c.id, c);
@@ -90,6 +99,7 @@ export class RoomManager {
       laps: 1,
       botFillSeconds: 60,
       minRacers: 2,
+      report: this.opts.report,
     });
     this.rooms.set(code, r);
     return r;
@@ -103,7 +113,11 @@ export class RoomManager {
   create(isPrivate: boolean): Room {
     let code = makeCode();
     while (this.rooms.has(code)) code = makeCode();
-    const r = new Room(this.R, code, { isPrivate, botFillSeconds: this.opts.botFillSeconds });
+    const r = new Room(this.R, code, {
+      isPrivate,
+      botFillSeconds: this.opts.botFillSeconds,
+      report: this.opts.report,
+    });
     this.rooms.set(code, r);
     return r;
   }
@@ -132,7 +146,20 @@ export function startServer(
   opts: ServerOptions,
 ): { http: Server; wss: WebSocketServer; manager: RoomManager; stop: () => void } {
   const log = opts.log ?? ((m: string) => console.log(`[race-server] ${m}`));
+  const apiUrl = opts.apiUrl ?? process.env.API_URL;
+  const internalKey = opts.internalKey ?? process.env.INTERNAL_KEY ?? 'dev-internal-key';
+  const jwtSecret =
+    opts.jwtSecret ?? process.env.JWT_SECRET ?? 'dev-only-secret-change-me-0123456789abcdef';
+  const report = (r: RaceReport) => {
+    if (!apiUrl) return;
+    fetch(`${apiUrl}/internal/race-results`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-internal-key': internalKey },
+      body: JSON.stringify(r),
+    }).catch((e: unknown) => log(`не удалось отправить итог гонки ${r.raceId}: ${String(e)}`));
+  };
   const manager = new RoomManager(R, {
+    report,
     botFillSeconds: opts.botFillSeconds,
     cities: opts.cities ?? loadCities(),
   });
@@ -143,10 +170,7 @@ export function startServer(
       return;
     }
     if (req.url === '/verify' && req.method === 'POST') {
-      if (
-        req.headers['x-internal-key'] !==
-        (opts.internalKey ?? process.env.INTERNAL_KEY ?? 'dev-internal-key')
-      ) {
+      if (req.headers['x-internal-key'] !== internalKey) {
         res.writeHead(403);
         res.end();
         return;
@@ -218,7 +242,12 @@ export function startServer(
                 ? manager.create(true)
                 : manager.quick();
         if (!target) return fail('room', 'комната не найдена');
-        const p = target.join(msg.name, msg.carId, send);
+        const who = verifyJwt(msg.token, jwtSecret);
+        const identity = who ? { userId: who.userId, ownedCarId: msg.ownedCarId || null } : null;
+        const p =
+          target instanceof Room
+            ? target.join(msg.name, msg.carId, send, identity)
+            : target.join(msg.name, msg.carId, send);
         if (!p) return fail('room', 'комната заполнена или гонка уже идёт');
         room = target;
         playerId = p.id;

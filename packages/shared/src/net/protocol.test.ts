@@ -52,6 +52,8 @@ describe('protocol', () => {
         carId: 'era2000_coupe',
         mode: 'join',
         room: 'ABC123',
+        token: 'eyJ' + 'x'.repeat(400),
+        ownedCarId: '9b2f7c1e-0000-4000-8000-000000000001',
       },
       { type: Msg.Ready, ready: true },
       { type: Msg.Ping, t: 123456.789 },
@@ -66,6 +68,8 @@ describe('protocol', () => {
         carId: 'c',
         mode: 'freeroam',
         room: 'moscow_synth',
+        token: '',
+        ownedCarId: '',
       },
     ];
     for (const m of msgs) expect(decodeClient(encodeClient(m))).toEqual(m);
