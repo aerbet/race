@@ -6,7 +6,6 @@ import {
   emptyInput,
   parseTrackDef,
   type CarConfig,
-  type InputFrame,
 } from '@sr/shared';
 import { initPhysics, type Rapier } from './rapier';
 import { Sim } from './sim';
