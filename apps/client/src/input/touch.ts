@@ -60,6 +60,7 @@ export class TouchInput {
     this.visible = v;
     this.el.classList.toggle('hidden', !v);
     this.el.classList.toggle('autogas', this.autoGas);
+    document.body.classList.toggle('touch-ui', v);
   }
 
   get active(): boolean {
