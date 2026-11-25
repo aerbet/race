@@ -5,10 +5,23 @@
   "drive": "awd",
   "awdRearShare": 0.62,
   "mass": 1480,
-  "body": { "width": 1.82, "height": 1.42, "length": 4.15 },
-  "centerOfMass": { "y": -0.28, "z": -0.05 },
+  "body": {
+    "width": 1.82,
+    "height": 1.42,
+    "length": 4.15
+  },
+  "centerOfMass": {
+    "y": -0.28,
+    "z": -0.05
+  },
   "inertiaScale": 1.0,
-  "wheels": { "radius": 0.33, "width": 0.24, "wheelbase": 2.62, "track": 1.56, "mountY": -0.22 },
+  "wheels": {
+    "radius": 0.33,
+    "width": 0.24,
+    "wheelbase": 2.62,
+    "track": 1.56,
+    "mountY": -0.22
+  },
   "suspension": {
     "restLength": 0.38,
     "travel": 0.2,
@@ -20,11 +33,11 @@
     "idleRpm": 850,
     "redlineRpm": 7000,
     "torqueCurve": [
-      [850, 220],
-      [2000, 420],
-      [5000, 430],
-      [6200, 390],
-      [7000, 330]
+      [850, 176],
+      [2000, 336],
+      [5000, 344],
+      [6200, 312],
+      [7000, 264]
     ],
     "engineBrake": 90,
     "sound": "v6"
@@ -55,13 +68,36 @@
     "rearGrip": 1.0,
     "rollingResistance": 0.012
   },
-  "brakes": { "maxForce": 16500, "frontBias": 0.6, "handbrakeForce": 6000 },
-  "aero": { "drag": 0.4, "downforce": 0.9 },
-  "steering": { "maxAngleDeg": 33, "keyboardRate": 4.5, "keyboardReturnRate": 6 },
+  "brakes": {
+    "maxForce": 16500,
+    "frontBias": 0.6,
+    "handbrakeForce": 6000
+  },
+  "aero": {
+    "drag": 0.4,
+    "downforce": 0.9
+  },
+  "steering": {
+    "maxAngleDeg": 33,
+    "keyboardRate": 4.5,
+    "keyboardReturnRate": 6
+  },
   "assists": {
-    "speedSteer": { "enabled": true, "minAngleDeg": 6.5, "speedRefKmh": 190 },
-    "turnAssist": { "enabled": true, "yawAccel": 1.4 },
-    "driftInit": { "enabled": true, "rearGripScale": 0.48, "minSpeedKmh": 40, "attackRate": 4.5 },
+    "speedSteer": {
+      "enabled": true,
+      "minAngleDeg": 6.5,
+      "speedRefKmh": 190
+    },
+    "turnAssist": {
+      "enabled": true,
+      "yawAccel": 1.4
+    },
+    "driftInit": {
+      "enabled": true,
+      "rearGripScale": 0.48,
+      "minSpeedKmh": 40,
+      "attackRate": 4.5
+    },
     "driftHold": {
       "enabled": true,
       "minAngleDeg": 20,
@@ -69,10 +105,25 @@
       "strength": 8,
       "speedKeep": 0.7
     },
-    "driftExit": { "enabled": true, "recoverRate": 1.8, "yawDamp": 3 },
-    "airStabilize": { "enabled": true, "strength": 14, "damping": 4 },
-    "softWalls": { "enabled": true, "friction": 0.05, "restitution": 0.15 },
-    "autoReset": { "enabled": true, "seconds": 3 }
+    "driftExit": {
+      "enabled": true,
+      "recoverRate": 1.8,
+      "yawDamp": 3
+    },
+    "airStabilize": {
+      "enabled": true,
+      "strength": 14,
+      "damping": 4
+    },
+    "softWalls": {
+      "enabled": true,
+      "friction": 0.05,
+      "restitution": 0.15
+    },
+    "autoReset": {
+      "enabled": true,
+      "seconds": 3
+    }
   },
   "nitro": {
     "capacity": 2.6,
@@ -81,5 +132,8 @@
     "chargePerAirSecond": 0.35,
     "chargePerOvertake": 0.15
   },
-  "specs": { "zeroTo100": 4.9, "topSpeedKmh": 255 }
+  "specs": {
+    "zeroTo100": 4.9,
+    "topSpeedKmh": 255
+  }
 }
