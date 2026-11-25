@@ -12,6 +12,47 @@ export class TouchInput {
   private steer = 0;
   autoGas = true;
   tilt = false;
+
+  /** Загрузить и сохранить настройки сенсора. */
+  loadPrefs(): void {
+    try {
+      const p = JSON.parse(localStorage.getItem('sr:touch') ?? '{}') as {
+        autoGas?: boolean;
+        tilt?: boolean;
+      };
+      if (typeof p.autoGas === 'boolean') this.autoGas = p.autoGas;
+      if (typeof p.tilt === 'boolean') this.tilt = p.tilt;
+    } catch {
+      /* без хранилища — значения по умолчанию */
+    }
+  }
+
+  savePrefs(): void {
+    try {
+      localStorage.setItem('sr:touch', JSON.stringify({ autoGas: this.autoGas, tilt: this.tilt }));
+    } catch {
+      /* без хранилища */
+    }
+    this.el.classList.toggle('autogas', this.autoGas);
+  }
+
+  /** Наклон на iOS требует разрешения по жесту пользователя. */
+  async enableTilt(on: boolean): Promise<void> {
+    const DOE = (
+      window as unknown as {
+        DeviceOrientationEvent?: { requestPermission?: () => Promise<string> };
+      }
+    ).DeviceOrientationEvent;
+    if (on && DOE?.requestPermission) {
+      try {
+        if ((await DOE.requestPermission()) !== 'granted') on = false;
+      } catch {
+        on = false;
+      }
+    }
+    this.tilt = on;
+    this.savePrefs();
+  }
   private tiltValue = 0;
   visible = false;
 

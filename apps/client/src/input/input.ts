@@ -19,6 +19,7 @@ export class InputManager {
   constructor(uiRoot: HTMLElement) {
     this.keyboard = new KeyboardInput();
     this.touch = new TouchInput(uiRoot);
+    this.touch.loadPrefs();
     if (isTouchDevice()) this.device = 'touch';
   }
 

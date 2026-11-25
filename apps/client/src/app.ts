@@ -243,6 +243,22 @@ export class App {
         },
         camera: () => this.race?.session.rig.cycle(),
         debug: () => this.toggleDebug(),
+        toggles:
+          this.input.device === 'touch'
+            ? [
+                {
+                  label: () => `Руль: ${this.input.touch.tilt ? 'наклон телефона' : 'кнопки'}`,
+                  toggle: () => this.input.touch.enableTilt(!this.input.touch.tilt),
+                },
+                {
+                  label: () => `Газ: ${this.input.touch.autoGas ? 'автоматический' : 'кнопкой'}`,
+                  toggle: () => {
+                    this.input.touch.autoGas = !this.input.touch.autoGas;
+                    this.input.touch.savePrefs();
+                  },
+                },
+              ]
+            : [],
       });
     } else {
       this.closeScreen?.();

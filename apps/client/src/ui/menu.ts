@@ -225,6 +225,8 @@ export interface PauseActions {
   menu: () => void;
   camera: () => void;
   debug: () => void;
+  /** Переключатели (например, сенсорное управление): подпись зависит от состояния. */
+  toggles?: { label: () => string; toggle: () => void | Promise<void> }[];
 }
 
 export function showPause(root: HTMLElement, a: PauseActions): () => void {
@@ -240,6 +242,17 @@ export function showPause(root: HTMLElement, a: PauseActions): () => void {
   root.appendChild(el);
   for (const k of ['resume', 'restart', 'menu', 'camera', 'debug'] as const) {
     (el.querySelector(`[data-k="${k}"]`) as HTMLElement).onclick = a[k];
+  }
+  const row = el.querySelector('.btnrow') as HTMLElement;
+  for (const t of a.toggles ?? []) {
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.textContent = t.label();
+    b.onclick = async () => {
+      await t.toggle();
+      b.textContent = t.label();
+    };
+    row.insertBefore(b, row.lastElementChild);
   }
   return () => el.remove();
 }

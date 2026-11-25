@@ -14,6 +14,7 @@ import { CarView } from '../render/car';
 import type { Quality } from '../render/quality';
 import type { InputManager } from '../input/input';
 import type { NetClient } from './client';
+import { CarAudio, audio } from '../audio/engine-audio';
 import { INTERP_DELAY_STEPS, InterpBuffer, ServerClock } from './interp';
 
 const REMOTE_COLORS = [0xd8262f, 0x2f7de1, 0xf2b31b, 0x22c06e, 0x9b40e0, 0xff7a1a, 0x3dd6d0];
@@ -28,6 +29,8 @@ interface Remote {
   lap: number;
   position: number;
   color: string;
+  spin: number;
+  audio: CarAudio | null;
 }
 
 /**
@@ -83,6 +86,11 @@ export class OnlineRace extends RaceController {
         lap: 0,
         position: 0,
         color: '#' + color.toString(16).padStart(6, '0'),
+        spin: 0,
+        audio: (() => {
+          const a = audio();
+          return a ? new CarAudio(a.ctx, cfg.engine.sound, a.master, 0) : null;
+        })(),
       });
       this.names.set(String(p.id), p.name);
     });
@@ -236,8 +244,9 @@ export class OnlineRace extends RaceController {
     if (this.playerState().finished && !this.finishedLocal) this.finishedLocal = true;
   }
 
-  override frame(_dt: number, _alpha: number): void {
+  override frame(dt: number, _alpha: number): void {
     if (!this.clock.ready) return;
+    const me = this.player.vehicle.position;
     this.renderStep = this.clock.step(performance.now()) - INTERP_DELAY_STEPS;
     for (const r of this.remotes.values()) {
       const st = r.buf.sample(this.renderStep);
@@ -250,7 +259,25 @@ export class OnlineRace extends RaceController {
       const cfg = r.view.cfg;
       const speed = Math.hypot(st.vx, st.vz);
       const maxSteer = (cfg.steering.maxAngleDeg * Math.PI) / 180;
-      const spin = (performance.now() / 1000) * (speed / cfg.wheels.radius);
+      r.spin += (speed / cfg.wheels.radius) * dt;
+      const spin = r.spin;
+      // Звук: громкость по расстоянию до своей машины
+      if (r.audio) {
+        const d = Math.hypot(st.x - me.x, st.z - me.z);
+        r.audio.setVolume(Math.max(0, 1 - d / 80) * 0.4);
+        r.audio.update(
+          {
+            rpm: st.rpm,
+            throttle: st.flags & CarFlags.Brake ? 0 : 0.8,
+            slip: 0,
+            nitro: !!(st.flags & CarFlags.Nitro),
+            speedKmh: speed * 3.6,
+            wallHit: false,
+            grounded: true,
+          },
+          dt,
+        );
+      }
       const w = cfg.wheels;
       for (let i = 0; i < 4; i++) {
         const front = i < 2,
@@ -286,6 +313,7 @@ export class OnlineRace extends RaceController {
 
   override dispose(): void {
     if (!this.net.closed) this.net.close();
+    for (const r of this.remotes.values()) r.audio?.dispose();
     super.dispose();
   }
 }
