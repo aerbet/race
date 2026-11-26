@@ -14,9 +14,9 @@
  */
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateGlb, validateWheelGlb } from '../../car-validate/src/validate';
+import { validateGlb, validateKitGlb, validateWheelGlb } from '../../car-validate/src/validate';
 import { findBlender } from './blender';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -97,11 +97,32 @@ function car(id: string): void {
     console.error(`✗ Валидатор: ${r.errors.length} ошибок`);
     process.exit(1);
   }
+  // Кузовные киты (BLENDER_PLAN 5.4): kit_<kit>.glb рядом с базой
+  const kits = readdirSync(dir).filter((f) => /^kit_[a-z0-9_]+\.glb$/.test(f));
+  const kitMin: string[] = [];
+  for (const f of kits) {
+    const kraw = join(dir, f);
+    const kmin = join(dir, f.replace(/\.glb$/, '.min.glb'));
+    gltfTransform(['meshopt', kraw, kmin, '--level', 'medium'], `Сжатие ${f}`);
+    const kr = validateKitGlb(new Uint8Array(readFileSync(kmin)));
+    console.log(
+      `  ${kr.errors.length ? '✗' : '✓'} ${f}: ${kr.stats.lod0}/${kr.stats.lod1}/${kr.stats.lod2} тр., ${kb(kmin)}`,
+    );
+    for (const e of kr.errors) console.log(`    ✗ ${e}`);
+    if (kr.errors.length) {
+      console.error(`✗ Валидатор: кит ${f}`);
+      process.exit(1);
+    }
+    kitMin.push(kmin);
+  }
   if (flags.has('--publish')) {
     const out = join(root, 'apps/client/public/cars', id);
     mkdirSync(out, { recursive: true });
     copyFileSync(min, join(out, 'base.glb'));
-    console.log(`✓ В игре: apps/client/public/cars/${id}/base.glb`);
+    for (const k of kitMin) copyFileSync(k, join(out, basename(k).replace('.min', '')));
+    console.log(
+      `✓ В игре: apps/client/public/cars/${id}/base.glb${kitMin.length ? ` + ${kitMin.length} кита` : ''}`,
+    );
   }
   console.log(`✓ ${id}: рендеры — art/renders/${id}/sheet.png`);
 }

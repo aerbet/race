@@ -75,9 +75,24 @@ def main():
             print('AO: запечено')
         lod.make_lods(root)
         export.glb(root, p['glb'])
-        scene.save_blend(p['blend'])
         print(f'GLB: {p["glb"]}')
+        if spec.get('kits'):
+            # Кузовные киты (BLENDER_PLAN 5.4): строятся от того же кузова, после экспорта базы
+            from cars import kits
+            kit_roots = kits.build_kits(spec, root)
+            errs = [e for r in kit_roots.values() for e in checks.run(r)]
+            if errs:
+                print('\n'.join(f'CHECK: {e}' for e in errs))
+                raise SystemExit(f'checks.py (киты): {len(errs)} ошибок')
+            for kid, path in kits.finish_kits(kit_roots, spec, os.path.dirname(p['glb'])).items():
+                print(f'KIT: {path}')
+        scene.save_blend(p['blend'])
     if not a.no_render:
+        if spec.get('kits'):
+            from cars import kits
+            kit_roots = {k: bpy.data.objects[f'kit_{k}'] for k in spec['kits']}
+            for f in kits.render_kits(root, kit_roots, p['renders']):
+                print(f'KITS: {f}')
         sheet = render.all_car(root, p['renders'])
         print(f'SHEET: {sheet}')
 

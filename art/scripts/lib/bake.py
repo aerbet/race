@@ -22,17 +22,17 @@ def _gltf_output_group():
     return g
 
 
-def _reload(old, path):
+def _reload(old, path, name):
     img = bpy.data.images.load(path)
     img.colorspace_settings.name = 'Non-Color'
     bpy.data.images.remove(old)
-    img.name = 'ao_body'
+    img.name = name
     return img
 
 
-def bake_ao(objs, mats, size=2048, samples=32, distance=0.6, path=None):
+def bake_ao(objs, mats, size=2048, samples=32, distance=0.6, path=None, name='ao_body'):
     """Запечь AO выбранных объектов в одну картинку и подключить её ко всем материалам mats."""
-    img = bpy.data.images.new('ao_body', size, size, alpha=False)
+    img = bpy.data.images.new(name, size, size, alpha=False)
     img.colorspace_settings.name = 'Non-Color'
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
@@ -67,7 +67,7 @@ def bake_ao(objs, mats, size=2048, samples=32, distance=0.6, path=None):
         st.quality = 88
         img.save_render(path, scene=sc)
         st.file_format, st.color_mode = 'PNG', 'RGBA'
-        img = _reload(img, path)
+        img = _reload(img, path, name)
         for tex in nodes.values():
             tex.image = img
     img.pack()

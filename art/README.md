@@ -18,7 +18,8 @@
 |---|---|
 | `pnpm art:silhouette <id>` | Схема силуэта по спецификации: виды спереди, сбоку, сзади, сверху → `art/renders/<id>/silhouette.png` и `.svg` (~5 с) |
 | `pnpm art:car <id>` | Блендер в фоне: модель → проверки `checks.py` → UV → LOD → `art/export/cars/<id>/base.glb` → meshopt (+KTX2) → `base.min.glb` → валидатор → рендеры `art/renders/<id>/` |
-| `pnpm art:car <id> --publish` | То же + копия в `apps/client/public/cars/<id>/base.glb` (только после утверждения владельцем) |
+| `pnpm art:car <id> --publish` | То же + копия в `apps/client/public/cars/<id>/base.glb` и `kit_<kit>.glb` |
+| Киты | Если в спецификации есть `kits`, `kits.py` строит их после базы: `art/export/cars/<id>/kit_<kit>.glb`, рендеры `kits.png`, `kits_rear.png` |
 | `pnpm art:car <id> --no-render` | Без рендеров (быстро, ~5 с) |
 | `pnpm art:car:all` | Все машины из `art/specs/cars/` |
 | `pnpm art:render <id>` | Только рендеры из `art/source/cars/<id>.blend` |

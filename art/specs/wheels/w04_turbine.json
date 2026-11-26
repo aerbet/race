@@ -1,1 +1,13 @@
-{ "id": "w04_turbine", "displayName": "Турбина", "style": "turbine", "spokes": 10, "finish": "silver", "lip": "same", "dish": 0.008, "concave": 0.004, "spokeWidth": 0.026, "thickness": 0.022, "lugs": 4 }
+{
+  "id": "w04_turbine",
+  "displayName": "Турбина",
+  "style": "turbine",
+  "spokes": 10,
+  "finish": "silver",
+  "lip": "same",
+  "dish": 0.008,
+  "concave": 0.004,
+  "spokeWidth": 0.026,
+  "thickness": 0.022,
+  "lugs": 4
+}

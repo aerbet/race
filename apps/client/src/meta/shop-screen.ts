@@ -34,6 +34,7 @@ const SLOT_NAMES: Record<string, string> = {
   vinyl: 'Винил',
   rims: 'Диски',
   spoiler: 'Антикрыло',
+  kit: 'Кузов',
 };
 
 function h(html: string): HTMLElement {

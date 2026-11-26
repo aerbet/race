@@ -3,7 +3,15 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { newest } from '../../art/src/blender';
-import { BRAKES, PARTS, SOCKETS, WHEELS, validateGlb, validateWheelGlb } from './validate';
+import {
+  BRAKES,
+  PARTS,
+  SOCKETS,
+  WHEELS,
+  validateGlb,
+  validateKitGlb,
+  validateWheelGlb,
+} from './validate';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -223,6 +231,36 @@ describe('car-validate: колёса', () => {
       const r = validateWheelGlb(new Uint8Array(readFileSync(join(dir, f))));
       expect(r.errors, f).toEqual([]);
     }
+  });
+});
+
+describe('car-validate: кузовные киты', () => {
+  it('опубликованные киты проходят', () => {
+    const dir = join(root, 'apps/client/public/cars');
+    const kits = existsSync(dir)
+      ? readdirSync(dir).flatMap((id) =>
+          readdirSync(join(dir, id))
+            .filter((f) => /^kit_.+\.glb$/.test(f))
+            .map((f) => join(dir, id, f)),
+        )
+      : [];
+    for (const f of kits) {
+      const r = validateKitGlb(new Uint8Array(readFileSync(f)));
+      expect(r.errors, f).toEqual([]);
+      expect(r.stats.lod0).toBeGreaterThan(1000);
+    }
+  });
+
+  it('ловит отсутствие корня kit_<id>', () => {
+    const r = validateKitGlb(
+      toGlb({
+        asset: { version: '2.0' },
+        scene: 0,
+        scenes: [{ nodes: [0] }],
+        nodes: [{ name: 'car_root' }],
+      }),
+    );
+    expect(r.errors.join()).toMatch(/kit_<id>/);
   });
 });
 

@@ -3,6 +3,7 @@
   "name": "Kaizen RX-34",
   "era": "2000",
   "model": "kaizen_rx34",
+  "kits": ["street", "track", "drift"],
   "drive": "awd",
   "awdRearShare": 0.7,
   "mass": 1540,

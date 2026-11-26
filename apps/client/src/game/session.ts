@@ -135,8 +135,16 @@ export class Session {
       player?: boolean;
       color?: number;
       neon?: number | null;
-      /** Премиум-внешний вид: краска, эффект неона, винил, диски, антикрыло. */
-      look?: { paint?: string; neonFx?: string; vinyl?: string; rims?: string; spoiler?: string };
+      /** Премиум-внешний вид: краска, эффект неона, винил, диски, антикрыло, кузовной кит. */
+      look?: {
+        paint?: string;
+        neonFx?: string;
+        vinyl?: string;
+        rims?: string;
+        spoiler?: string;
+        kit?: string;
+        paint2?: string;
+      };
       name?: string;
       manual?: boolean;
     } = {},

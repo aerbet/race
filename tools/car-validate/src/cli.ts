@@ -6,10 +6,10 @@
  *
  * Код выхода 1 — есть ошибки.
  */
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateGlb, validateWheelGlb } from './validate';
+import { validateGlb, validateKitGlb, validateWheelGlb } from './validate';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -23,6 +23,14 @@ function defaults(): string[] {
         const p = join(abs, id, f);
         if (existsSync(p)) out.push(p);
       }
+      // Кузовные киты: kit_<id>.glb (опубликованные) и kit_<id>.min.glb (сжатые)
+      if (statSync(join(abs, id)).isDirectory())
+        for (const f of readdirSync(join(abs, id)))
+          if (
+            /^kit_[a-z0-9_]+(\.min)?\.glb$/.test(f) &&
+            (dir.startsWith('apps') || f.endsWith('.min.glb'))
+          )
+            out.push(join(abs, id, f));
     }
   }
   for (const dir of ['apps/client/public/wheels', 'art/export/wheels']) {
@@ -43,6 +51,18 @@ let failed = 0;
 for (const f of list) {
   const buf = new Uint8Array(readFileSync(f));
   const isWheel = f.split(sep).join('/').includes('/wheels/');
+  if (/^kit_[a-z0-9_]+(\.min)?\.glb$/.test(basename(f))) {
+    const r = validateKitGlb(buf);
+    const s = r.stats;
+    if (r.errors.length) failed++;
+    console.log(
+      `${r.errors.length ? 'FAIL' : 'OK  '} ${relative(root, f)} — кит «${r.kit}» ${s.lod0}/${s.lod1}/${s.lod2} тр.` +
+        (s.textures.length ? `; ${s.textures.join(', ')}` : ''),
+    );
+    for (const e of r.errors) console.log(`   ✗ ${e}`);
+    for (const w of r.warnings) console.log(`   ! ${w}`);
+    continue;
+  }
   const r = isWheel ? validateWheelGlb(buf) : validateGlb(buf);
   const s = r.stats;
   const ok = r.errors.length === 0;

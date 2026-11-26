@@ -1,1 +1,13 @@
-{ "id": "w03_mesh", "displayName": "Сетка", "style": "mesh", "spokes": 10, "finish": "bronze", "lip": "chrome", "dish": 0.03, "concave": 0.006, "spokeWidth": 0.011, "thickness": 0.018, "lugs": 5 }
+{
+  "id": "w03_mesh",
+  "displayName": "Сетка",
+  "style": "mesh",
+  "spokes": 10,
+  "finish": "bronze",
+  "lip": "chrome",
+  "dish": 0.03,
+  "concave": 0.006,
+  "spokeWidth": 0.011,
+  "thickness": 0.018,
+  "lugs": 5
+}

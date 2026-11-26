@@ -1,1 +1,13 @@
-{ "id": "w02_star5", "displayName": "Звезда", "style": "star", "spokes": 5, "finish": "gunmetal", "lip": "same", "dish": 0.012, "concave": 0.022, "spokeWidth": 0.022, "thickness": 0.028, "lugs": 5 }
+{
+  "id": "w02_star5",
+  "displayName": "Звезда",
+  "style": "star",
+  "spokes": 5,
+  "finish": "gunmetal",
+  "lip": "same",
+  "dish": 0.012,
+  "concave": 0.022,
+  "spokeWidth": 0.022,
+  "thickness": 0.028,
+  "lugs": 5
+}

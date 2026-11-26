@@ -178,6 +178,8 @@ export class RaceController {
           vinyl: setup.visual?.vinyl,
           rims: setup.visual?.rims,
           spoiler: setup.visual?.spoiler,
+          kit: setup.visual?.kit,
+          paint2: setup.visual?.paint2,
         },
       },
     );

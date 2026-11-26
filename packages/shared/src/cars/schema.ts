@@ -75,6 +75,8 @@ export const CarConfigSchema = z.object({
     .string()
     .regex(/^[a-z0-9_]+$/)
     .optional(),
+  /** Кузовные киты модели: cars/<model>/kit_<id>.glb; названия и цены — в shop.json (слот kit). */
+  kits: z.array(z.string().regex(/^[a-z0-9_]+$/)).optional(),
   drive: z.enum(['rwd', 'fwd', 'awd']),
   /** Доля момента на заднюю ось для awd. */
   awdRearShare: unit.default(0.6),

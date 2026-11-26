@@ -11,7 +11,7 @@ export interface TokenPack {
 
 export interface Cosmetic {
   id: string;
-  slot: 'paint' | 'neon' | 'vinyl' | 'rims' | 'spoiler';
+  slot: 'paint' | 'neon' | 'vinyl' | 'rims' | 'spoiler' | 'kit';
   value: string;
   name: string;
   price: number;

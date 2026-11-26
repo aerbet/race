@@ -23,7 +23,8 @@ public class GarageService {
   /** Бесплатные варианты деталей кузова. */
   static final java.util.Set<String> STOCK =
       java.util.Set.of(
-          "rims:stock", "rims:five", "spoiler:none", "spoiler:lip", "spoiler:wing", "bumper:stock", "bumper:sport", "vinyl:none");
+          "rims:stock", "rims:five", "spoiler:none", "spoiler:lip", "spoiler:wing", "bumper:stock", "bumper:sport", "vinyl:none",
+          "kit:stock");
 
   /** Разрешённые визуальные слоты и формат значений (цвет #rrggbb или id варианта). */
   static final Map<String, Pattern> VISUAL =
@@ -33,7 +34,8 @@ public class GarageService {
           "rims", Pattern.compile("[a-z0-9_]{1,24}"),
           "spoiler", Pattern.compile("[a-z0-9_]{1,24}"),
           "bumper", Pattern.compile("[a-z0-9_]{1,24}"),
-          "vinyl", Pattern.compile("[a-z0-9_]{1,24}"));
+          "vinyl", Pattern.compile("[a-z0-9_]{1,24}"),
+          "kit", Pattern.compile("[a-z0-9_]{1,24}"));
 
   public GarageService(
       CarCatalog catalog,

@@ -12,3 +12,5 @@
 | Диски и шины `art/export/wheels/*.glb`, карта нормалей протектора | собственные, строятся скриптом `art/scripts/cars/wheels.py` (рисунок протектора — numpy, без надписей) | собственные |
 | Колёса `apps/client/public/wheels/*.glb` (утверждены 26.11.2026) | собственные, `art/scripts/cars/wheels.py` | собственные |
 | Машина `apps/client/public/cars/kaizen_rx34/base.glb` (утверждена 26.11.2026) | собственная, `art/scripts/cars/car.py` + `art/specs/cars/kaizen_rx34.json`; AO запечён в Блендере | собственные |
+| Кузовные киты `apps/client/public/cars/kaizen_rx34/kit_{street,track,drift}.glb` | собственные, `art/scripts/cars/kits.py` + `art/specs/cars/kaizen_rx34.json`; AO запечён в Блендере | собственные |
+| Текстуры ливрей и карбона в клиенте (`render/paint.ts`) | собственные, рисуются в canvas | собственные |

@@ -1,1 +1,13 @@
-{ "id": "w01_split5", "displayName": "Сплит-5", "style": "double", "spokes": 5, "finish": "silver", "lip": "chrome", "dish": 0.022, "concave": 0.012, "spokeWidth": 0.024, "thickness": 0.026, "lugs": 5 }
+{
+  "id": "w01_split5",
+  "displayName": "Сплит-5",
+  "style": "double",
+  "spokes": 5,
+  "finish": "silver",
+  "lip": "chrome",
+  "dish": 0.022,
+  "concave": 0.012,
+  "spokeWidth": 0.024,
+  "thickness": 0.026,
+  "lugs": 5
+}

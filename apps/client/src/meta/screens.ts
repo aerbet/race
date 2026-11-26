@@ -54,6 +54,7 @@ const FREE_PARTS: [string, string, string][] = [
   ['spoiler', 'wing', 'Антикрыло'],
   ['rims', 'five', 'Диски: 5 спиц'],
   ['vinyl', 'none', 'Без винила'],
+  ['kit', 'stock', 'Кузов: сток'],
 ];
 
 export const PAINTS = [
@@ -170,6 +171,11 @@ export function showGarage(root: HTMLElement, done: () => void): void {
     }).join('');
     const paint = cur.visual.paint ?? '#e8eef7';
     const neon = cur.visual.neon ?? '#29e0ff';
+    // Кузовные киты — только у машин с glTF-моделью и китами этой модели
+    const fits = (slot: string, value: string) =>
+      slot !== 'kit' ||
+      (!!base.kits?.length && (!value || value === 'stock' || base.kits.includes(value)));
+    const mine = owned.filter((o) => fits(o.slot, o.value));
     panel.innerHTML = `<div class="results">
       <p class="big" style="font:900 italic 30px var(--font);margin:0">Гараж</p>
       <p class="sub">Кредиты: <b>${money.toLocaleString('ru-RU')}</b></p>
@@ -185,19 +191,21 @@ export function showGarage(root: HTMLElement, done: () => void): void {
       <table>${rows}</table>
       <h2>Цвет</h2><div class="row">${PAINTS.map((c) => `<button class="swatch ${c === paint ? 'sel' : ''}" data-paint="${c}" style="background:${c}"></button>`).join('')}</div>
       <h2>Неон</h2><div class="row">${NEONS.map((c) => `<button class="swatch ${c === neon ? 'sel' : ''}" data-neon="${c}" style="background:${c === 'off' ? '#222' : c}">${c === 'off' ? '×' : ''}</button>`).join('')}</div>
-      <h2>Кузов (бесплатно)</h2><div class="row">${FREE_PARTS.map(
-        ([slot, value, name]) =>
-          `<button class="btn ${(cur.visual[slot] ?? '') === value ? 'sel' : ''}" data-slot="${slot}" data-val="${value}">${name}</button>`,
-      ).join('')}</div>
+      <h2>Кузов (бесплатно)</h2><div class="row">${FREE_PARTS.filter(([slot]) => fits(slot, ''))
+        .map(
+          ([slot, value, name]) =>
+            `<button class="btn ${(cur.visual[slot] ?? (slot === 'kit' ? 'stock' : '')) === value ? 'sel' : ''}" data-slot="${slot}" data-val="${value}">${name}</button>`,
+        )
+        .join('')}</div>
       ${
-        owned.length
-          ? `<h2>Купленное в магазине</h2><div class="row">${owned
+        mine.length
+          ? `<h2>Купленное в магазине</h2><div class="row">${mine
               .map(
                 (o) =>
                   `<button class="btn ${cur.visual[o.slot] === o.value ? 'sel' : ''}" data-slot="${o.slot}" data-val="${o.value}">${escapeHtml(o.name)}</button>`,
               )
               .join('')}</div>`
-          : '<p class="hint">Премиум-краски, неон, винилы и диски — в «Магазине».</p>'
+          : '<p class="hint">Премиум-краски, неон, винилы, диски и кузовные киты — в «Магазине».</p>'
       }
       <h2>Автосалон</h2><div class="grid2">${
         shop

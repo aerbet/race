@@ -73,6 +73,9 @@
       "price": 90
     },
     { "id": "rims_mesh", "slot": "rims", "value": "mesh", "name": "Диски «Сетка»", "price": 90 },
-    { "id": "spoiler_gt", "slot": "spoiler", "value": "gt", "name": "Антикрыло GT", "price": 110 }
+    { "id": "spoiler_gt", "slot": "spoiler", "value": "gt", "name": "Антикрыло GT", "price": 110 },
+    { "id": "kit_street", "slot": "kit", "value": "street", "name": "Кит «Уличный»", "price": 220 },
+    { "id": "kit_track", "slot": "kit", "value": "track", "name": "Кит «Трековый»", "price": 320 },
+    { "id": "kit_drift", "slot": "kit", "value": "drift", "name": "Кит «Дрифт»", "price": 300 }
   ]
 }

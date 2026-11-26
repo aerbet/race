@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { CarConfig } from '@sr/shared';
-import { carModelParam, loadCarModel, splitCarModel } from './car-model';
+import { carKitParam, carModelParam, loadCarKit, loadCarModel, splitCarModel } from './car-model';
+import { applyModelPaint, paintMaterial } from './paint';
 
 /**
  * Процедурная модель машины (собственная, без внешних ассетов).
@@ -116,6 +117,10 @@ export interface CarViewOptions {
   vinyl?: string;
   rims?: string;
   spoiler?: string;
+  /** Кузовной кит glTF-модели (stock | id из cfg.kits). */
+  kit?: string;
+  /** Второй цвет (#rrggbb) — детали с маской accent. */
+  paint2?: string;
 }
 
 let glowCache: THREE.Texture | null = null;
@@ -131,121 +136,6 @@ function makeGlow(): THREE.Texture {
   g.fillRect(0, 0, 64, 64);
   glowCache = new THREE.CanvasTexture(c);
   return glowCache;
-}
-
-const vinylCache = new Map<string, THREE.Texture>();
-/** Винил — текстура по развёртке кузова: u — вдоль длины, v — вокруг сечения (0 низ, 0.5 крыша). */
-function vinylTexture(kind: string): THREE.Texture | null {
-  if (!kind || kind === 'none') return null;
-  const hit = vinylCache.get(kind);
-  if (hit) return hit;
-  const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 256;
-  const g = c.getContext('2d')!;
-  g.fillStyle = '#fff';
-  g.fillRect(0, 0, 512, 256);
-  g.fillStyle = '#16181f';
-  const vy = (v: number) => (1 - v) * 256;
-  if (kind === 'stripes') {
-    // Две гоночные полосы через капот, крышу и багажник
-    g.fillRect(0, vy(0.535), 512, 9);
-    g.fillRect(0, vy(0.485), 512, 9);
-  } else if (kind === 'checker') {
-    for (const side of [0.19, 0.81])
-      for (let x = 300; x < 512; x += 16)
-        for (let y = -2; y < 3; y++)
-          if ((x / 16 + y) % 2 === 0) g.fillRect(x, vy(side) + y * 12, 16, 12);
-  } else if (kind === 'tribal') {
-    g.lineWidth = 7;
-    g.strokeStyle = '#16181f';
-    for (const side of [0.19, 0.81]) {
-      const y0 = vy(side);
-      g.beginPath();
-      g.moveTo(40, y0 + 18);
-      for (let x = 40; x < 470; x += 30)
-        g.quadraticCurveTo(x + 15, y0 - 26 + ((x / 30) % 2) * 10, x + 30, y0 + 14);
-      g.stroke();
-    }
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  vinylCache.set(kind, t);
-  return t;
-}
-
-function paintMaterial(opts: CarViewOptions, hi: boolean): THREE.Material {
-  const ghost = !!opts.ghost;
-  if (ghost)
-    return new THREE.MeshStandardMaterial({
-      color: opts.color,
-      transparent: true,
-      opacity: 0.35,
-      depthWrite: false,
-      metalness: 0.3,
-      roughness: 0.4,
-    });
-  const p = opts.paint ?? '';
-  const base = p.startsWith('#') ? parseInt(p.slice(1), 16) : opts.color;
-  const map = vinylTexture(opts.vinyl ?? '');
-  const common = { map, side: THREE.FrontSide };
-  if (p === 'chrome')
-    return new THREE.MeshPhysicalMaterial({
-      ...common,
-      color: 0xf4f6fa,
-      metalness: 1,
-      roughness: 0.06,
-      clearcoat: 1,
-      envMapIntensity: 1.4,
-    });
-  if (p === 'pearl')
-    return new THREE.MeshPhysicalMaterial({
-      ...common,
-      color: 0xf3efe8,
-      metalness: 0.25,
-      roughness: 0.22,
-      clearcoat: 1,
-      clearcoatRoughness: 0.05,
-      sheen: 1,
-      sheenColor: new THREE.Color(0xc8b8ff),
-      sheenRoughness: 0.4,
-    });
-  if (p === 'matte_black')
-    return new THREE.MeshStandardMaterial({
-      ...common,
-      color: 0x141518,
-      metalness: 0.2,
-      roughness: 0.82,
-    });
-  if (p === 'chameleon')
-    return new THREE.MeshPhysicalMaterial({
-      ...common,
-      color: 0x3a1f7a,
-      metalness: 0.7,
-      roughness: 0.25,
-      clearcoat: 1,
-      iridescence: 1,
-      iridescenceIOR: 1.9,
-      iridescenceThicknessRange: [200, 900],
-    });
-  if (!hi)
-    return new THREE.MeshStandardMaterial({
-      ...common,
-      color: base,
-      metalness: 0.55,
-      roughness: 0.32,
-    });
-  // Автоэмаль с лаком
-  return new THREE.MeshPhysicalMaterial({
-    ...common,
-    color: base,
-    metalness: 0.45,
-    roughness: 0.38,
-    clearcoat: 1,
-    clearcoatRoughness: 0.08,
-    // Ночная сцена с bloom: светлые машины иначе пересвечены
-    envMapIntensity: 0.7,
-  });
 }
 
 /** Кузов + стекло: один лофт, две группы материалов. */
@@ -430,13 +320,21 @@ export class CarView {
   private modelTail: THREE.MeshStandardMaterial | null = null;
   /** Сдвиг колёс внутрь под процедурный кузов; у glTF-модели колёса стоят по колее, как в арках. */
   private wheelInset = 0.04;
+  private readonly opts: CarViewOptions;
+  private readonly hi: boolean;
+  /** Кит, который стоит на glTF-модели (null — сток). */
+  kit: string | null = null;
+  /** Промис загрузки glTF-модели (для гаража и тестов); null — процедурный кузов. */
+  readonly ready: Promise<void> | null = null;
 
   constructor(cfg: CarConfig, opts: CarViewOptions) {
     this.cfg = cfg;
+    this.opts = opts;
     const ghost = !!opts.ghost;
     const hi =
       !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) &&
       !location.search.includes('q=low');
+    this.hi = hi;
     const { width: W, height: H, length: L } = cfg.body;
     const shape = SHAPES[cfg.era] ?? SHAPES['2000']!;
     const R = cfg.wheels.radius;
@@ -648,17 +546,32 @@ export class CarView {
 
     // Модель из Блендера вместо процедурной: из конфига (`model`) или `?carModel=<id>` для проверки
     const modelId = carModelParam() ?? cfg.model;
-    if (modelId && !ghost)
-      loadCarModel(modelId)
-        .then((m) => this.useModel(m))
+    if (modelId && !ghost) {
+      const want = opts.kit ?? carKitParam();
+      const kit = want && cfg.kits?.includes(want) ? want : null;
+      this.ready = Promise.all([
+        loadCarModel(modelId),
+        // Кит не загрузился — машина остаётся на стоковых деталях
+        kit
+          ? loadCarKit(modelId, kit).catch((e: unknown) => {
+              console.warn(`кит ${kit} не загрузился`, e);
+              return null;
+            })
+          : null,
+      ])
+        .then(([m, k]) => this.useModel(m, k, kit))
         .catch((e: unknown) => console.warn(`модель ${modelId} не загрузилась`, e));
+    }
   }
 
-  /** Заменить процедурный кузов и колёса на glTF-модель (ART_BRIEF: узлы body…wheel_RR). */
-  useModel(scene: THREE.Object3D): void {
-    const parts = splitCarModel(scene);
+  /** Заменить процедурный кузов и колёса на glTF-модель (ART_BRIEF: узлы body…wheel_RR) + кит. */
+  useModel(scene: THREE.Object3D, kitScene?: THREE.Object3D | null, kit?: string | null): void {
+    const parts = splitCarModel(scene, kitScene, kit);
+    applyModelPaint(parts.body, this.opts, this.hi);
+    this.kit = parts.kit;
+    // Неон и пламя нитро остаются, процедурный кузов прячется
     for (const c of this.body.children)
-      if (!this.nitroFlames.includes(c as THREE.Mesh)) c.visible = false;
+      if (!this.nitroFlames.includes(c as THREE.Mesh) && c.name !== 'neon') c.visible = false;
     // Начало модели — на земле, центр колёс — на высоте радиуса
     parts.body.position.set(0, this.wheelY - this.cfg.wheels.radius, 0);
     this.body.add(parts.body);

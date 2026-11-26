@@ -291,3 +291,78 @@ export function validateWheelGlb(buf: Uint8Array): Report {
     stats: { lod0: t0, lod1: t1, lod2: t2, size, wheels: [tris('brake')], textures },
   };
 }
+
+export const KIT_PARTS = ['hood', 'bumper_front', 'bumper_rear', 'skirts', 'spoiler'] as const;
+export const KIT_LIMITS = { lod0Max: 12000, textureMax: 1024 };
+
+/**
+ * Кузовной кит (BLENDER_PLAN 5.4): kit_<id> → <часть>__<id> (+_LOD1/_LOD2) для hood,
+ * bumper_front, bumper_rear, skirts, spoiler. Начало — как у car_root, спойлер — в сокете.
+ */
+export function validateKitGlb(buf: Uint8Array): Report & { kit: string } {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const { json, bin } = parseGlb(buf);
+  const nodes = walk(json);
+  const byName = new Map(nodes.map((n) => [n.name, n]));
+  const root = nodes.find((n) => n.parent === null && /^kit_[a-z0-9_]+$/.test(n.name));
+  const kit = root?.name.slice(4) ?? '';
+  if (!root) errors.push('нет корневого узла kit_<id>');
+  const tris = { '0': 0, '1': 0, '2': 0 };
+  let all: Box | null = null;
+  for (const part of KIT_PARTS) {
+    for (const lod of ['', '_LOD1', '_LOD2'] as const) {
+      const name = `${part}__${kit}${lod}`;
+      const n = byName.get(name);
+      if (!n) {
+        errors.push(`нет узла ${name}`);
+        continue;
+      }
+      if (root && n.parent !== root.index)
+        errors.push(`${name} должен быть дочерним узлом kit_${kit}`);
+      if (n.mesh === undefined) {
+        if (!lod) errors.push(`${name} без меша`);
+        continue;
+      }
+      tris[lodOf(name)] += meshTriangles(json, n.mesh);
+      if (!lod) all = merge(all, meshBox(json, n.mesh, n.world));
+    }
+  }
+  for (const n of nodes) if (/\.\d{3}$/.test(n.name)) errors.push(`имя по умолчанию: «${n.name}»`);
+  if (tris['0'] > KIT_LIMITS.lod0Max)
+    errors.push(`LOD0: ${tris['0']} треугольников > ${KIT_LIMITS.lod0Max}`);
+  if (tris['0'] && (tris['1'] >= tris['0'] || tris['2'] >= tris['1']))
+    errors.push(`LOD не легчают: ${tris['0']} / ${tris['1']} / ${tris['2']}`);
+  const size = all ? [0, 1, 2].map((k) => all!.max[k]! - all!.min[k]!) : [0, 0, 0];
+  if (all) {
+    const [w, , l] = size as [number, number, number];
+    if (l < 2.5 || l > 7 || w < 1.2 || w > 2.8)
+      errors.push(`габариты кита ${size.map((v) => v.toFixed(2)).join('×')} м — масштаб или оси`);
+    if (all.min[1]! < -0.02) errors.push(`кит ниже земли (y=${all.min[1]!.toFixed(3)})`);
+  }
+  // Перёд — в −Z: передний бампер должен быть впереди заднего
+  const fb = byName.get(`bumper_front__${kit}`);
+  const rb = byName.get(`bumper_rear__${kit}`);
+  if (fb?.mesh !== undefined && rb?.mesh !== undefined) {
+    const f = meshBox(json, fb.mesh, fb.world);
+    const r = meshBox(json, rb.mesh, rb.world);
+    if (f && r && f.min[2]! + f.max[2]! >= r.min[2]! + r.max[2]!)
+      errors.push('передний бампер сзади заднего: перёд должен смотреть в −Z');
+  }
+  const textures: string[] = [];
+  for (const img of json.images ?? []) {
+    if (img.bufferView === undefined || !bin) continue;
+    const bv = json.bufferViews![img.bufferView]!;
+    const s = imageSize(bin.subarray(bv.byteOffset ?? 0, (bv.byteOffset ?? 0) + bv.byteLength));
+    if (!s) continue;
+    textures.push(`${s.w}×${s.h} ${s.format}`);
+    if (s.w > KIT_LIMITS.textureMax || s.h > KIT_LIMITS.textureMax)
+      errors.push(`картинка ${s.w}×${s.h} > ${KIT_LIMITS.textureMax}`);
+  }
+  return {
+    kit,
+    errors,
+    warnings,
+    stats: { lod0: tris['0'], lod1: tris['1'], lod2: tris['2'], size, wheels: [], textures },
+  };
+}
