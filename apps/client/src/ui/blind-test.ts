@@ -8,6 +8,7 @@ const BLIND_IDS = ['era2000_coupe', 'era2026_hatch', 'kaizen_rx34'].filter((id) 
 import { App } from '../app';
 import type { Quality } from '../render/quality';
 import { escapeHtml } from './menu';
+import { api, newKey } from '../meta/api';
 
 export const QUESTIONS = [
   { id: 'smooth', text: 'Плавность управления' },
@@ -70,6 +71,7 @@ export class BlindTest {
   private app: App;
   private screen: HTMLElement | null = null;
   private tester = '';
+  private session = '';
   private order: string[] = [];
   private idx = 0;
   private driveStart = 0;
@@ -116,13 +118,15 @@ export class BlindTest {
     const name = el.querySelector('[data-k="name"]') as HTMLInputElement;
     (el.querySelector('[data-k="go"]') as HTMLElement).onclick = () => {
       this.tester = name.value.trim() || `T-${Date.now().toString(36)}`;
+      // Анонимный id прохода: на сервер уходит только он, не имя
+      this.session = newKey();
       // Случайный порядок машин для каждого тестера
       this.order = [...BLIND_IDS].sort(() => Math.random() - 0.5);
       this.idx = 0;
       this.drive();
     };
     (el.querySelector('[data-k="dl"]') as HTMLElement).onclick = () => this.download();
-    (el.querySelector('[data-k="sum"]') as HTMLElement).onclick = () => this.summary();
+    (el.querySelector('[data-k="sum"]') as HTMLElement).onclick = () => void this.summary();
   }
 
   private drive(): void {
@@ -206,6 +210,7 @@ export class BlindTest {
         userAgent: navigator.userAgent,
       });
       saveResults(all);
+      void this.upload(all[all.length - 1]!);
       this.idx++;
       if (this.idx < this.order.length) this.drive();
       else this.thanks();
@@ -221,8 +226,43 @@ export class BlindTest {
     (el.querySelector('[data-k="dl"]') as HTMLElement).onclick = () => this.download();
   }
 
-  private summary(): void {
-    const avg = averages(loadResults());
+  /** Отправка оценки на сервер (анонимно). Без сети — остаётся локально, можно скачать JSON. */
+  private async upload(r: BlindResult): Promise<void> {
+    try {
+      await api('/api/blind', {
+        auth: false,
+        body: {
+          sessionId: this.session,
+          carId: r.carId,
+          label: r.label,
+          order: r.order,
+          driveSeconds: r.driveSeconds,
+          device: r.device,
+          scores: r.scores,
+          comment: r.comment,
+        },
+      });
+    } catch {
+      /* сервер недоступен — результат есть в браузере */
+    }
+  }
+
+  private async summary(): Promise<void> {
+    // Сначала общая сводка с сервера, без сети — по этому браузеру
+    let avg = averages(loadResults());
+    let source = 'по этому устройству';
+    try {
+      const srv = await api<{
+        testers: number;
+        cars: (Record<string, number> & { car_id: string; n: number })[];
+      }>('/api/blind/summary', { auth: false });
+      if (srv.cars.length) {
+        avg = Object.fromEntries(srv.cars.map((c) => [c.car_id, c]));
+        source = `все тестеры: ${srv.testers}`;
+      }
+    } catch {
+      /* офлайн */
+    }
     const rows = Object.entries(avg)
       .map(
         ([car, a]) =>
@@ -234,7 +274,7 @@ export class BlindTest {
       .join('');
     const el = this
       .show(`<div class="results"><p class="big" style="font:900 italic 30px var(--font);margin:0">Сводка</p>
-      <p class="sub">Цель — ≥ 4,0 по каждому пункту.</p>
+      <p class="sub">Цель — ≥ 4,0 по каждому пункту · ${source}</p>
       <table><tr><th>Машина</th>${QUESTIONS.map((q) => `<th>${q.id}</th>`).join('')}</tr>${rows}</table>
       <div class="btnrow"><button class="btn" data-k="back">Назад</button></div></div>`);
     (el.querySelector('[data-k="back"]') as HTMLElement).onclick = () => this.intro();

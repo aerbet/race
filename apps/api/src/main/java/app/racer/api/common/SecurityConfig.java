@@ -64,6 +64,8 @@ public class SecurityConfig {
                     .permitAll()
                     // Внутренние вызовы сервера гонок — проверяются ключом в контроллере
                     .requestMatchers("/internal/**").permitAll()
+                    // Слепой тест — анонимно, с лимитом частоты в контроллере
+                    .requestMatchers("/api/blind", "/api/blind/summary").permitAll()
                     // Вебхуки провайдеров: подпись/перепроверка — в контроллере
                     .requestMatchers(HttpMethod.POST, "/webhooks/**").permitAll()
                     .anyRequest().authenticated())

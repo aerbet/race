@@ -769,3 +769,15 @@ body.touch-ui .hud-attr {
   border-radius: 12px;
   border: 1px solid rgba(41, 224, 255, 0.25);
 }
+
+/* Заметная кнопка слепого теста (PLAN_V2 7.0.4) */
+.blind-cta {
+  display: block;
+  margin: 4px 0 14px;
+  text-decoration: none;
+  border-color: rgba(140, 255, 58, 0.55);
+  background: rgba(140, 255, 58, 0.08);
+}
+.blind-cta:hover {
+  border-color: #8cff3a;
+}

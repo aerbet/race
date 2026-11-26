@@ -150,6 +150,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     </div>
     <h1>${BRAND.title}</h1>
     <p class="tagline">${BRAND.tagline}</p>
+    <a class="btn blind-cta" href="?blind">Помоги настроить управление<small>3 тачки, по минуте на каждую и 5 оценок. Анонимно.</small></a>
     <h2>Где</h2><div class="grid2" data-k="loc"></div>
     <div data-k="weatherBlock"><h2>Погода</h2><div class="row" data-k="weather"></div></div>
     <h2>Режим</h2><div class="grid2" data-k="mode"></div>
@@ -168,8 +169,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
       <span class="kbd">W/↑</span> газ · <span class="kbd">S/↓</span> тормоз/задний · <span class="kbd">A D</span> руль ·
       <span class="kbd">Пробел</span> резкий тормоз (с газом и рулём — занос) · <span class="kbd">Shift</span> нитро · <span class="kbd">C</span> камера ·
       <span class="kbd">R</span> сброс · <span class="kbd">Esc</span> пауза · <span class="kbd">Q/E</span> передачи (ручная)<br/>
-      Геймпад: стик — руль, R2/L2 — газ/тормоз, A — резкий тормоз / занос с газом, B — нитро. На телефоне — экранные кнопки, газ автоматический.<br/>
-      <a href="?blind" style="color:var(--accent)">Слепой тест управления</a>
+      Геймпад: стик — руль, R2/L2 — газ/тормоз, A — резкий тормоз / занос с газом, B — нитро. На телефоне — экранные кнопки, газ автоматический.
     </p>
   </div></div>`);
   root.appendChild(el);
