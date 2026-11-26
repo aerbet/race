@@ -13,6 +13,8 @@ import { InputDebug } from './ui/input-debug';
 import { CarAudio, audio } from './audio/engine-audio';
 import { showShop } from './meta/shop-screen';
 import { MusicWidget } from './ui/music-ui';
+import { PhotoMode } from './ui/photo-mode';
+import * as THREE from 'three';
 import { hub } from './audio/hub';
 import { account } from './meta/account';
 import { ApiError, activeCar, api, errText } from './meta/api';
@@ -71,7 +73,7 @@ export class App {
   }
 
   private onKey(e: KeyboardEvent): void {
-    if (!this.race) return;
+    if (!this.race || this.photoMode) return;
     if (e.code === 'Escape') this.togglePause();
     if (e.code === 'KeyC') this.race.session.rig.cycle();
     if (e.code === 'F2') {
@@ -102,6 +104,35 @@ export class App {
     el.textContent = text;
     this.root.appendChild(el);
     setTimeout(() => el.remove(), seconds * 1000);
+  }
+
+  /** Фоторежим (9.5): из паузы; выход — снова пауза. */
+  private photoMode: PhotoMode | null = null;
+  private photo(): void {
+    const race = this.race;
+    if (!race) return;
+    this.closeScreens();
+    const ses = race.session;
+    const pl = ses.player!;
+    ses.freeCamera = true;
+    this.photoMode = new PhotoMode(this.root, {
+      camera: ses.gfx.camera,
+      canvas: ses.gfx.renderer.domElement,
+      render: () => ses.gfx.render(),
+      target: () => pl.view.root.position,
+      heading: () => {
+        const f = new THREE.Vector3(0, 0, -1).applyQuaternion(pl.view.root.quaternion);
+        return Math.atan2(f.x, f.z);
+      },
+    });
+    this.photoMode.onExit = () => {
+      this.photoMode = null;
+      ses.freeCamera = false;
+      ses.rig.snap();
+      // Снова пауза: togglePause переключает, поэтому сначала «снимаем» её
+      this.paused = false;
+      this.togglePause();
+    };
   }
 
   /** Меню «Музыка»: в гонке сначала пауза. */
@@ -250,6 +281,9 @@ export class App {
     if (
       this.fpsProbe &&
       !this.online &&
+      // Замер — только во время езды: пауза и фоторежим не в счёт
+      !this.paused &&
+      !this.photoMode &&
       race.tracker.phase !== 'finished' &&
       this.fpsProbe.tick(dt)
     ) {
@@ -373,6 +407,7 @@ export class App {
         },
         camera: () => this.race?.session.rig.cycle(),
         debug: () => this.toggleDebug(),
+        photo: this.online ? undefined : () => this.photo(),
         toggles:
           this.input.device === 'touch'
             ? [

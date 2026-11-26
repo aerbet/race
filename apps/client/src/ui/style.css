@@ -960,3 +960,32 @@ body:has(.screen) .yt-frame {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Фоторежим (9.5): без HUD, панель снизу по центру */
+body.photo-mode .hud,
+body.photo-mode .pause-btn,
+body.photo-mode .touch-controls,
+body.photo-mode .speedlines {
+  display: none !important;
+}
+.photo-ui {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 32;
+  text-align: center;
+  background: rgba(6, 8, 18, 0.75);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+  max-width: calc(100vw - 24px);
+}
+.photo-ui .btnrow {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.photo-ui .hint,
+.photo-ui .sub {
+  margin: 2px 0;
+}

@@ -423,6 +423,8 @@ export interface PauseActions {
   menu: () => void;
   camera: () => void;
   debug: () => void;
+  /** Фоторежим (нет в онлайне). */
+  photo?: () => void;
   /** Переключатели (например, сенсорное управление): подпись зависит от состояния. */
   toggles?: { label: () => string; toggle: () => void | Promise<void> }[];
 }
@@ -434,6 +436,7 @@ export function showPause(root: HTMLElement, a: PauseActions): () => void {
       <button class="btn" data-k="resume">${t('pause.resume')}</button>
       <button class="btn" data-k="restart">${t('pause.restart')}</button>
       <button class="btn" data-k="camera">${t('pause.camera')}</button>
+      ${a.photo ? `<button class="btn" data-k="photo">${t('pause.photo')}</button>` : ''}
       <button class="btn" data-k="debug">${t('pause.debug')}</button>
       <button class="btn" data-k="menu">${t('pause.menu')}</button>
     </div></div></div>`);
@@ -441,6 +444,7 @@ export function showPause(root: HTMLElement, a: PauseActions): () => void {
   for (const k of ['resume', 'restart', 'menu', 'camera', 'debug'] as const) {
     (el.querySelector(`[data-k="${k}"]`) as HTMLElement).onclick = a[k];
   }
+  if (a.photo) (el.querySelector('[data-k="photo"]') as HTMLElement).onclick = a.photo;
   const row = el.querySelector('.btnrow') as HTMLElement;
   for (const t of a.toggles ?? []) {
     const b = document.createElement('button');

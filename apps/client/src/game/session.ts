@@ -127,6 +127,9 @@ export class Session {
   }
 
   userPaused = false;
+  /** Камеру ведёт фоторежим, а не CameraRig. */
+  freeCamera = false;
+
   setPaused(p: boolean): void {
     this.userPaused = p;
     this.loop.paused = p || document.hidden;
@@ -247,7 +250,9 @@ export class Session {
       const up = new THREE.Vector3(0, 1, 0).applyQuaternion(pl.view.root.quaternion);
       const lv = pl.vehicle.body.linvel();
       const vel = new THREE.Vector3(lv.x, lv.y, lv.z);
-      this.rig.update(dt, pl.view.root.position, fwd, vel, pl.vehicle.nitroActive, up);
+      // Фоторежим ведёт камеру сам
+      if (!this.freeCamera)
+        this.rig.update(dt, pl.view.root.position, fwd, vel, pl.vehicle.nitroActive, up);
       this.gfx.followShadow(pl.view.root.position.x, pl.view.root.position.z);
       const speed = vel.length();
       const intensity =
