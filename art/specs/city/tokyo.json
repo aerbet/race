@@ -2,8 +2,41 @@
   "kit": "tokyo",
   "note": "Ориентиры — стилизованные силуэты по мотивам (решётчатая башня, угол с экранами над большим перекрёстком, высокий мост), без копирования конкретных сооружений.",
   "landmarks": [
-    { "id": "lattice_tower", "city": "tokyo_synth", "x": 380, "z": -320 },
-    { "id": "screen_corner", "city": "tokyo_synth", "x": -60, "z": 40 },
-    { "id": "pylon_bridge", "city": "tokyo_synth", "x": -250, "z": 250 }
+    {
+      "id": "lattice_tower",
+      "city": "tokyo_synth",
+      "x": 380,
+      "z": -320
+    },
+    {
+      "id": "screen_corner",
+      "city": "tokyo_synth",
+      "x": -60,
+      "z": 40
+    },
+    {
+      "id": "pylon_bridge",
+      "city": "tokyo_synth",
+      "x": -250,
+      "z": 250
+    },
+    {
+      "id": "lattice_tower",
+      "city": "tokyo_shinjuku",
+      "x": 700,
+      "z": -650
+    },
+    {
+      "id": "screen_corner",
+      "city": "tokyo_shinjuku",
+      "x": 120,
+      "z": 80
+    },
+    {
+      "id": "pylon_bridge",
+      "city": "tokyo_shinjuku",
+      "x": -300,
+      "z": -200
+    }
   ]
 }

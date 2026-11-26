@@ -2,7 +2,8 @@
  * osm-to-city: OpenStreetMap → упрощённая дорожная сеть → блоки 256 м → glTF.
  *
  *   pnpm --filter osm-to-city build -- --synth --id moscow_synth --name "Москва (процедурная)" --kit moscow
- *   pnpm --filter osm-to-city build -- --bbox 55.743,37.581,55.761,37.613 --id moscow_arbat --name "Москва, Арбат"
+ *   pnpm --filter osm-to-city build -- --bbox 55.751,37.596,55.769,37.628 --id moscow_center --name "Москва, центр" --kit moscow --auto-tracks mskc
+ *   (скачанный район кэшируется в tools/osm-to-city/data/<id>.json; --style tokyo — неон)
  *   pnpm --filter osm-to-city build -- --in data/arbat.json --id moscow_arbat --name "Москва, Арбат"
  *
  * Результат: apps/client/public/cities/<id>/city.json + tiles/*.glb
@@ -12,6 +13,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseOverpass, type OverpassJson } from './osm';
 import { buildCity } from './build';
+import { autoTracks } from './routes';
 import type { ModuleCatalog } from './modules';
 import { synthDistrict, synthTracks } from './synth';
 import { synthTokyo, tokyoTracks } from './synth-tokyo';
@@ -29,7 +31,7 @@ const half = Number(arg('half') ?? 1000);
 
 async function fetchOverpass(bbox: string): Promise<OverpassJson> {
   const [s, w, n, e] = bbox.split(',').map(Number);
-  const q = `[out:json][timeout:120];(way["highway"](${s},${w},${n},${e});way["building"](${s},${w},${n},${e}););(._;>;);out body;`;
+  const q = `[out:json][timeout:120];(way["highway"](${s},${w},${n},${e});way["building"](${s},${w},${n},${e});relation["building"](${s},${w},${n},${e}););(._;>;);out body;`;
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     body: new URLSearchParams({ data: q }),
@@ -56,8 +58,15 @@ if (arg('synth') === 'tokyo') {
   tracks = synthTracks(half * 0.9);
   origin = { lat: 55.75, lon: 37.6 };
 } else if (arg('bbox')) {
-  data = await fetchOverpass(arg('bbox')!);
-  writeFileSync(join(root, 'tools/osm-to-city/data', `${id}.json`), JSON.stringify(data));
+  // Кэш: повторная сборка не скачивает район заново (данные © участники OpenStreetMap, ODbL)
+  const cached = join(root, 'tools/osm-to-city/data', `${id}.json`);
+  data =
+    existsSync(cached) && !args.includes('--refresh')
+      ? (JSON.parse(readFileSync(cached, 'utf8')) as OverpassJson)
+      : await fetchOverpass(arg('bbox')!);
+  if (!existsSync(cached) || args.includes('--refresh'))
+    writeFileSync(cached, JSON.stringify(data));
+  if (arg('style') === 'tokyo') style = 'tokyo';
 } else if (arg('in')) {
   data = JSON.parse(readFileSync(resolve(arg('in')!), 'utf8')) as OverpassJson;
 } else {
@@ -78,6 +87,11 @@ if (kitId) {
   modules = JSON.parse(readFileSync(f, 'utf8')) as ModuleCatalog;
 }
 const parsed = parseOverpass(data, origin);
+// Реальный район без готовых трасс: кольцо, спринт и дрифт по его улицам (10.2)
+if (!tracks.length && arg('auto-tracks')) {
+  tracks = autoTracks(parsed.roads, half, arg('auto-tracks')!);
+  console.log(`трассы: ${tracks.map((t) => t.id).join(', ')}`);
+}
 const { city, files } = buildCity(parsed.roads, parsed.buildings, {
   id,
   name,

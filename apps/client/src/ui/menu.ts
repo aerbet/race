@@ -21,6 +21,20 @@ export interface MenuSettings {
 
 /** Трассы городов по режимам (id трасс из city.json). */
 const CITY_TRACKS: Record<string, Record<ModeId, string>> = {
+  moscow_center: {
+    circuit: 'mskc_ring',
+    sprint: 'mskc_sprint',
+    drift: 'mskc_drift',
+    timeattack: 'mskc_ring',
+    free: 'mskc_ring',
+  },
+  tokyo_shinjuku: {
+    circuit: 'tyos_ring',
+    sprint: 'tyos_sprint',
+    drift: 'tyos_drift',
+    timeattack: 'tyos_ring',
+    free: 'tyos_ring',
+  },
   moscow_synth: {
     circuit: 'msk_ring',
     sprint: 'msk_sprint',
@@ -45,7 +59,9 @@ const LOCATIONS = [
   ...CITIES.map((c) => ({
     id: c.id,
     title: c.name,
-    desc: `${c.country} · ночной город, блоки 256 м`,
+    desc: c.id.endsWith('_synth')
+      ? `${c.country} · ночной город, блоки 256 м`
+      : `${c.country} · реальные улицы (© OpenStreetMap)`,
   })),
   {
     id: 'jp_touge',
@@ -61,7 +77,7 @@ const DEFAULTS: MenuSettings = {
   botLevel: 'medium',
   manual: false,
   playerName: 'Игрок',
-  location: 'moscow_synth',
+  location: 'moscow_center',
   weather: 'snow',
 };
 

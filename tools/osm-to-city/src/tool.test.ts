@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parseCity } from '@sr/shared';
 import { orientedBox, polygonArea, simplify, triangulate, type P } from './geom';
-import { buildingHeight, makeProjection, parseOverpass, type OverpassJson } from './osm';
+import { buildingHeight, joinRings, makeProjection, parseOverpass, type OverpassJson } from './osm';
 import { buildCity, buildingColliders } from './build';
 import { synthDistrict, synthTracks } from './synth';
 import { buildTrack } from '@sr/shared';
 import { writeGlb } from './glb';
 import { placeLandmarks, placeModules, type ModuleCatalog } from './modules';
+import { autoTracks } from './routes';
 
 describe('geometry', () => {
   it('simplify removes collinear points', () => {
@@ -246,6 +247,14 @@ describe('модули зданий (10.1) и ориентиры (10.3)', () => 
     expect(cat.modules[placeModules(rect(0, 0, 30, 30), 95, 2, cat)[0]![0]]!.type).toBe('tower');
   });
 
+  it('квартал 100×80 м — секции вдоль всех сторон, фасадом на улицу', () => {
+    const inst = placeModules(rect(0, 0, 100, 80), 25, 4, cat);
+    expect(inst.length).toBeGreaterThanOrEqual(8);
+    // все секции у периметра, а не в середине двора
+    for (const [, x, z] of inst)
+      expect(Math.max(Math.abs(x) / 50, Math.abs(z) / 40)).toBeGreaterThan(0.6);
+  });
+
   it('длинный дом собирается из нескольких секций без растяжения больше 35 %', () => {
     const inst = placeModules(rect(0, 0, 150, 16), 25, 3, cat);
     expect(inst.length).toBeGreaterThanOrEqual(3);
@@ -301,5 +310,63 @@ describe('модули зданий (10.1) и ориентиры (10.3)', () => 
     const n = city.tiles.reduce((a, t) => a + t.instances.length, 0);
     expect(n).toBe(1); // второй дом попал в зону башни-ориентира
     expect(city.landmarks.map((l) => l.id).sort()).toEqual(['bridge', 'tower']);
+  });
+});
+
+describe('мультиполигоны и трассы по улицам (10.2)', () => {
+  it('внешнее кольцо здания собирается из нескольких линий в любом направлении', () => {
+    expect(
+      joinRings([
+        [1, 2, 3],
+        [5, 4, 3],
+        [5, 1],
+      ]),
+    ).toEqual([[1, 2, 3, 4, 5, 1]]);
+    expect(
+      joinRings([
+        [1, 2],
+        [3, 4],
+      ]),
+    ).toEqual([]);
+  });
+
+  it('кольцо, спринт и дрифт по сетке крупных улиц', () => {
+    const roads = [] as Parameters<typeof autoTracks>[0];
+    let id = 1;
+    // сетка 4×4 квартала по 400 м
+    for (let k = 0; k <= 4; k++) {
+      const c = -800 + k * 400;
+      roads.push({
+        id: id++,
+        cls: 'secondary',
+        name: '',
+        oneway: false,
+        lanes: 0,
+        points: [
+          [-800, c],
+          [-400, c],
+          [0, c],
+          [400, c],
+          [800, c],
+        ],
+      });
+      roads.push({
+        id: id++,
+        cls: 'secondary',
+        name: '',
+        oneway: false,
+        lanes: 0,
+        points: [
+          [c, -800],
+          [c, -400],
+          [c, 0],
+          [c, 400],
+          [c, 800],
+        ],
+      });
+    }
+    const tracks = autoTracks(roads, 1000, 'tst');
+    expect(tracks.map((t) => t.id).sort()).toEqual(['tst_drift', 'tst_ring', 'tst_sprint']);
+    for (const t of tracks) expect(() => buildTrack(t)).not.toThrow();
   });
 });

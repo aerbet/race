@@ -426,6 +426,24 @@
    "city": "moscow_synth",
    "x": 0,
    "z": -300
+  },
+  {
+   "id": "spire_tower",
+   "city": "moscow_center",
+   "x": -600,
+   "z": 500
+  },
+  {
+   "id": "tv_tower",
+   "city": "moscow_center",
+   "x": 750,
+   "z": -750
+  },
+  {
+   "id": "arch_bridge",
+   "city": "moscow_center",
+   "x": 100,
+   "z": 250
   }
  ]
 }

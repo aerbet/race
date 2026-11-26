@@ -18,3 +18,4 @@
 | Наборы зданий `apps/client/public/cities/kits/{moscow,tokyo}/` (атлас, модули, реквизит, ориентиры) | собственные, `art/scripts/city/*.py`; атласы нарисованы процедурно | собственные |
 | Оформление трасс и рельеф `apps/client/public/tracks/` | собственные, `art/scripts/track/dressing.py`, `terrain.py`; логотипы спонсоров — вымышленные фигуры | собственные |
 | Карты трасс `apps/client/public/maps/*.png` | собственные, `art/scripts/track/map.py` | собственные |
+| Районы `apps/client/public/cities/{moscow_center,tokyo_shinjuku}/` (улицы, контуры домов, трассы) | © участники OpenStreetMap, через Overpass API, 26.11.2026 | ODbL 1.0 (атрибуция в игре; производная база — под ODbL) |

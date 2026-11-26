@@ -14,6 +14,9 @@ export async function loadCity(id: string): Promise<City> {
 }
 
 export const CITIES = [
+  // Реальные районы 2×2 км из OpenStreetMap (10.2), © участники OpenStreetMap (ODbL)
+  { id: 'moscow_center', name: 'Москва, центр', country: 'Россия' },
+  { id: 'tokyo_shinjuku', name: 'Токио, Синдзюку', country: 'Япония' },
   { id: 'moscow_synth', name: 'Москва (процедурная)', country: 'Россия' },
   { id: 'tokyo_synth', name: 'Токио (процедурный)', country: 'Япония' },
 ];

@@ -7,7 +7,7 @@
  * пропорциям, длинные дома собираются из нескольких одинаковых секций. Масштаб модуля
  * ограничен, чтобы окна не растягивались заметно.
  */
-import { orientedBox, type P } from './geom';
+import { centroid, orientedBox, polygonArea, simplify, type P } from './geom';
 
 export interface ModuleInfo {
   id: string;
@@ -156,6 +156,13 @@ function hash(n: number): number {
  */
 export function placeModules(fp: P[], h: number, seed: number, cat: ModuleCatalog): Instance[] {
   const box = orientedBox(fp);
+  // Периметральный дом (квартал с двором) или сложный контур: секции вдоль каждой стороны
+  const short0 = 2 * Math.min(box.hx, box.hz);
+  const rect = Math.abs(polygonArea(fp)) / (4 * box.hx * box.hz);
+  if (short0 > 40 || (rect < 0.7 && short0 > 22)) {
+    const edge = placeAlongEdges(fp, h, seed, cat);
+    if (edge.length) return edge;
+  }
   // Модуль ставится X-ом вдоль длинной стороны
   const alongU = box.hx >= box.hz;
   const long = 2 * (alongU ? box.hx : box.hz);
@@ -266,5 +273,52 @@ export function placeProps(cat: ModuleCatalog, roads: Road[]): Instance[] {
       }
     }
   }
+  return out;
+}
+
+/** Секции жилых модулей вдоль сторон контура, с отступом внутрь на полглубины (фасад — на улицу). */
+export function placeAlongEdges(fp: P[], h: number, seed: number, cat: ModuleCatalog): Instance[] {
+  const types = typesFor(h, 30, 14).filter((t) =>
+    ['stalinka', 'panel9', 'panel16', 'khrush'].includes(t),
+  );
+  const pool = cat.modules.map((m, i) => ({ m, i })).filter(({ m }) => types.includes(m.type));
+  if (!pool.length) return [];
+  const pts = simplify([...fp, fp[0]!], 2).slice(0, -1);
+  const [cx, cz] = centroid(pts);
+  const out: Instance[] = [];
+  const r = (v: number) => Math.round(v * 100) / 100;
+  pts.forEach(([ax, az], k) => {
+    const [bx, bz] = pts[(k + 1) % pts.length]!;
+    const l = Math.hypot(bx - ax, bz - az);
+    if (l < 12) return;
+    const ex = (bx - ax) / l,
+      ez = (bz - az) / l;
+    let nx = -ez,
+      nz = ex;
+    const mx = (ax + bx) / 2,
+      mz = (az + bz) / 2;
+    if (nx * (cx - mx) + nz * (cz - mz) < 0) [nx, nz] = [-nx, -nz]; // нормаль внутрь контура
+    // модуль с наименьшим растяжением по длине стороны
+    let best: { i: number; n: number; sx: number; d: number; score: number } | null = null;
+    for (const { m, i } of pool) {
+      const n = Math.max(1, Math.round(l / m.w));
+      const sx = l / (n * m.w);
+      const score =
+        Math.abs(Math.log(sx)) * 2 +
+        Math.abs(Math.log(h / m.h)) * 0.7 +
+        hash(seed * 7 + k * 13 + i) * 0.3;
+      if (!best || score < best.score) best = { i, n, sx, d: m.d, score };
+    }
+    const m = cat.modules[best!.i]!;
+    const sx = clamp(best!.sx, 0.7, 1.35);
+    const sy = clamp(h / m.h, 0.8, 1.25);
+    const yaw = Math.atan2(-ez, ex); // ось X модуля — вдоль стороны
+    for (let q = 0; q < best!.n; q++) {
+      const off = (q - (best!.n - 1) / 2) * m.w * sx;
+      const x = mx + ex * off + nx * (m.d / 2),
+        z = mz + ez * off + nz * (m.d / 2);
+      out.push([best!.i, r(x), r(z), Math.round(yaw * 1000) / 1000, r(sx), r(sy), 1]);
+    }
+  });
   return out;
 }
