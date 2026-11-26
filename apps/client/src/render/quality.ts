@@ -53,7 +53,8 @@ export function getQuality(): Quality {
   if (name === 'low') {
     return {
       name,
-      pixelRatio: Math.min(window.devicePixelRatio, 1.25),
+      // Лёгкая графика: рендер в 0,75 от экрана (PLAN_V2 7.1в), CSS растягивает кадр
+      pixelRatio: Math.min(window.devicePixelRatio, 1.25) * 0.75,
       antialias: false,
       shadows: false,
       bloom: false,

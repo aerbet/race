@@ -2,7 +2,8 @@ import type { Rapier } from '@sr/physics';
 import { formatTime, toBase64, type City, type RaceEvent } from '@sr/shared';
 import { loadCity } from './city/city-view';
 import { RaceController, type RaceResults, type RaceSetup } from './game/race';
-import { getQuality, type Quality } from './render/quality';
+import { getQuality, loadQualitySetting, saveQualitySetting, type Quality } from './render/quality';
+import { FpsProbe } from './render/fps-probe';
 import { FpsCounter } from './render/fps';
 import { InputManager } from './input/input';
 import { Hud, type MinimapDot } from './ui/hud';
@@ -89,6 +90,8 @@ export class App {
   }
 
   /** Короткое сообщение поверх HUD. */
+  private fpsProbe: FpsProbe | null = null;
+
   toast(text: string, seconds = 2.5): void {
     this.hud?.showToast(text, seconds);
   }
@@ -158,6 +161,13 @@ export class App {
     const city = setup.cityId ? await this.loadCityCached(setup.cityId) : null;
     // Качество графики могли поменять в меню — берём актуальное на каждую гонку
     this.quality = getQuality();
+    // Замер FPS — только в «авто» на высоком качестве и без ?q= в адресе
+    this.fpsProbe =
+      loadQualitySetting() === 'auto' &&
+      this.quality.name === 'high' &&
+      !new URLSearchParams(location.search).has('q')
+        ? new FpsProbe()
+        : null;
     const R = await this.rapier;
     const race = new RaceController(R, setup, this.quality, this.root, this.input, city);
     this.race = race;
@@ -220,6 +230,21 @@ export class App {
     const hud = this.hud;
     if (!race || !hud) return;
     // Бюджет 10.5: draw calls кадра рядом с FPS
+    // Слабое устройство в режиме «авто»: после 3 с замера — лёгкая графика и перезапуск заезда
+    if (
+      this.fpsProbe &&
+      !this.online &&
+      race.tracker.phase !== 'finished' &&
+      this.fpsProbe.tick(dt)
+    ) {
+      this.fpsProbe = null;
+      saveQualitySetting('low');
+      const setup = this.lastSetup;
+      if (setup) {
+        void this.start(setup).then(() => this.toast('Включили лёгкую графику — так плавнее', 3));
+        return;
+      }
+    }
     const info = race.session.gfx.renderer.info;
     this.fps.tick(dt, `${this.quality.name} · ${info.render.calls} dc`);
     info.reset();
