@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { CarConfig } from '@sr/shared';
+import { carModelParam, loadCarModel, splitCarModel } from './car-model';
 
 /**
  * Процедурная модель машины (собственная, без внешних ассетов).
@@ -424,6 +425,9 @@ export class CarView {
   readonly cfg: CarConfig;
   private headMat: THREE.MeshBasicMaterial | null = null;
   private flashT = 0;
+  /** Высота центра колеса над началом root (для посадки glTF-модели). */
+  private wheelY = 0;
+  private modelTail: THREE.MeshStandardMaterial | null = null;
 
   constructor(cfg: CarConfig, opts: CarViewOptions) {
     this.cfg = cfg;
@@ -435,6 +439,7 @@ export class CarView {
     const shape = SHAPES[cfg.era] ?? SHAPES['2000']!;
     const R = cfg.wheels.radius;
     const wy = cfg.wheels.mountY - cfg.suspension.restLength * 0.8;
+    this.wheelY = wy;
     const wz = cfg.wheels.wheelbase / 2;
     const paint = paintMaterial(opts, hi);
     // Тонированное стекло: почти чёрное, отражения слабые — иначе на ночном небе сливается с краской
@@ -638,6 +643,31 @@ export class CarView {
       this.wheels.push(wg);
       this.root.add(wg);
     }
+
+    // Модель из Блендера вместо процедурной (этап B0, `?carModel=<id>`)
+    const modelId = carModelParam();
+    if (modelId && !ghost)
+      loadCarModel(modelId)
+        .then((m) => this.useModel(m))
+        .catch((e: unknown) => console.warn(`модель ${modelId} не загрузилась`, e));
+  }
+
+  /** Заменить процедурный кузов и колёса на glTF-модель (ART_BRIEF: узлы body…wheel_RR). */
+  useModel(scene: THREE.Object3D): void {
+    const parts = splitCarModel(scene);
+    for (const c of this.body.children)
+      if (!this.nitroFlames.includes(c as THREE.Mesh)) c.visible = false;
+    // Начало модели — на земле, центр колёс — на высоте радиуса
+    parts.body.position.set(0, this.wheelY - this.cfg.wheels.radius, 0);
+    this.body.add(parts.body);
+    this.wheels.forEach((wg, i) => {
+      const spin = wg.getObjectByName('spin')!;
+      for (const c of spin.children) c.visible = false;
+      spin.add(parts.wheels[i]!);
+      const brake = parts.brakes[i];
+      if (brake) wg.add(brake);
+    });
+    this.modelTail = parts.tailMaterial;
   }
 
   /** Мигнуть фарами: ярче на `seconds` секунд (через bloom выглядит как вспышка). */
@@ -654,6 +684,7 @@ export class CarView {
 
   setBraking(on: boolean): void {
     this.brakeMat.color.setHex(on ? 0xff2020 : 0x701010);
+    if (this.modelTail) this.modelTail.emissiveIntensity = on ? 3 : 1;
   }
 
   setNitro(on: boolean, t: number): void {

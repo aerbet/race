@@ -14,10 +14,17 @@
     "e2e": "node e2e/smoke.mjs",
     "server": "pnpm --filter race-server dev",
     "api": "cd apps/api && mvn -q spring-boot:run",
-    "api:test": "cd apps/api && mvn -q test"
+    "api:test": "cd apps/api && mvn -q test",
+    "art:car": "pnpm --filter art art car",
+    "art:car:all": "pnpm --filter art art car:all",
+    "art:wheels": "pnpm --filter art art wheels",
+    "art:city": "pnpm --filter art art city",
+    "art:render": "pnpm --filter art art render",
+    "art:validate": "pnpm --filter car-validate validate"
   },
   "devDependencies": {
     "@eslint/js": "9.19.0",
+    "@gltf-transform/cli": "4.5.1",
     "@types/node": "22.13.0",
     "eslint": "9.19.0",
     "eslint-config-prettier": "10.0.1",

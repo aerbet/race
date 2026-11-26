@@ -8,3 +8,7 @@ test-results
 playwright-report
 tools/osm-to-city/data/
 apps/api/target/
+# 3D: .blend и сырые .glb пересобираются из скриптов (art/README.md)
+art/source/
+art/export/
+__pycache__/
