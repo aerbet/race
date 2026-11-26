@@ -238,10 +238,12 @@ function paintMaterial(opts: CarViewOptions, hi: boolean): THREE.Material {
   return new THREE.MeshPhysicalMaterial({
     ...common,
     color: base,
-    metalness: 0.55,
-    roughness: 0.35,
+    metalness: 0.45,
+    roughness: 0.38,
     clearcoat: 1,
-    clearcoatRoughness: 0.06,
+    clearcoatRoughness: 0.08,
+    // Ночная сцена с bloom: светлые машины иначе пересвечены
+    envMapIntensity: 0.7,
   });
 }
 
