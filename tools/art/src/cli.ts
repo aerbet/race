@@ -6,7 +6,8 @@
  *   pnpm art:silhouette <id>                      # схема силуэта (шаг 1 конвейера машины)
  *   pnpm art:render <id>                          # только рендеры (из art/source/cars/<id>.blend)
  *   pnpm art:wheels [<id>] [--publish]            # диски (art/specs/wheels), этап B1
- *   pnpm art:city <kit>                           # этап B5
+ *   pnpm track:export <id|all>                     # сплайн трассы → art/specs/track/<id>.json (B7)
+ *   pnpm art:city <kit> [--no-render]             # набор зданий: атлас, модули, рендер улицы (B5)
  *
  * --publish копирует сжатую модель в apps/client/public/cars/<id>/base.glb —
  * только после утверждения владельцем (кроме тестовой модели).
@@ -18,6 +19,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateGlb, validateKitGlb, validateWheelGlb } from '../../car-validate/src/validate';
 import { findBlender } from './blender';
+import { writeExports } from './track-export';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const argv = process.argv.slice(2).filter((a) => a !== '--');
@@ -215,10 +217,76 @@ switch (cmd) {
     console.log(`✓ art/renders/${id}/silhouette.png и silhouette.svg`);
     break;
   }
-  case 'city':
-    console.error('Город — этап B5, генератор ещё не написан (art/scripts/city/)');
-    process.exit(1);
+  case 'city': {
+    // Набор зданий (BLENDER_PLAN 6): атлас + модули → meshopt → apps/client/public/cities/kits/<kit>
+    const kit = rest[0] ?? 'moscow';
+    blender(
+      flags.has('--no-render')
+        ? 'art/scripts/city/build_modules.py'
+        : 'art/scripts/city/render_street.py',
+      ['--kit', kit],
+      `Блендер: набор зданий ${kit}`,
+    );
+    const dir = join(root, 'art/export/city', kit);
+    const min = join(dir, 'modules.min.glb');
+    gltfTransform(
+      ['meshopt', join(dir, 'modules.glb'), min, '--level', 'medium'],
+      'Сжатие модулей',
+    );
+    const out = join(root, 'apps/client/public/cities/kits', kit);
+    mkdirSync(out, { recursive: true });
+    copyFileSync(min, join(out, 'modules.glb'));
+    copyFileSync(join(dir, 'modules.json'), join(out, 'modules.json'));
+    const lmin = join(dir, 'landmarks.min.glb');
+    gltfTransform(
+      ['meshopt', join(dir, 'landmarks.glb'), lmin, '--level', 'medium'],
+      'Сжатие ориентиров',
+    );
+    copyFileSync(lmin, join(out, 'landmarks.glb'));
+    console.log(
+      `✓ ${kit}: ${(statSync(min).size / 1024).toFixed(0)} КБ → apps/client/public/cities/kits/${kit}`,
+    );
+    if (!flags.has('--no-render'))
+      console.log(`✓ рендер: art/renders/city_${kit}/street_night.png`);
     break;
+  }
+  case 'track:export': {
+    const files = writeExports(root, rest[0] ?? 'all');
+    if (!files.length) {
+      console.error(`Нет трассы ${rest[0]}`);
+      process.exit(1);
+    }
+    for (const f of files) console.log(`✓ ${f}`);
+    break;
+  }
+  case 'track': {
+    // pnpm art:track maps — карты трасс для меню (7.3); terrain <id> — рельеф (7.2); dressing — оформление (7.1)
+    const sub = rest[0] ?? 'maps';
+    writeExports(root, 'all');
+    const script = { maps: 'map.py', terrain: 'terrain.py', dressing: 'dressing.py' }[sub];
+    if (!script) {
+      console.error('pnpm art:track maps | terrain <id> | dressing');
+      process.exit(1);
+    }
+    blender(`art/scripts/track/${script}`, rest.slice(1), `Блендер: трассы — ${sub}`);
+    if (sub === 'dressing' || sub === 'terrain') {
+      // Сжатие и публикация: apps/client/public/tracks/
+      const dir = join(root, 'art/export/tracks');
+      const out = join(root, 'apps/client/public/tracks');
+      mkdirSync(out, { recursive: true });
+      for (const f of readdirSync(dir).filter(
+        (f) => f.endsWith('.glb') && !f.endsWith('.min.glb'),
+      )) {
+        const min = join(dir, f.replace(/\.glb$/, '.min.glb'));
+        gltfTransform(['meshopt', join(dir, f), min, '--level', 'medium'], `Сжатие ${f}`);
+        copyFileSync(min, join(out, f));
+      }
+      for (const f of readdirSync(dir).filter((f) => f.endsWith('.json')))
+        copyFileSync(join(dir, f), join(out, f));
+      console.log('✓ apps/client/public/tracks');
+    }
+    break;
+  }
   case 'blender':
     console.log(findBlender() ?? 'Блендер не найден');
     break;

@@ -35,6 +35,22 @@ export const TrackDefSchema = z.object({
   groundSize: z.number().positive(),
   /** На каком расстоянии после старта стоит финишная линия (для кольца — 0). */
   startS: z.number().nonnegative().default(0),
+  /** Оформление (BLENDER_PLAN 7.1), см. tracks/dressing.ts; нет — правила по умолчанию. */
+  dressing: z
+    .array(
+      z.object({
+        item: z.string().or(z.array(z.string()).min(1)),
+        every: z.number().positive().optional(),
+        side: z.enum(['left', 'right', 'both', 'outer', 'inner']),
+        offset: z.number(),
+        from: z.number().optional(),
+        to: z.number().optional(),
+        minCurve: z.number().optional(),
+        at: z.array(z.number()).optional(),
+        spanWidth: z.number().positive().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type TrackDef = z.infer<typeof TrackDefSchema>;

@@ -1,5 +1,6 @@
 export * from './schema';
 export * from './build';
+export * from './dressing';
 export * from './polygon';
 export * from './sprint';
 export * from './touge';

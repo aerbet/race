@@ -19,6 +19,8 @@
 | `pnpm art:silhouette <id>` | Схема силуэта по спецификации: виды спереди, сбоку, сзади, сверху → `art/renders/<id>/silhouette.png` и `.svg` (~5 с) |
 | `pnpm art:car <id>` | Блендер в фоне: модель → проверки `checks.py` → UV → LOD → `art/export/cars/<id>/base.glb` → meshopt (+KTX2) → `base.min.glb` → валидатор → рендеры `art/renders/<id>/` |
 | `pnpm art:car <id> --publish` | То же + копия в `apps/client/public/cars/<id>/base.glb` и `kit_<kit>.glb` |
+| `pnpm art:city <kit> [--no-render]` | Набор зданий: атлас (`city/trim_sheet.py`), модули и реквизит (`city/build_modules.py`), ориентиры (`city/landmarks.py`) → meshopt → `apps/client/public/cities/kits/<kit>/`; рендер `art/renders/city_<kit>/street_night.png` (`city/render_street.py`). Затем город: `pnpm --filter osm-to-city build -- --synth --id moscow_synth --kit moscow` |
+| `pnpm track:export <id|all>`, `pnpm art:track maps | dressing | terrain <id>` | Трассы (B7): сплайн → `art/specs/track/`; карты меню → `apps/client/public/maps/`; оформление и рельеф → `apps/client/public/tracks/` |
 | Киты | Если в спецификации есть `kits`, `kits.py` строит их после базы: `art/export/cars/<id>/kit_<kit>.glb`, рендеры `kits.png`, `kits_rear.png` |
 | `pnpm art:car <id> --no-render` | Без рендеров (быстро, ~5 с) |
 | `pnpm art:car:all` | Все машины из `art/specs/cars/` |

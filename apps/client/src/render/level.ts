@@ -1,7 +1,24 @@
 import * as THREE from 'three';
-import type { BuiltTrack } from '@sr/shared';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { defaultDressing, placeDressing, type BuiltTrack } from '@sr/shared';
 import type { LevelGeometry } from '@sr/physics';
 import type { Quality } from './quality';
+
+let gltfLoader: GLTFLoader | null = null;
+const loader = () => (gltfLoader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder));
+let dressingPromise: Promise<THREE.Object3D> | null = null;
+/** Библиотека оформления трасс (одна загрузка на сессию). */
+function dressingLib(): Promise<THREE.Object3D> {
+  dressingPromise ??= loader()
+    .loadAsync(`${import.meta.env.BASE_URL}tracks/dressing.glb`)
+    .then((g) => {
+      g.scene.updateMatrixWorld(true);
+      return g.scene;
+    });
+  dressingPromise.catch(() => (dressingPromise = null));
+  return dressingPromise;
+}
 
 /** Детерминированный ГПСЧ для расстановки декора. */
 function rng(seed: number) {
@@ -88,13 +105,14 @@ export class LevelView {
     readonly quality: Quality,
     inCity = false,
   ) {
+    this.loadDressing(inCity);
     if (inCity) {
       // Город рисует CityView; здесь только старт и чекпоинты поверх улиц
       this.buildStartLine();
       this.buildCheckpointMarkers();
       return;
     }
-    if (track.elevated) this.buildMountain(track.def.groundSize);
+    if (track.elevated) this.loadTerrain(track.def.groundSize);
     else this.buildGround(track.def.groundSize);
     this.buildRoad();
     this.buildWalls(geom);
@@ -102,6 +120,103 @@ export class LevelView {
     this.buildStartLine();
     this.buildLamps();
     if (!track.elevated) this.buildCity();
+  }
+
+  /**
+   * Оформление (BLENDER_PLAN 7.1): элементы dressing.glb по правилам трассы —
+   * один InstancedMesh на элемент (бюджет draw calls). Нет файла — трасса без оформления.
+   */
+  private loadDressing(inCity: boolean): void {
+    const rules = this.track.def.dressing ?? defaultDressing(this.track, inCity);
+    const inst = placeDressing(this.track, rules);
+    if (!inst.length) return;
+    void dressingLib()
+      .then((scene) => {
+        const gltf = { scene };
+        const byItem = new Map<string, typeof inst>();
+        for (const i of inst) byItem.set(i.item, [...(byItem.get(i.item) ?? []), i]);
+        const m = new THREE.Matrix4();
+        const q = new THREE.Quaternion();
+        const up = new THREE.Vector3(0, 1, 0);
+        for (const [item, list] of byItem) {
+          const src = gltf.scene.getObjectByName(item) as THREE.Mesh | undefined;
+          if (!src?.isMesh) continue;
+          const im = new THREE.InstancedMesh(src.geometry, src.material, list.length);
+          list.forEach((d, k) => {
+            m.compose(
+              new THREE.Vector3(d.x, d.y, d.z),
+              q.setFromAxisAngle(up, d.yaw),
+              new THREE.Vector3(d.sx, 1, 1),
+            );
+            im.setMatrixAt(k, m.multiply(src.matrixWorld));
+          });
+          im.computeBoundingSphere();
+          im.castShadow = this.quality.shadows;
+          this.group.add(im);
+        }
+      })
+      .catch(() => undefined);
+  }
+
+  /**
+   * Рельеф из Блендера (BLENDER_PLAN 7.2): tracks/terrain_<id>.glb блоками 256 м + сосны и скалы
+   * экземплярами элементов dressing.glb. Нет файла — процедурная гора (buildMountain).
+   */
+  private loadTerrain(size: number): void {
+    const id = this.track.def.id;
+    const base = `${import.meta.env.BASE_URL}tracks/terrain_${id}`;
+    void Promise.all([
+      fetch(`${base}.json`).then((r) => {
+        if (!r.ok) throw new Error('нет рельефа');
+        return r.json() as Promise<{
+          instances: [string, number, number, number, number, number][];
+        }>;
+      }),
+      loader().loadAsync(`${base}.glb`),
+      dressingLib(),
+    ])
+      .then(([info, gltf, lib]) => {
+        const atlas = (lib.getObjectByName('pine') as THREE.Mesh | undefined)?.material;
+        gltf.scene.updateMatrixWorld(true);
+        gltf.scene.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh) return;
+          if (o.name.endsWith('_collision')) {
+            o.visible = false; // упрощённая сетка — для физики, если понадобится
+            return;
+          }
+          if (atlas) m.material = atlas;
+          m.receiveShadow = this.quality.shadows;
+        });
+        this.group.add(gltf.scene);
+        // Сосны и скалы: по InstancedMesh на элемент; в low — каждое второе
+        const keep = this.quality.name === 'low' ? 2 : 1;
+        const by = new Map<string, typeof info.instances>();
+        info.instances.forEach((d, k) => {
+          if (k % keep === 0) by.set(d[0], [...(by.get(d[0]) ?? []), d]);
+        });
+        lib.updateMatrixWorld(true);
+        const m = new THREE.Matrix4();
+        const q = new THREE.Quaternion();
+        const up = new THREE.Vector3(0, 1, 0);
+        for (const [item, list] of by) {
+          const src = lib.getObjectByName(item) as THREE.Mesh | undefined;
+          if (!src?.isMesh) continue;
+          const im = new THREE.InstancedMesh(src.geometry, src.material, list.length);
+          list.forEach(([, x, y, z, yaw, sc], k) => {
+            m.compose(
+              new THREE.Vector3(x, y, z),
+              q.setFromAxisAngle(up, yaw),
+              new THREE.Vector3(sc, sc, sc),
+            );
+            im.setMatrixAt(k, m.multiply(src.matrixWorld));
+          });
+          im.computeBoundingSphere();
+          im.castShadow = this.quality.shadows;
+          this.group.add(im);
+        }
+      })
+      .catch(() => this.buildMountain(size));
   }
 
   /**
@@ -184,15 +299,22 @@ export class LevelView {
       transparent: true,
       opacity: 0.85,
     });
-    const post = new THREE.CylinderGeometry(0.15, 0.15, 4, 6);
-    for (const cp of this.track.checkpoints.slice(0, -1)) {
+    // Столбики — один InstancedMesh (бюджет draw calls 10.5), а не меш на столбик
+    const cps = this.track.checkpoints.slice(0, -1);
+    const posts = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(0.15, 0.15, 4, 6),
+      mat,
+      cps.length * 2,
+    );
+    const pm = new THREE.Matrix4();
+    let pi = 0;
+    for (const cp of cps) {
       for (const side of [-1, 1]) {
-        const m = new THREE.Mesh(post, mat);
         const off = side * (cp.halfWidth - 2);
-        m.position.set(cp.x - cp.tz * off, 2, cp.z + cp.tx * off);
-        this.group.add(m);
+        posts.setMatrixAt(pi++, pm.makeTranslation(cp.x - cp.tz * off, 2, cp.z + cp.tx * off));
       }
     }
+    this.group.add(posts);
     // Стрелки-шевроны на асфальте вдоль трассы
     const chevTex = canvasTexture(64, 64, (g) => {
       g.strokeStyle = 'rgba(41,224,255,0.9)';

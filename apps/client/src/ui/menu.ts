@@ -136,6 +136,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     <h2>Где</h2><div class="grid2" data-k="loc"></div>
     <div data-k="weatherBlock"><h2>Погода</h2><div class="row" data-k="weather"></div></div>
     <h2>Режим</h2><div class="grid2" data-k="mode"></div>
+    <img data-k="map" class="trackmap" alt="" />
     <h2>Машина</h2><div class="grid2" data-k="car"></div>
     <div data-k="botsBlock"><h2>Соперники</h2>
       <div class="row" data-k="bots"></div>
@@ -170,6 +171,11 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
       locBox.appendChild(b);
     }
     q('weatherBlock').style.display = CITY_TRACKS[s.location] ? '' : 'none';
+    // Карта трассы (BLENDER_PLAN 7.3): apps/client/public/maps/<trackId>.png
+    const map = q('map') as HTMLImageElement;
+    map.src = `${import.meta.env.BASE_URL}maps/${setupFromSettings(s).trackId}.png`;
+    map.onerror = () => (map.style.display = 'none');
+    map.onload = () => (map.style.display = '');
     const wBox = q('weather');
     wBox.innerHTML = '';
     for (const w of ['dry', 'wet', 'snow'] as Weather[]) {

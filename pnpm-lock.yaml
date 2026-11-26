@@ -106,6 +106,9 @@ importers:
 
   tools/art:
     dependencies:
+      '@sr/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       tsx:
         specifier: 4.19.2
         version: 4.19.2

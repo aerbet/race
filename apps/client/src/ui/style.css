@@ -759,3 +759,13 @@ body.touch-ui .hud-attr {
 .offer .badge {
   align-self: flex-start;
 }
+
+/* Карта трассы в меню (рендер art/scripts/track/map.py) */
+.trackmap {
+  display: block;
+  width: min(100%, 260px);
+  aspect-ratio: 1;
+  margin: 12px auto 0;
+  border-radius: 12px;
+  border: 1px solid rgba(41, 224, 255, 0.25);
+}

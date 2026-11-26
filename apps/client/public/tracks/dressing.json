@@ -1,0 +1,102 @@
+{
+ "items": [
+  {
+   "id": "concrete_block",
+   "step": 2.0,
+   "tris": 18
+  },
+  {
+   "id": "guardrail",
+   "step": 4.0,
+   "tris": 30
+  },
+  {
+   "id": "tire_wall",
+   "step": 4.0,
+   "tris": 308
+  },
+  {
+   "id": "fence",
+   "step": 4.0,
+   "tris": 24
+  },
+  {
+   "id": "grandstand",
+   "step": 20.4,
+   "tris": 120
+  },
+  {
+   "id": "banner_a",
+   "step": 6.0,
+   "tris": 22
+  },
+  {
+   "id": "banner_b",
+   "step": 6.0,
+   "tris": 22
+  },
+  {
+   "id": "banner_c",
+   "step": 6.0,
+   "tris": 22
+  },
+  {
+   "id": "banner_d",
+   "step": 6.0,
+   "tris": 22
+  },
+  {
+   "id": "cone",
+   "step": 0.4,
+   "tris": 60
+  },
+  {
+   "id": "light_mast",
+   "step": 3.2,
+   "tris": 28
+  },
+  {
+   "id": "start_arch",
+   "step": 2.0,
+   "tris": 34
+  },
+  {
+   "id": "tunnel",
+   "step": 12.0,
+   "tris": 34
+  },
+  {
+   "id": "pine",
+   "step": 4.8,
+   "tris": 54
+  },
+  {
+   "id": "rock",
+   "step": 4.8,
+   "tris": 56
+  },
+  {
+   "id": "rock_b",
+   "step": 6.8,
+   "tris": 48
+  }
+ ],
+ "cells": [
+  "concrete",
+  "stripes",
+  "rubber",
+  "metal",
+  "fence",
+  "seats",
+  "cone",
+  "lamp",
+  "logo_a",
+  "logo_b",
+  "logo_c",
+  "logo_d",
+  "arch",
+  "asphalt",
+  "pine",
+  "rock"
+ ]
+}

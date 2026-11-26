@@ -21,7 +21,9 @@
     "art:city": "pnpm --filter art art city",
     "art:render": "pnpm --filter art art render",
     "art:validate": "pnpm --filter car-validate validate",
-    "art:silhouette": "pnpm --filter art art silhouette"
+    "art:silhouette": "pnpm --filter art art silhouette",
+    "art:track": "pnpm --filter art art track",
+    "track:export": "pnpm --filter art art track:export"
   },
   "devDependencies": {
     "@eslint/js": "9.19.0",

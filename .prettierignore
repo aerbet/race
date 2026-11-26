@@ -2,3 +2,7 @@ pnpm-lock.yaml
 dist
 docs/*.pdf
 *.md
+# Сгенерированные данные (osm-to-city, Блендер, track:export)
+apps/client/public/cities/**/*.json
+apps/client/public/tracks/*.json
+art/specs/track/
