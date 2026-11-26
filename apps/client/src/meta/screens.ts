@@ -47,6 +47,15 @@ const q = <T extends HTMLElement = HTMLElement>(el: HTMLElement, k: string) =>
   el.querySelector(`[data-k="${k}"]`) as T;
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : 'Что-то пошло не так');
 
+/** Бесплатные варианты деталей кузова: [слот, значение, подпись]. */
+const FREE_PARTS: [string, string, string][] = [
+  ['spoiler', 'none', 'Без спойлера'],
+  ['spoiler', 'lip', 'Губа'],
+  ['spoiler', 'wing', 'Антикрыло'],
+  ['rims', 'five', 'Диски: 5 спиц'],
+  ['vinyl', 'none', 'Без винила'],
+];
+
 export const PAINTS = [
   '#e8eef7',
   '#d8262f',
@@ -127,12 +136,16 @@ export function showGarage(root: HTMLElement, done: () => void): void {
     let cars: OwnedCar[];
     let money = 0;
     let shop: Awaited<ReturnType<typeof catalog>>;
+    type Owned = { id: string; slot: string; value: string; name: string; owned: boolean };
+    let owned: Owned[] = [];
     try {
-      [cars, money, shop] = await Promise.all([
+      [cars, money, shop, owned] = await Promise.all([
         garageList(),
         wallet().then((w) => w.credits),
         catalog(),
+        api<Owned[]>('/api/shop/cosmetics').catch(() => [] as Owned[]),
       ]);
+      owned = owned.filter((o) => o.owned);
     } catch (e) {
       panel.innerHTML = `<p class="sub">${escapeHtml(errText(e))}</p><div class="btnrow"><button class="btn" data-k="back">Назад</button></div>`;
       q(panel, 'back').onclick = () => {
@@ -172,6 +185,20 @@ export function showGarage(root: HTMLElement, done: () => void): void {
       <table>${rows}</table>
       <h2>Цвет</h2><div class="row">${PAINTS.map((c) => `<button class="swatch ${c === paint ? 'sel' : ''}" data-paint="${c}" style="background:${c}"></button>`).join('')}</div>
       <h2>Неон</h2><div class="row">${NEONS.map((c) => `<button class="swatch ${c === neon ? 'sel' : ''}" data-neon="${c}" style="background:${c === 'off' ? '#222' : c}">${c === 'off' ? '×' : ''}</button>`).join('')}</div>
+      <h2>Кузов (бесплатно)</h2><div class="row">${FREE_PARTS.map(
+        ([slot, value, name]) =>
+          `<button class="btn ${(cur.visual[slot] ?? '') === value ? 'sel' : ''}" data-slot="${slot}" data-val="${value}">${name}</button>`,
+      ).join('')}</div>
+      ${
+        owned.length
+          ? `<h2>Купленное в магазине</h2><div class="row">${owned
+              .map(
+                (o) =>
+                  `<button class="btn ${cur.visual[o.slot] === o.value ? 'sel' : ''}" data-slot="${o.slot}" data-val="${o.value}">${escapeHtml(o.name)}</button>`,
+              )
+              .join('')}</div>`
+          : '<p class="hint">Премиум-краски, неон, винилы и диски — в «Магазине».</p>'
+      }
       <h2>Автосалон</h2><div class="grid2">${
         shop
           .filter((c) => !cars.some((o) => o.carId === c.id))
@@ -218,6 +245,9 @@ export function showGarage(root: HTMLElement, done: () => void): void {
     panel
       .querySelectorAll<HTMLElement>('[data-neon]')
       .forEach((b) => (b.onclick = () => void visual({ neon: b.dataset.neon! })));
+    panel
+      .querySelectorAll<HTMLElement>('[data-slot]')
+      .forEach((b) => (b.onclick = () => void visual({ [b.dataset.slot!]: b.dataset.val! })));
     panel.querySelectorAll<HTMLElement>('[data-shop]').forEach((b) => {
       b.onclick = () =>
         void act(() => api('/api/garage/cars', { body: { carId: b.dataset.shop }, key: newKey() }));

@@ -135,6 +135,8 @@ export class Session {
       player?: boolean;
       color?: number;
       neon?: number | null;
+      /** Премиум-внешний вид: краска, эффект неона, винил, диски, антикрыло. */
+      look?: { paint?: string; neonFx?: string; vinyl?: string; rims?: string; spoiler?: string };
       name?: string;
       manual?: boolean;
     } = {},
@@ -143,6 +145,7 @@ export class Session {
     const view = new CarView(cfg, {
       color: opts.color ?? CAR_COLORS[slot % CAR_COLORS.length]!,
       neon: opts.neon === null ? undefined : (opts.neon ?? NEON_COLORS[slot % NEON_COLORS.length]),
+      ...opts.look,
     });
     this.gfx.scene.add(view.root);
     v.surfaceGrip = WEATHER_GRIP[this.weather];

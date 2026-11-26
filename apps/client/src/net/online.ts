@@ -151,6 +151,7 @@ export function startOnline(app: App): void {
           parts: garageCar?.parts,
           paint: garageCar?.visual.paint,
           neon: garageCar?.visual.neon,
+          visual: garageCar?.visual,
           ownedCarId: garageCar?.id,
           bots: 0,
           botLevel: 'medium',

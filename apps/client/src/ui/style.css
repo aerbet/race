@@ -674,10 +674,9 @@ body.touch-ui .hud-attr {
 /* Плеер своей музыки */
 .music {
   position: fixed;
-  left: 50%;
-  top: 8px;
-  transform: translateX(-50%);
-  z-index: 35;
+  left: 12px;
+  bottom: 24px;
+  z-index: 31;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -686,7 +685,7 @@ body.touch-ui .hud-attr {
   border-radius: 999px;
   padding: 3px 8px;
   font: 12px var(--font);
-  max-width: calc(100vw - 340px);
+  max-width: min(420px, calc(100vw - 24px));
 }
 .music .mbtn {
   background: none;
@@ -720,13 +719,43 @@ body.touch-ui .hud-attr {
   width: 60px;
   padding: 0;
 }
-@media (max-width: 720px) {
+@media (max-width: 720px), (max-height: 500px) {
+  /* Телефон: в гонке — сверху по центру (низ занят кнопками), в меню — внизу */
   .music {
+    left: 50%;
+    bottom: auto;
+    top: 6px;
+    transform: translateX(-50%);
+    max-width: 50vw;
+  }
+  body:has(.screen) .music {
     top: auto;
-    bottom: 4px;
-    max-width: 60vw;
+    bottom: 6px;
   }
   .music .mname {
     max-width: 80px;
   }
+}
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.offer .btn {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.badge {
+  font: 700 11px var(--font);
+  color: #0b0d18;
+  background: #8cff3a;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.offer .badge {
+  align-self: flex-start;
 }

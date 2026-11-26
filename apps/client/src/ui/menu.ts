@@ -116,7 +116,7 @@ export interface MenuActions {
   start: (setup: RaceSetup) => void;
   online: () => void;
   /** Экраны метаигры (профиль, гараж, рекорды, рейтинг, диспетчер). */
-  meta: (screen: 'profile' | 'garage' | 'records' | 'ratings' | 'dispatcher') => void;
+  meta: (screen: 'profile' | 'garage' | 'records' | 'ratings' | 'dispatcher' | 'shop') => void;
 }
 
 /** Главное меню: режим, машина, соперники. */
@@ -126,6 +126,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     <div class="topbar">
       <button class="btn" data-meta="profile">${account.token ? `👤 ${escapeHtml(account.name ?? '')}` : 'Войти'}</button>
       <button class="btn" data-meta="garage">Гараж</button>
+      <button class="btn" data-meta="shop">Магазин</button>
       <button class="btn" data-meta="records">Рекорды</button>
       <button class="btn" data-meta="ratings">Рейтинг</button>
       <button class="btn" data-meta="dispatcher">Диспетчер</button>

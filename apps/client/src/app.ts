@@ -10,6 +10,7 @@ import { showMenu, showPause, showResults } from './ui/menu';
 import { DebugPanel } from './ui/debug-panel';
 import { InputDebug } from './ui/input-debug';
 import { CarAudio, audio } from './audio/engine-audio';
+import { showShop } from './meta/shop-screen';
 import { MusicWidget } from './ui/music-ui';
 import { account } from './meta/account';
 import { ApiError, activeCar, api } from './meta/api';
@@ -106,8 +107,17 @@ export class App {
         if (m === 'records') showRecords(this.root, back);
         if (m === 'ratings') showRatings(this.root, back);
         if (m === 'dispatcher') showDispatcher(this.root, back);
+        if (m === 'shop') showShop(this.root, back);
       },
     });
+    // Возврат со страницы оплаты: ?payment=<id>
+    const returned = new URLSearchParams(location.search).get('payment');
+    if (returned && /^[0-9a-f-]{36}$/.test(returned)) {
+      history.replaceState(null, '', location.pathname);
+      this.closeScreens();
+      showShop(this.root, () => this.menu(), returned);
+      return;
+    }
     // Первый запуск — знакомство с «Диспетчером»
     if (!dispatcherSeen()) {
       this.closeScreens();
@@ -130,6 +140,7 @@ export class App {
             parts: car.parts,
             paint: car.visual.paint,
             neon: car.visual.neon,
+            visual: car.visual,
             ownedCarId: car.id,
           };
         }

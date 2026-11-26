@@ -50,6 +50,8 @@ export interface RaceSetup {
   parts?: PartLevels;
   paint?: string;
   neon?: string;
+  /** Остальные слоты внешнего вида: vinyl, rims, spoiler. */
+  visual?: Record<string, string>;
   ownedCarId?: string;
 }
 
@@ -160,9 +162,23 @@ export class RaceController {
         player: true,
         manual: setup.manual,
         name: setup.playerName,
-        color: setup.paint ? parseInt(setup.paint.slice(1), 16) : 0xe8eef7,
+        color: setup.paint?.startsWith('#') ? parseInt(setup.paint.slice(1), 16) : 0xe8eef7,
+        // Неон: #цвет, off, или премиум-эффект (rainbow/pulse) на базовом циане
         neon:
-          setup.neon === 'off' ? null : setup.neon ? parseInt(setup.neon.slice(1), 16) : undefined,
+          setup.neon === 'off'
+            ? null
+            : setup.neon?.startsWith('#')
+              ? parseInt(setup.neon.slice(1), 16)
+              : setup.neon
+                ? 0x29e0ff
+                : undefined,
+        look: {
+          paint: setup.paint,
+          neonFx: setup.neon && !setup.neon.startsWith('#') ? setup.neon : undefined,
+          vinyl: setup.visual?.vinyl,
+          rims: setup.visual?.rims,
+          spoiler: setup.visual?.spoiler,
+        },
       },
     );
     this.register(pc, 'player', setup.playerName);
