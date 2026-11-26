@@ -1,0 +1,14 @@
+{
+  "id": "inferno",
+  "name": "Инферно",
+  "price": 750,
+  "set": {
+    "kit": "track",
+    "livery": "checker",
+    "rims": "five",
+    "paint": "#c81e1e",
+    "paint2": "#111111",
+    "neon": "#ff6a00",
+    "smoke": "gold"
+  }
+}

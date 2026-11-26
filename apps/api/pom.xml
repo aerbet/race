@@ -43,6 +43,7 @@
           <include>cars/*.json</include>
           <include>story/*.json</include>
           <include>shop/*.json</include>
+          <include>shop/looks/*.json</include>
         </includes>
       </resource>
     </resources>

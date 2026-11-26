@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
   t,
+  resolveVisual,
   DriftScorer,
   FIXED_DT,
   RaceTracker,
@@ -144,6 +145,14 @@ export class RaceController {
     // Игрок — в конце решётки при гонке с ботами (интереснее обгонять)
     const nBots = MODES[setup.mode].bots ? setup.bots : 0;
     const playerSlot = setup.slot ?? (nBots > 0 ? Math.min(nBots, 7) : 0);
+    // Образ из ателье перекрывает отдельные слоты (9.4)
+    const vis = resolveVisual({
+      ...(setup.visual ?? {}),
+      ...(setup.paint ? { paint: setup.paint } : {}),
+      ...(setup.neon ? { neon: setup.neon } : {}),
+    });
+    const paint = vis.paint;
+    const neon = vis.neon;
     const pc = this.session.addCar(
       applyTuning(getCar(setup.carId), setup.parts ?? {}),
       playerSlot,
@@ -152,24 +161,25 @@ export class RaceController {
         manual: setup.manual,
         driftMode: setup.mode === 'drift',
         name: setup.playerName,
-        color: setup.paint?.startsWith('#') ? parseInt(setup.paint.slice(1), 16) : 0xe8eef7,
+        color: paint?.startsWith('#') ? parseInt(paint.slice(1), 16) : 0xe8eef7,
         // Неон: #цвет, off, или премиум-эффект (rainbow/pulse) на базовом циане
         neon:
-          setup.neon === 'off'
+          neon === 'off'
             ? null
-            : setup.neon?.startsWith('#')
-              ? parseInt(setup.neon.slice(1), 16)
-              : setup.neon
+            : neon?.startsWith('#')
+              ? parseInt(neon.slice(1), 16)
+              : neon
                 ? 0x29e0ff
                 : undefined,
         look: {
-          paint: setup.paint,
-          neonFx: setup.neon && !setup.neon.startsWith('#') ? setup.neon : undefined,
-          vinyl: setup.visual?.vinyl,
-          rims: setup.visual?.rims,
-          spoiler: setup.visual?.spoiler,
-          kit: setup.visual?.kit,
-          paint2: setup.visual?.paint2,
+          paint,
+          neonFx: neon && !neon.startsWith('#') && neon !== 'off' ? neon : undefined,
+          vinyl: vis.livery,
+          rims: vis.rims,
+          spoiler: vis.spoiler,
+          kit: vis.kit,
+          paint2: vis.paint2,
+          smoke: vis.smoke,
         },
       },
     );

@@ -1,0 +1,14 @@
+{
+  "id": "sakura",
+  "name": "Сакура",
+  "price": 700,
+  "set": {
+    "kit": "drift",
+    "livery": "tribal",
+    "rims": "turbine",
+    "paint": "#ffb7d0",
+    "paint2": "#ffffff",
+    "neon": "#ff2bd6",
+    "smoke": "pink"
+  }
+}

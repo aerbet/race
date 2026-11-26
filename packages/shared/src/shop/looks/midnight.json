@@ -1,0 +1,14 @@
+{
+  "id": "midnight",
+  "name": "Полночь",
+  "price": 600,
+  "set": {
+    "kit": "street",
+    "livery": "stripes",
+    "rims": "mesh",
+    "paint": "#121a33",
+    "paint2": "#29e0ff",
+    "neon": "#29e0ff",
+    "smoke": "cyan"
+  }
+}

@@ -11,7 +11,7 @@ import {
 } from '@sr/shared';
 import { CityColliders, Sim, type Rapier, type Vehicle } from '@sr/physics';
 import { CityView } from '../city/city-view';
-import { WEATHER_GRIP, type City, type Weather } from '@sr/shared';
+import { SMOKE_COLORS, WEATHER_GRIP, type City, type Weather } from '@sr/shared';
 import { SceneRenderer } from '../render/scene';
 import { LevelView } from '../render/level';
 import { CarView } from '../render/car';
@@ -33,6 +33,9 @@ export class SessionCar {
   /** Источник ввода для этой машины на шаг; null — ввод задаётся снаружи. */
   controller: ((step: number) => InputFrame) | null = null;
   name = '';
+
+  /** Цветной дым из ателье; без него — серый. */
+  smokeColor?: THREE.Color;
 
   constructor(
     readonly vehicle: Vehicle,
@@ -145,6 +148,8 @@ export class Session {
         spoiler?: string;
         kit?: string;
         paint2?: string;
+        /** Цвет дыма из-под колёс (id из SMOKE_COLORS). */
+        smoke?: string;
       };
       name?: string;
       manual?: boolean;
@@ -161,6 +166,8 @@ export class Session {
     this.gfx.scene.add(view.root);
     v.surfaceGrip = WEATHER_GRIP[this.weather];
     const c = new SessionCar(v, view, this.cars.length);
+    const smoke = opts.look?.smoke ? SMOKE_COLORS[opts.look.smoke] : undefined;
+    if (smoke) c.smokeColor = new THREE.Color(smoke);
     c.name = opts.name ?? t('net.carSlot', { n: slot + 1 });
     this.cars.push(c);
     if (opts.player) {
@@ -288,7 +295,7 @@ export class Session {
           Math.min(1, w.slip),
         );
         if (!w.front && Math.random() < Math.min(1, w.slip) * 0.6)
-          this.smoke.emit(cp.x, cp.y + 0.2, cp.z, lv.x, lv.z);
+          this.smoke.emit(cp.x, cp.y + 0.2, cp.z, lv.x, lv.z, c.smokeColor);
       } else {
         this.skid.add(c.index * 4 + i, 0, 0, 0, 0, 0, 0);
       }

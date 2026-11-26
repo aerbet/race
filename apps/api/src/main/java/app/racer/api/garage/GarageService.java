@@ -24,7 +24,7 @@ public class GarageService {
   static final java.util.Set<String> STOCK =
       java.util.Set.of(
           "rims:stock", "rims:five", "spoiler:none", "spoiler:lip", "spoiler:wing", "bumper:stock", "bumper:sport", "vinyl:none",
-          "kit:stock");
+          "kit:stock", "livery:none", "look:none", "smoke:none");
 
   /** Разрешённые визуальные слоты и формат значений (цвет #rrggbb или id варианта). */
   static final Map<String, Pattern> VISUAL =
@@ -35,7 +35,10 @@ public class GarageService {
           "spoiler", Pattern.compile("[a-z0-9_]{1,24}"),
           "bumper", Pattern.compile("[a-z0-9_]{1,24}"),
           "vinyl", Pattern.compile("[a-z0-9_]{1,24}"),
-          "kit", Pattern.compile("[a-z0-9_]{1,24}"));
+          "kit", Pattern.compile("[a-z0-9_]{1,24}"),
+          "livery", Pattern.compile("[a-z0-9_]{1,24}"),
+          "look", Pattern.compile("[a-z0-9_]{1,24}"),
+          "smoke", Pattern.compile("[a-z0-9_]{1,24}"));
 
   public GarageService(
       CarCatalog catalog,

@@ -876,3 +876,87 @@ body:has(.screen) .yt-frame {
   color: var(--text);
   pointer-events: none;
 }
+
+/* Витрина ателье (9.4) */
+.shop-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.shop-head .row {
+  align-items: center;
+  gap: 8px;
+}
+.preview-box {
+  position: relative;
+  height: 260px;
+  margin: 6px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: radial-gradient(ellipse at 50% 70%, rgba(41, 224, 255, 0.1), transparent 70%);
+  overflow: hidden;
+}
+.preview-box .sub {
+  padding: 16px;
+}
+.car-preview {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.tryon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  font: 14px var(--font);
+}
+.shop-tabs {
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+@media (max-width: 560px) {
+  .grid3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .preview-box {
+    height: 200px;
+  }
+}
+.btn.item {
+  border-left: 3px solid var(--r);
+}
+.r-common {
+  --r: #8d96a8;
+}
+.r-rare {
+  --r: #3aa0ff;
+}
+.r-epic {
+  --r: #b46bff;
+}
+.r-legendary {
+  --r: #ffb02b;
+}
+.btn.item.r-legendary {
+  background: linear-gradient(135deg, rgba(255, 176, 43, 0.12), transparent 60%);
+}
+.rarity {
+  font: 700 11px var(--font);
+  color: var(--r);
+  border: 1px solid var(--r);
+  border-radius: 4px;
+  padding: 1px 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

@@ -1,6 +1,7 @@
 import {
   t,
   has,
+  resolveVisual,
   CARS,
   DISPATCHER,
   PART_CATEGORIES,
@@ -53,7 +54,9 @@ const FREE_PARTS: [string, string, string][] = [
   ['spoiler', 'lip', 'free.spoiler.lip'],
   ['spoiler', 'wing', 'free.spoiler.wing'],
   ['rims', 'five', 'free.rims.five'],
-  ['vinyl', 'none', 'free.vinyl.none'],
+  ['livery', 'none', 'free.vinyl.none'],
+  ['look', 'none', 'free.look.none'],
+  ['smoke', 'none', 'free.smoke.none'],
   ['kit', 'stock', 'free.kit.stock'],
 ];
 
@@ -171,8 +174,9 @@ export function showGarage(root: HTMLElement, done: () => void): void {
       return `<tr><td>${t(`part.${cat}`)}</td><td>${'■'.repeat(lv)}${'□'.repeat(4 - lv)}</td>
         <td>${next <= 4 ? `<button class="btn" data-buy="${cat}" ${price! > money ? 'disabled' : ''}>${t('garage.level', { n: next, price: price!.toLocaleString(locale()), pi: piAfter })}</button>` : t('garage.max')}</td></tr>`;
     }).join('');
-    const paint = cur.visual.paint ?? '#e8eef7';
-    const neon = cur.visual.neon ?? '#29e0ff';
+    const vis = resolveVisual(cur.visual);
+    const paint = vis.paint ?? '#e8eef7';
+    const neon = vis.neon ?? '#29e0ff';
     // Кузовные киты — только у машин с glTF-моделью и китами этой модели
     const fits = (slot: string, value: string) =>
       slot !== 'kit' ||
@@ -196,7 +200,7 @@ export function showGarage(root: HTMLElement, done: () => void): void {
       <h2>${t('garage.body')}</h2><div class="row">${FREE_PARTS.filter(([slot]) => fits(slot, ''))
         .map(
           ([slot, value, name]) =>
-            `<button class="btn ${(cur.visual[slot] ?? (slot === 'kit' ? 'stock' : '')) === value ? 'sel' : ''}" data-slot="${slot}" data-val="${value}">${t(name)}</button>`,
+            `<button class="btn ${(vis[slot] ?? (slot === 'kit' ? 'stock' : 'none')) === value ? 'sel' : ''}" data-slot="${slot}" data-val="${value}">${t(name)}</button>`,
         )
         .join('')}</div>
       ${
@@ -204,7 +208,7 @@ export function showGarage(root: HTMLElement, done: () => void): void {
           ? `<h2>${t('garage.bought')}</h2><div class="row">${mine
               .map(
                 (o) =>
-                  `<button class="btn ${cur.visual[o.slot] === o.value ? 'sel' : ''}" data-slot="${o.slot}" data-val="${o.value}">${escapeHtml(o.name)}</button>`,
+                  `<button class="btn ${(o.slot === 'look' ? cur.visual.look : vis[o.slot]) === o.value ? 'sel' : ''}" data-slot="${o.slot}" data-val="${o.value}">${escapeHtml(has(`item.${o.id}`) ? t(`item.${o.id}`) : o.name)}</button>`,
               )
               .join('')}</div>`
           : `<p class="hint">${t('garage.shopHint')}</p>`
@@ -247,8 +251,17 @@ export function showGarage(root: HTMLElement, done: () => void): void {
         );
       };
     });
+    // Любая отдельная деталь снимает образ: иначе образ перекрыл бы её (resolveVisual)
     const visual = (v: Record<string, string>) =>
-      act(() => api(`/api/garage/cars/${cur.id}/visual`, { method: 'PUT', body: v }));
+      act(() =>
+        api(`/api/garage/cars/${cur.id}/visual`, {
+          method: 'PUT',
+          body:
+            'look' in v || !cur.visual.look || cur.visual.look === 'none'
+              ? v
+              : { ...v, look: 'none' },
+        }),
+      );
     panel
       .querySelectorAll<HTMLElement>('[data-paint]')
       .forEach((b) => (b.onclick = () => void visual({ paint: b.dataset.paint! })));

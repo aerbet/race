@@ -21,6 +21,11 @@ public class ShopController {
     return cosmetics.list(auth == null ? null : TokenService.userId(auth));
   }
 
+  @GetMapping("/api/shop/showcase")
+  public CosmeticsService.Showcase showcase(Authentication auth) {
+    return cosmetics.showcase(auth == null ? null : TokenService.userId(auth));
+  }
+
   @PostMapping("/api/shop/cosmetics/{id}/buy")
   public CosmeticsService.Item buy(Authentication auth, @PathVariable String id) {
     return cosmetics.buy(TokenService.userId(auth), id);

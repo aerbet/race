@@ -91,9 +91,11 @@ export class Smoke {
   private vel: Float32Array;
   private life: Float32Array;
   private size: Float32Array;
+  private color: Float32Array;
   private i = 0;
 
   constructor(readonly max: number) {
+    this.color = new Float32Array(max * 3);
     this.pos = new Float32Array(max * 3);
     this.vel = new Float32Array(max * 3);
     this.life = new Float32Array(max);
@@ -102,21 +104,26 @@ export class Smoke {
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
     g.setAttribute('life', new THREE.BufferAttribute(this.life, 1));
     g.setAttribute('psize', new THREE.BufferAttribute(this.size, 1));
+    g.setAttribute('tint', new THREE.BufferAttribute(this.color, 3));
     const mat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
       uniforms: { scale: { value: window.innerHeight / 2 } },
-      vertexShader: `attribute float life; attribute float psize; uniform float scale; varying float vL;
-        void main(){ vL=life; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize = psize*scale/(-mv.z); gl_Position=projectionMatrix*mv; }`,
-      fragmentShader: `varying float vL; void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); if(d>0.5) discard;
-        float a = (1.0-d*2.0) * vL * 0.35; gl_FragColor=vec4(vec3(0.75,0.76,0.8), a);} `,
+      vertexShader: `attribute float life; attribute float psize; attribute vec3 tint; uniform float scale; varying float vL; varying vec3 vC;
+        void main(){ vL=life; vC=tint; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize = psize*scale/(-mv.z); gl_Position=projectionMatrix*mv; }`,
+      fragmentShader: `varying float vL; varying vec3 vC; void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); if(d>0.5) discard;
+        float a = (1.0-d*2.0) * vL * 0.35; gl_FragColor=vec4(vC, a);} `,
     });
     this.points = new THREE.Points(g, mat);
     this.points.frustumCulled = false;
   }
 
-  emit(x: number, y: number, z: number, vx: number, vz: number): void {
+  /** Частица дыма; color — цветной дым из ателье, по умолчанию серый. */
+  emit(x: number, y: number, z: number, vx: number, vz: number, color?: THREE.Color): void {
     const i = this.i++ % this.max;
+    if (color) this.color.set([color.r, color.g, color.b], i * 3);
+    else this.color.set([0.75, 0.76, 0.8], i * 3);
+    (this.points.geometry.attributes.tint as THREE.BufferAttribute).needsUpdate = true;
     this.pos.set([x, y, z], i * 3);
     this.vel.set(
       [

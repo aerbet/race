@@ -36,105 +36,152 @@
       "slot": "paint",
       "value": "chrome",
       "name": "Хром",
-      "price": 150
+      "price": 150,
+      "rarity": "common"
     },
     {
       "id": "paint_pearl",
       "slot": "paint",
       "value": "pearl",
       "name": "Перламутр",
-      "price": 120
+      "price": 120,
+      "rarity": "common"
     },
     {
       "id": "paint_matte_black",
       "slot": "paint",
       "value": "matte_black",
       "name": "Матовый чёрный",
-      "price": 100
+      "price": 100,
+      "rarity": "common"
     },
     {
       "id": "paint_chameleon",
       "slot": "paint",
       "value": "chameleon",
       "name": "Хамелеон",
-      "price": 250
+      "price": 250,
+      "rarity": "epic"
     },
     {
       "id": "neon_rainbow",
       "slot": "neon",
       "value": "rainbow",
       "name": "Неон «Радуга»",
-      "price": 200
+      "price": 200,
+      "rarity": "epic"
     },
     {
       "id": "neon_pulse",
       "slot": "neon",
       "value": "pulse",
       "name": "Неон «Пульс»",
-      "price": 150
+      "price": 150,
+      "rarity": "common"
     },
     {
       "id": "vinyl_stripes",
-      "slot": "vinyl",
+      "slot": "livery",
       "value": "stripes",
       "name": "Винил «Полосы»",
-      "price": 80
+      "price": 80,
+      "rarity": "common"
     },
     {
       "id": "vinyl_tribal",
-      "slot": "vinyl",
+      "slot": "livery",
       "value": "tribal",
       "name": "Винил «Узор»",
-      "price": 120
+      "price": 120,
+      "rarity": "epic"
     },
     {
       "id": "vinyl_checker",
-      "slot": "vinyl",
+      "slot": "livery",
       "value": "checker",
       "name": "Винил «Шахматка»",
-      "price": 100
+      "price": 100,
+      "rarity": "rare"
     },
     {
       "id": "rims_turbine",
       "slot": "rims",
       "value": "turbine",
       "name": "Диски «Турбина»",
-      "price": 90
+      "price": 90,
+      "rarity": "rare"
     },
     {
       "id": "rims_mesh",
       "slot": "rims",
       "value": "mesh",
       "name": "Диски «Сетка»",
-      "price": 90
+      "price": 90,
+      "rarity": "common"
     },
     {
       "id": "spoiler_gt",
       "slot": "spoiler",
       "value": "gt",
       "name": "Антикрыло GT",
-      "price": 110
+      "price": 110,
+      "rarity": "rare"
     },
     {
       "id": "kit_street",
       "slot": "kit",
       "value": "street",
       "name": "Кит «Уличный»",
-      "price": 220
+      "price": 220,
+      "rarity": "common"
     },
     {
       "id": "kit_track",
       "slot": "kit",
       "value": "track",
       "name": "Кит «Трековый»",
-      "price": 320
+      "price": 320,
+      "rarity": "rare"
     },
     {
       "id": "kit_drift",
       "slot": "kit",
       "value": "drift",
       "name": "Кит «Дрифт»",
-      "price": 300
+      "price": 300,
+      "rarity": "epic"
+    },
+    {
+      "id": "smoke_cyan",
+      "slot": "smoke",
+      "value": "cyan",
+      "name": "Дым «Лёд»",
+      "price": 60,
+      "rarity": "common"
+    },
+    {
+      "id": "smoke_pink",
+      "slot": "smoke",
+      "value": "pink",
+      "name": "Дым «Неон»",
+      "price": 90,
+      "rarity": "rare"
+    },
+    {
+      "id": "smoke_lime",
+      "slot": "smoke",
+      "value": "lime",
+      "name": "Дым «Кислота»",
+      "price": 90,
+      "rarity": "rare"
+    },
+    {
+      "id": "smoke_gold",
+      "slot": "smoke",
+      "value": "gold",
+      "name": "Дым «Золото»",
+      "price": 160,
+      "rarity": "epic"
     }
   ]
 }

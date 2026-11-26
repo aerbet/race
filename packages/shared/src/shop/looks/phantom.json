@@ -1,0 +1,14 @@
+{
+  "id": "phantom",
+  "name": "Призрак",
+  "price": 800,
+  "set": {
+    "kit": "street",
+    "livery": "none",
+    "rims": "mesh",
+    "paint": "matte_black",
+    "paint2": "#3a3d48",
+    "neon": "pulse",
+    "smoke": "lime"
+  }
+}
