@@ -17,23 +17,36 @@ public class GarageService {
   private final OwnedCarRepository cars;
   private final EconomyService economy;
   private final LedgerRepository ledger;
+  private final app.racer.api.payments.ShopCatalog shop;
+  private final app.racer.api.shop.CosmeticsService cosmetics;
+
+  /** Бесплатные варианты деталей кузова. */
+  static final java.util.Set<String> STOCK =
+      java.util.Set.of("rims:stock", "rims:five", "spoiler:none", "spoiler:lip", "bumper:stock", "bumper:sport", "vinyl:none");
 
   /** Разрешённые визуальные слоты и формат значений (цвет #rrggbb или id варианта). */
   static final Map<String, Pattern> VISUAL =
       Map.of(
-          "paint", Pattern.compile("#[0-9a-fA-F]{6}"),
-          "neon", Pattern.compile("#[0-9a-fA-F]{6}|off"),
+          "paint", Pattern.compile("#[0-9a-fA-F]{6}|[a-z_]{1,24}"),
+          "neon", Pattern.compile("#[0-9a-fA-F]{6}|off|[a-z_]{1,24}"),
           "rims", Pattern.compile("[a-z0-9_]{1,24}"),
           "spoiler", Pattern.compile("[a-z0-9_]{1,24}"),
           "bumper", Pattern.compile("[a-z0-9_]{1,24}"),
           "vinyl", Pattern.compile("[a-z0-9_]{1,24}"));
 
   public GarageService(
-      CarCatalog catalog, OwnedCarRepository cars, EconomyService economy, LedgerRepository ledger) {
+      CarCatalog catalog,
+      OwnedCarRepository cars,
+      EconomyService economy,
+      LedgerRepository ledger,
+      app.racer.api.payments.ShopCatalog shop,
+      @org.springframework.context.annotation.Lazy app.racer.api.shop.CosmeticsService cosmetics) {
     this.catalog = catalog;
     this.cars = cars;
     this.economy = economy;
     this.ledger = ledger;
+    this.shop = shop;
+    this.cosmetics = cosmetics;
   }
 
   public List<OwnedCar> list(UUID userId) {
@@ -107,6 +120,12 @@ public class GarageService {
       Pattern p = VISUAL.get(e.getKey());
       if (p == null) throw ApiException.bad("unknown_slot", "нет слота " + e.getKey());
       if (!p.matcher(e.getValue()).matches()) throw ApiException.bad("bad_value", "неверное значение " + e.getKey());
+      // Буквенные значения — только из каталога; премиальные — только купленные
+      if (!e.getValue().startsWith("#") && !e.getValue().equals("off")) {
+        if (shop.cosmeticByValue(e.getKey(), e.getValue()).isEmpty() && !STOCK.contains(e.getKey() + ":" + e.getValue()))
+          throw ApiException.bad("bad_value", "нет такого варианта " + e.getKey());
+        cosmetics.checkVisual(userId, e.getKey(), e.getValue());
+      }
       v.put(e.getKey(), e.getValue());
     }
     c.visual = v;

@@ -60,10 +60,12 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             a ->
                 a.requestMatchers("/api/auth/**", "/actuator/health", "/api/health").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/records/**", "/api/ratings/**", "/api/catalog/**")
+                    .requestMatchers(HttpMethod.GET, "/api/records/**", "/api/ratings/**", "/api/catalog/**", "/api/shop/**")
                     .permitAll()
                     // Внутренние вызовы сервера гонок — проверяются ключом в контроллере
                     .requestMatchers("/internal/**").permitAll()
+                    // Вебхуки провайдеров: подпись/перепроверка — в контроллере
+                    .requestMatchers(HttpMethod.POST, "/webhooks/**").permitAll()
                     .anyRequest().authenticated())
         .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()));
     return http.build();

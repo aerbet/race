@@ -30,3 +30,17 @@ app:
   verifier-url: ${VERIFIER_URL:http://localhost:2567/verify}
   cors-origins: ${CORS_ORIGINS:http://localhost:5173}
   starting-credits: 20000
+payments:
+  # Публичный адрес игры (возврат после оплаты)
+  public-url: ${PUBLIC_URL:http://localhost:5173}
+  cryptopay:
+    token: ${CRYPTOPAY_TOKEN:}
+    # Тестовая сеть: https://testnet-pay.crypt.bot
+    base-url: ${CRYPTOPAY_URL:https://pay.crypt.bot}
+    assets: ${CRYPTOPAY_ASSETS:USDT,TON}
+  yookassa:
+    shop-id: ${YOOKASSA_SHOP_ID:}
+    secret-key: ${YOOKASSA_SECRET_KEY:}
+    base-url: ${YOOKASSA_URL:https://api.yookassa.ru}
+    receipts: ${YOOKASSA_RECEIPTS:false}
+    vat-code: ${YOOKASSA_VAT_CODE:1}

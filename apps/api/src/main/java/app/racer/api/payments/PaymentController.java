@@ -1,0 +1,94 @@
+package app.racer.api.payments;
+
+import app.racer.api.auth.TokenService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class PaymentController {
+  private static final Logger log = LoggerFactory.getLogger(PaymentController.class);
+  private final PaymentService payments;
+  private final CryptoPayProvider cryptoPay;
+  private final ObjectMapper om;
+
+  public PaymentController(PaymentService payments, CryptoPayProvider cryptoPay, ObjectMapper om) {
+    this.payments = payments;
+    this.cryptoPay = cryptoPay;
+    this.om = om;
+  }
+
+  @GetMapping("/api/shop/products")
+  public List<PaymentService.Offer> products() {
+    return payments.offers();
+  }
+
+  public record Create(String productId, String provider) {}
+
+  public record View(UUID id, String status, String provider, String productId, int tokens, String amount, String currency, String payUrl) {
+    static View of(Payment p) {
+      return new View(p.id, p.status, p.provider, p.productId, p.tokens, p.amount.toPlainString(), p.currency, p.payUrl);
+    }
+  }
+
+  @PostMapping("/api/payments")
+  public View create(Authentication auth, @RequestHeader("Idempotency-Key") String key, @RequestBody Create body) {
+    return View.of(payments.create(TokenService.userId(auth), body.productId(), body.provider(), key));
+  }
+
+  @GetMapping("/api/payments/{id}")
+  public View status(Authentication auth, @PathVariable UUID id) {
+    return View.of(payments.status(TokenService.userId(auth), id));
+  }
+
+  @GetMapping("/api/payments")
+  public List<View> history(Authentication auth) {
+    return payments.history(TokenService.userId(auth)).stream().map(View::of).toList();
+  }
+
+  /** Вебхук Crypto Pay: подпись по сырому телу; оплату всё равно перепроверяем getInvoices. */
+  @PostMapping("/webhooks/cryptobot")
+  public ResponseEntity<String> cryptobot(@RequestHeader(value = "crypto-pay-api-signature", required = false) String sig, @RequestBody byte[] body) {
+    if (!cryptoPay.verifySignature(body, sig)) return ResponseEntity.status(401).body("bad signature");
+    try {
+      JsonNode u = om.readTree(body);
+      if ("invoice_paid".equals(u.path("update_type").asText())) {
+        String invoiceId = u.path("payload").path("invoice_id").asText();
+        Payment p = payments.byProvider("cryptobot", invoiceId);
+        if (p != null) payments.confirm(p.id);
+      }
+    } catch (Exception e) {
+      log.warn("вебхук Crypto Pay: {}", e.toString());
+      return ResponseEntity.status(500).body("retry");
+    }
+    return ResponseEntity.ok("ok");
+  }
+
+  /** Уведомления ЮKassa: телу не верим, статус и сумму перепроверяем GET /v3/payments/{id}. */
+  @PostMapping("/webhooks/yookassa")
+  public ResponseEntity<String> yookassa(@RequestBody Map<String, Object> body) {
+    try {
+      Object obj = body.get("object");
+      if (obj instanceof Map<?, ?> m && m.get("id") != null) {
+        Payment p = payments.byProvider("sbp", String.valueOf(m.get("id")));
+        if (p != null) payments.confirm(p.id);
+      }
+    } catch (Exception e) {
+      log.warn("уведомление ЮKassa: {}", e.toString());
+      return ResponseEntity.status(500).body("retry");
+    }
+    return ResponseEntity.ok("ok");
+  }
+}

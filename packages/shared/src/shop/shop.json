@@ -1,0 +1,78 @@
+{
+  "currency": { "token": "жетоны" },
+  "packs": [
+    { "id": "tokens_100", "name": "100 жетонов", "tokens": 100, "rub": 99, "usdt": 1.1 },
+    {
+      "id": "tokens_550",
+      "name": "550 жетонов",
+      "tokens": 550,
+      "rub": 499,
+      "usdt": 5.5,
+      "badge": "+10%"
+    },
+    {
+      "id": "tokens_1200",
+      "name": "1200 жетонов",
+      "tokens": 1200,
+      "rub": 999,
+      "usdt": 11,
+      "badge": "+20%"
+    }
+  ],
+  "cosmetics": [
+    { "id": "paint_chrome", "slot": "paint", "value": "chrome", "name": "Хром", "price": 150 },
+    { "id": "paint_pearl", "slot": "paint", "value": "pearl", "name": "Перламутр", "price": 120 },
+    {
+      "id": "paint_matte_black",
+      "slot": "paint",
+      "value": "matte_black",
+      "name": "Матовый чёрный",
+      "price": 100
+    },
+    {
+      "id": "paint_chameleon",
+      "slot": "paint",
+      "value": "chameleon",
+      "name": "Хамелеон",
+      "price": 250
+    },
+    {
+      "id": "neon_rainbow",
+      "slot": "neon",
+      "value": "rainbow",
+      "name": "Неон «Радуга»",
+      "price": 200
+    },
+    { "id": "neon_pulse", "slot": "neon", "value": "pulse", "name": "Неон «Пульс»", "price": 150 },
+    {
+      "id": "vinyl_stripes",
+      "slot": "vinyl",
+      "value": "stripes",
+      "name": "Винил «Полосы»",
+      "price": 80
+    },
+    {
+      "id": "vinyl_tribal",
+      "slot": "vinyl",
+      "value": "tribal",
+      "name": "Винил «Узор»",
+      "price": 120
+    },
+    {
+      "id": "vinyl_checker",
+      "slot": "vinyl",
+      "value": "checker",
+      "name": "Винил «Шахматка»",
+      "price": 100
+    },
+    {
+      "id": "rims_turbine",
+      "slot": "rims",
+      "value": "turbine",
+      "name": "Диски «Турбина»",
+      "price": 90
+    },
+    { "id": "rims_mesh", "slot": "rims", "value": "mesh", "name": "Диски «Сетка»", "price": 90 },
+    { "id": "spoiler_gt", "slot": "spoiler", "value": "gt", "name": "Антикрыло GT", "price": 110 }
+  ]
+}

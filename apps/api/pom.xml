@@ -42,6 +42,7 @@
           <include>tuning/pi-fixtures.json</include>
           <include>cars/*.json</include>
           <include>story/*.json</include>
+          <include>shop/*.json</include>
         </includes>
       </resource>
     </resources>
