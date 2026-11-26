@@ -63,16 +63,26 @@ export class Sim {
     const body = world.createRigidBody(R.RigidBodyDesc.fixed());
     const list: Collider[] = [];
     for (const b of boxes) {
-      const [cx, cz, hx, hz, yaw, h] = b as [number, number, number, number, number, number];
+      const [cx, cz, hx, hz, yaw, h, y0] = b as [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number?,
+      ];
+      // y0 — высота низа: приподнятая плита (настил моста) — это дорога, а не стена
+      const floor = y0 !== undefined;
       const c = world.createCollider(
         R.ColliderDesc.cuboid(hx, h / 2, hz)
-          .setTranslation(cx, h / 2, cz)
+          .setTranslation(cx, (y0 ?? 0) + h / 2, cz)
           .setRotation({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) })
-          .setFriction(0)
+          .setFriction(floor ? 1 : 0)
           .setCollisionGroups(groups(GROUP_STATIC, 0xffff)),
         body,
       );
-      this.level.wallHandles.add(c.handle);
+      if (!floor) this.level.wallHandles.add(c.handle);
       list.push(c);
     }
     this.tiles.set(key, list);

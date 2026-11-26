@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { CARS, RaceTracker, buildTrack, parseCity } from '@sr/shared';
+import { CARS, RaceTracker, buildTrack, deckColliders, emptyInput, parseCity } from '@sr/shared';
 import { initPhysics, type Rapier } from './rapier';
 import { Sim } from './sim';
 import { Bot } from './bot';
@@ -130,6 +130,40 @@ describe('tokyo tracks', { timeout: 120_000 }, () => {
       expect(r.finished).toBe(true);
       expect(resets).toBe(0);
       expect(wallSteps).toBeLessThan(60);
+    },
+  );
+});
+
+describe('настил мостов-ориентиров (хвост 10.3)', { timeout: 60_000 }, () => {
+  it.each(['moscow_center', 'tokyo_shinjuku'])(
+    '%s: машина, упавшая на мост, остаётся на настиле',
+    (id) => {
+      const c = parseCity(
+        JSON.parse(
+          readFileSync(
+            new URL(`../../../apps/client/public/cities/${id}/city.json`, import.meta.url),
+            'utf8',
+          ),
+        ),
+      );
+      const bridge = c.landmarks.find((l) => l.id.endsWith('_bridge'))!;
+      expect(bridge).toBeDefined();
+      const deck = deckColliders([bridge])[0]!;
+      const top = deck[6] + deck[5];
+      const track = buildTrack(c.tracks[0]!);
+      const sim = new Sim(R, track);
+      const car = sim.addCar(CARS.era2026_hatch!, 0);
+      const cc = new CityColliders(c, sim);
+      car.teleport({ x: bridge.x, y: top + 1.5, z: bridge.z }, bridge.yaw);
+      let minY = Infinity;
+      for (let s = 0; s < 60 * 3; s++) {
+        if (s % 10 === 0) cc.update([car.position]);
+        sim.tick([emptyInput()]);
+        minY = Math.min(minY, car.position.y);
+      }
+      sim.dispose();
+      // Колёса на плите: центр машины выше низа настила, не провалился на улицу
+      expect(minY).toBeGreaterThan(top - 0.2);
     },
   );
 });
