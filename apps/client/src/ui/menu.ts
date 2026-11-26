@@ -158,7 +158,9 @@ export interface MenuActions {
   start: (setup: RaceSetup) => void;
   online: () => void;
   /** Экраны метаигры (профиль, гараж, рекорды, рейтинг, диспетчер). */
-  meta: (screen: 'profile' | 'garage' | 'records' | 'ratings' | 'dispatcher' | 'shop') => void;
+  meta: (
+    screen: 'profile' | 'garage' | 'records' | 'ratings' | 'dispatcher' | 'shop' | 'music',
+  ) => void;
 }
 
 /** Главное меню: режим, машина, соперники. */
@@ -171,6 +173,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
       <button class="btn" data-meta="shop">${t('menu.shop')}</button>
       <button class="btn" data-meta="records">${t('menu.records')}</button>
       <button class="btn" data-meta="ratings">${t('menu.ratings')}</button>
+      <button class="btn" data-meta="music">${t('menu.music')}</button>
       <button class="btn" data-meta="dispatcher">${t('menu.dispatcher')}</button>
     </div>
     <h1>${BRAND.title}</h1>

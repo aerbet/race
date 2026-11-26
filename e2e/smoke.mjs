@@ -125,6 +125,27 @@ try {
   await page.waitForSelector('[data-k="go"]');
   check('пауза → меню', true);
 
+  // 3б. Музыка: YouTube недоступен → сообщение и радио игры (PLAN_V2 8.5)
+  await page.route(/youtube\.com|googleapis/, (r) => r.abort());
+  await page.click('[data-meta="music"]');
+  await page.click('[data-tab="youtube"]');
+  await page.click('[data-play]');
+  const fallback = await page
+    .waitForFunction(
+      () =>
+        globalThis.document.querySelector('.music')?.classList.contains('on') &&
+        !!globalThis.document.querySelector('[data-k="msg"]')?.textContent,
+      null,
+      { timeout: 8000 },
+    )
+    .then(
+      () => true,
+      () => false,
+    );
+  check('музыка: без YouTube включается радио', fallback);
+  await page.click('[data-k="back"]');
+  await page.unroute(/youtube\.com|googleapis/);
+
   // 4. Слепой тест
   await page.goto(base + '&blind');
   await page.waitForSelector('[data-k="name"]');

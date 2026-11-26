@@ -1,67 +1,45 @@
-import { t, tn } from '@sr/shared';
-import { music } from '../audio/music';
+import { t } from '@sr/shared';
+import { hub } from '../audio/hub';
+import { YouTubeSource } from '../audio/youtube';
 
-/** Мини-плеер: выбор папки/файлов, ⏮ ⏯ ⏭, перемешивание, громкость. M — пауза/воспроизведение. */
+/**
+ * Мини-плеер: ♪ — меню «Музыка», ⏮ ⏯ ⏭ и громкость — для текущего источника
+ * (радио игры, свои файлы или YouTube). M — пауза/воспроизведение.
+ * Карточка YouTube — отдельный элемент рядом, наши кнопки её не перекрывают.
+ */
 export class MusicWidget {
   readonly el: HTMLDivElement;
-  private file: HTMLInputElement;
 
-  constructor(parent: HTMLElement) {
+  constructor(parent: HTMLElement, openMenu: () => void) {
+    hub.attachYouTube(new YouTubeSource(parent));
     this.el = document.createElement('div');
     this.el.className = 'music';
     this.el.innerHTML = `
-      <button class="mbtn" data-k="pick" title="${t('music.own.title')}">♪</button>
-      <span class="mname" data-k="name">${t('music.own')}</span>
+      <button class="mbtn" data-k="pick" title="${t('menu.music')}">♪</button>
+      <span class="mname" data-k="name"></span>
       <button class="mbtn" data-k="prev" title="${t('music.prev')}">⏮</button>
       <button class="mbtn" data-k="play" title="${t('music.play')}">⏯</button>
       <button class="mbtn" data-k="next" title="${t('music.next')}">⏭</button>
-      <button class="mbtn" data-k="shuffle" title="${t('music.shuffle')}">⤮</button>
-      <input type="range" min="0" max="1" step="0.05" value="0.6" data-k="vol" title="${t('music.volume')}" />
-      <input type="file" accept="audio/*" multiple hidden data-k="file" />`;
+      <input type="range" min="0" max="1" step="0.05" value="0.6" data-k="vol" title="${t('music.volume')}" />`;
     parent.appendChild(this.el);
     const q = <T extends HTMLElement>(k: string) => this.el.querySelector(`[data-k="${k}"]`) as T;
-    this.file = q<HTMLInputElement>('file');
-    q('pick').onclick = async () => {
-      if (music.supportsFolder) {
-        try {
-          const n = await music.pickFolder();
-          if (n > 0) music.toggle();
-          return;
-        } catch {
-          /* отмена или нет доступа — откроем выбор файлов */
-        }
-      }
-      this.file.click();
-    };
-    this.file.onchange = () => {
-      if (this.file.files && music.addFiles(this.file.files) > 0 && !music.playing) music.toggle();
-    };
-    q('prev').onclick = () => music.prev();
-    q('play').onclick = () => music.toggle();
-    q('next').onclick = () => music.next();
-    q('shuffle').onclick = () => music.toggleShuffle();
+    q('pick').onclick = openMenu;
+    q('name').onclick = openMenu;
+    q('prev').onclick = () => hub.prev();
+    q('play').onclick = () => hub.toggle();
+    q('next').onclick = () => hub.next();
     q<HTMLInputElement>('vol').oninput = (e) =>
-      music.setVolume(Number((e.target as HTMLInputElement).value));
+      hub.setVolume(Number((e.target as HTMLInputElement).value));
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyM' && !(e.target instanceof HTMLInputElement)) music.toggle();
+      if (e.code === 'KeyM' && !(e.target instanceof HTMLInputElement)) hub.toggle();
     });
-    music.onChange = () => this.render();
+    hub.subscribe(() => this.render());
     this.render();
   }
 
   private render(): void {
-    const name = this.el.querySelector('[data-k="name"]') as HTMLElement;
-    const cur = music.current;
-    name.textContent = cur
-      ? cur.name.replace(/\.[^.]+$/, '')
-      : music.tracks.length
-        ? tn('music.tracks', music.tracks.length)
-        : t('music.own');
-    this.el.classList.toggle('has', music.tracks.length > 0);
-    this.el.classList.toggle('on', music.playing);
-    (this.el.querySelector('[data-k="shuffle"]') as HTMLElement).classList.toggle(
-      'active',
-      music.shuffle,
-    );
+    (this.el.querySelector('[data-k="name"]') as HTMLElement).textContent = hub.title;
+    this.el.classList.toggle('has', hub.ready);
+    this.el.classList.toggle('on', hub.playing);
   }
 }

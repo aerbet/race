@@ -11,3 +11,4 @@ export * from './tuning/index';
 export * from './story/index';
 export * from './shop/index';
 export * from './i18n/index';
+export * from './music/index';

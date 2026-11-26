@@ -13,6 +13,7 @@ import { InputDebug } from './ui/input-debug';
 import { CarAudio, audio } from './audio/engine-audio';
 import { showShop } from './meta/shop-screen';
 import { MusicWidget } from './ui/music-ui';
+import { hub } from './audio/hub';
 import { account } from './meta/account';
 import { ApiError, activeCar, api, errText } from './meta/api';
 import {
@@ -65,7 +66,8 @@ export class App {
     this.pauseBtn.onclick = () => this.togglePause();
     root.appendChild(this.pauseBtn);
     window.addEventListener('keydown', (e) => this.onKey(e));
-    new MusicWidget(root);
+    new MusicWidget(root, () => this.openMusic());
+    hub.onNotice = (text) => this.toast(text, 4);
   }
 
   private onKey(e: KeyboardEvent): void {
@@ -93,7 +95,19 @@ export class App {
   private fpsProbe: FpsProbe | null = null;
 
   toast(text: string, seconds = 2.5): void {
-    this.hud?.showToast(text, seconds);
+    if (this.hud) return this.hud.showToast(text, seconds);
+    // Вне гонки (меню) — простая плашка сверху
+    const el = document.createElement('div');
+    el.className = 'toast-float';
+    el.textContent = text;
+    this.root.appendChild(el);
+    setTimeout(() => el.remove(), seconds * 1000);
+  }
+
+  /** Меню «Музыка»: в гонке сначала пауза. */
+  openMusic(): void {
+    if (this.race && !this.paused) this.togglePause();
+    void import('./ui/music-screen').then(({ showMusic }) => showMusic(this.root, () => {}));
   }
 
   /** Закрыть текущий экран (меню, пауза, результаты). */
@@ -117,6 +131,8 @@ export class App {
         if (m === 'ratings') showRatings(this.root, back);
         if (m === 'dispatcher') showDispatcher(this.root, back);
         if (m === 'shop') showShop(this.root, back);
+        if (m === 'music')
+          void import('./ui/music-screen').then(({ showMusic }) => showMusic(this.root, back));
       },
     });
     // Возврат со страницы оплаты: ?payment=<id>
