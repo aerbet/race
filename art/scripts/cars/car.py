@@ -304,11 +304,12 @@ def side_details(body, spec, parts):
         if b:
             _add_bm(parts['body'], b)
         # Зазоры: передняя кромка двери и задняя (у средней стойки)
-        for path in ([(0.335, zw - 0.01), (0.334, 0.33), (0.345, s.bottom(0.345) + 0.03)],
-                     [(0.608, zw - 0.005), (0.613, 0.4), (0.618, s.bottom(0.618) + 0.04)]):
+        ud, ub = body.u_door, body.ub + 0.008
+        for path in ([(ud, zw - 0.01), (ud - 0.001, 0.33), (ud + 0.01, s.bottom(ud + 0.01) + 0.03)],
+                     [(ub, zw - 0.005), (ub + 0.005, 0.4), (ub + 0.01, s.bottom(ub + 0.01) + 0.04)]):
             _add_bm(parts['body'], strip_path(body, path, view, 0.005, 0.001, 0.004, 2))
         # Ручка
-        hu = 0.555
+        hu = body.ub - 0.045
         b = slab(body, [(hu, zw - 0.075), (hu + 0.028, zw - 0.075), (hu + 0.028, zw - 0.055),
                         (hu, zw - 0.055)][::(1 if view == 'side_r' else -1)], view, 0.006, 0.004, 1)
         if b:

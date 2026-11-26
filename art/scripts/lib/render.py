@@ -240,6 +240,29 @@ def uv_check(root, out, body='body'):
     return [f]
 
 
+def ao_check(root, out):
+    """Запечённая карта AO на кузове (Workbench, режим текстуры) — проверка запекания."""
+    show_lod(root, 0)
+    if not bpy.data.images.get('ao_body'):
+        return []
+    lo, hi = bbox(_lod_objs(root, 0))
+    c = (lo + hi) / 2
+    cam = _camera()
+    cam.data.type = 'PERSP'
+    cam.data.lens = 50
+    _setup('WORKBENCH')
+    sh = bpy.context.scene.display.shading
+    sh.color_type = 'TEXTURE'
+    sh.light = 'FLAT'
+    sh.show_object_outline = False
+    sh.show_cavity = False
+    _aim(cam, c + Vector((0.75, 0.85, 0.32)).normalized() * (hi - lo).length * 1.55, c)
+    f = _render(os.path.join(out, 'ao_check.png'))
+    sh.color_type = 'MATERIAL'
+    sh.light = 'STUDIO'
+    return [f]
+
+
 def lod_strip(root, out):
     """LOD0 / LOD1 / LOD2 рядом (вид сбоку)."""
     files = []
@@ -289,7 +312,7 @@ def compose(files, path, cols=3, tile=512, bg=(0.08, 0.08, 0.1, 1)):
 
 
 SHEET_ORDER = ['three_quarter_front', 'three_quarter_rear', 'night', 'side', 'front', 'rear',
-               'top', 'uv_check', 'lod', 'kits']
+               'top', 'uv_check', 'lod', 'ao_check', 'kits']
 
 
 def all_car(root, out):
@@ -299,6 +322,7 @@ def all_car(root, out):
     night(root, out)
     uv_check(root, out)
     lod_strip(root, out)
+    ao_check(root, out)
     files = [os.path.join(out, f'{n}.png') for n in SHEET_ORDER]
     return compose(files, os.path.join(out, 'sheet.png'), cols=3, tile=512)
 

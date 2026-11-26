@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import bpy  # noqa: E402
 
-from lib import checks, export, lod, render, scene, uv  # noqa: E402
+from lib import bake, checks, export, lod, render, scene, uv  # noqa: E402
 
 REQUIRED = [
     'car_root', 'body', 'hood', 'bumper_front', 'bumper_rear', 'skirts', 'spoiler', 'glass',
@@ -20,6 +20,9 @@ REQUIRED = [
     *(f'brake_{t}' for t in ('FL', 'FR', 'RL', 'RR')),
     'socket_spoiler', 'socket_exhaust', 'socket_plate_front', 'socket_plate_rear',
 ]
+
+# Окрашенные части: общий атлас uv0 и запечённый AO
+PAINTED = ('body', 'hood', 'bumper_front', 'bumper_rear', 'skirts', 'spoiler')
 
 
 def generator(spec):
@@ -54,12 +57,22 @@ def main():
         scene.apply_all(root)
         smooth_shading(root)
         meshes = [o for o in root.children_recursive if o.type == 'MESH']
-        uv.smart_uv0(meshes)
+        # uv0: окрашенные части — общий атлас (под AO), остальное — отдельно;
+        # у колёс своя развёртка шины под карту протектора — не трогаем
+        painted = [o for o in meshes if o.name in PAINTED]
+        other = [o for o in meshes if o not in painted and not o.name.startswith(('wheel_', 'brake_'))]
+        uv.smart_uv0(painted)
+        uv.smart_uv0(other)
         uv.livery_uv1(bpy.data.objects['body'])
         errs = checks.run(root, REQUIRED)
         if errs:
             print('\n'.join(f'CHECK: {e}' for e in errs))
             raise SystemExit(f'checks.py: {len(errs)} ошибок')
+        if spec.get('generator', 'car') == 'car':
+            mats = {m for o in painted for m in o.data.materials}
+            bake.bake_ao(painted, mats, size=1024, samples=64,
+                         path=os.path.join(scene.ART, 'export', 'cars', spec['id'], 'ao_body.png'))
+            print('AO: запечено')
         lod.make_lods(root)
         export.glb(root, p['glb'])
         scene.save_blend(p['blend'])

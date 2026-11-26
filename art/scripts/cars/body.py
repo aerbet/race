@@ -42,7 +42,8 @@ class Body:
         us.update(round(x, 5) for x in (0.003, 0.008, 0.015, 0.025, 0.985, 0.992, 0.997))
         # Станции точно по границам стёкол и стоек — края окон ровные
         self.ua, self.uq = g['windshieldBase'] + 0.035, g['roofRear'] + 0.045
-        self.ub = 0.6
+        self.ub = g.get('bPillar', 0.6)
+        self.u_door = g.get('doorFront', 0.335)
         for x in (g['windshieldBase'], g['roofFront'], g['roofRear'], g['backlightBase'], self.ua, self.uq,
                   self.ub - 0.007, self.ub + 0.007):
             us.add(round(x, 5))
@@ -78,7 +79,8 @@ class Body:
         b = self.spec.get('hood', {})
         if b.get('style') != 'power_bulge_slots':
             return 0.0
-        return 0.032 * smooth(0.06, 0.1, u) * (1 - smooth(0.27, 0.33, u)) * (1 - smooth(0.18, 0.27, abs(x)))
+        ws = self.g['windshieldBase']
+        return 0.032 * smooth(0.06, 0.1, u) * (1 - smooth(ws - 0.07, ws - 0.01, u)) * (1 - smooth(0.18, 0.27, abs(x)))
 
     def kick(self, u):
         """Подъём нижней кромки заднего бокового окна («кик»)."""

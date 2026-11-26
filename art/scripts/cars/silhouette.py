@@ -196,7 +196,7 @@ def side_view(d, s, ox, oy):
         low.append((X(u), oy + z))
     d.poly(up + low, 'glass')
     # Средняя стойка (B) — по передней кромке задней двери
-    ub = 0.6  # купе: одна длинная дверь до средней стойки
+    ub = g.get('bPillar', 0.6)  # купе: одна длинная дверь до средней стойки
     d.line([(X(ub), oy + zw), (X(ub - 0.006), oy + s.top(ub) - t)], 'body', 0.05)
     # Лобовое и заднее стекло — линии вдоль верха
     d.line([(X(u), oy + s.top(u)) for u in [lerp(g['windshieldBase'], g['roofFront'], k / 12) for k in range(13)]],
@@ -205,8 +205,9 @@ def side_view(d, s, ox, oy):
            'glass', 0.03)
     # Двери, плечевая линия, порог
     zs = s.shoulder_z()
-    d.line([(X(0.335), oy + zw), (X(0.335), oy + s.bottom(0.335) + 0.02)], 'line', 0.008)
-    d.line([(X(0.61), oy + zw + 0.01), (X(0.618), oy + s.bottom(0.618) + 0.03)], 'line', 0.008)
+    ud = g.get('doorFront', 0.335)
+    d.line([(X(ud), oy + zw), (X(ud), oy + s.bottom(ud) + 0.02)], 'line', 0.008)
+    d.line([(X(ub + 0.01), oy + zw + 0.01), (X(ub + 0.018), oy + s.bottom(ub + 0.018) + 0.03)], 'line', 0.008)
     d.line([(X(u), oy + zs + 0.012 * math.sin(u * math.pi)) for u in [lerp(0.03, 0.97, k / 40) for k in range(41)]],
            'body2', 0.02)
     # Нижняя «отбойная» линия двери (door kick)
