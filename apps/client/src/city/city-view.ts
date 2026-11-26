@@ -4,6 +4,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { parseCity, registerTrack, tileOf, type City, type Weather } from '@sr/shared';
 import type { Quality } from '../render/quality';
 import { Billboards } from './billboards';
+import { KitSigns, signsForModule, type ModuleBox } from './kit-signs';
 
 /** Загрузка city.json и регистрация городских трасс. */
 export async function loadCity(id: string): Promise<City> {
@@ -84,6 +85,9 @@ export class CityView {
   /** Бренды на щитах (модуль prop_billboard). */
   private billboards: Billboards | null = null;
   private billboardModule = -1;
+  /** Неоновые вывески от модулей зданий (у пропов и ориентиров — null). */
+  private kitSigns: KitSigns | null = null;
+  private moduleBoxes: (ModuleBox | null)[] = [];
   private loaded = new Map<string, THREE.Object3D>();
   private loading = new Set<string>();
   private byKey = new Map<string, City['tiles'][number]>();
@@ -389,6 +393,20 @@ export class CityView {
           return im;
         }),
       );
+      // Габариты модулей зданий (LOD0 с матрицей узла) — для вывесок на фасаде
+      this.moduleBoxes = this.kit.map((k, i) => {
+        const l = k.lods[0];
+        if (!l || this.city.modules[i]!.startsWith('prop_')) return null;
+        l.geometry.computeBoundingBox();
+        const b = l.geometry.boundingBox!.clone().applyMatrix4(l.node);
+        return { minX: b.min.x, maxX: b.max.x, maxZ: b.max.z, height: b.max.y };
+      });
+      const total = counts.reduce((a, b) => a + b, 0);
+      this.kitSigns = new KitSigns(
+        this.city.style === 'tokyo' ? 'tokyo' : 'moscow',
+        Math.min(total * 2, 3000),
+      );
+      this.group.add(this.kitSigns.group);
       this.billboardModule = this.city.modules.indexOf('prop_billboard');
       if (this.billboardModule >= 0) {
         // Каждой стороне — свой бренд; запас на все щиты города
@@ -431,6 +449,7 @@ export class CityView {
     this.instKey = key;
     for (const row of this.inst) for (const im of row) im.count = 0;
     this.billboards?.begin();
+    this.kitSigns?.begin();
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const pos = new THREE.Vector3();
@@ -447,6 +466,10 @@ export class CityView {
         const im = this.inst[mi]![li]!;
         m.compose(pos.set(x, 0, z), q.setFromAxisAngle(up, yaw), scl.set(sx, sy, sz));
         if (mi === this.billboardModule) this.billboards?.add(m, x, z);
+        const box = near ? this.moduleBoxes[mi] : null;
+        if (box && this.kitSigns)
+          for (const sg of signsForModule(box, x, z, yaw, sx, sy, sz, this.kitSigns.style))
+            this.kitSigns.add(sg);
         m.multiply(lods[li]!.node);
         im.setMatrixAt(im.count++, m);
       }
@@ -458,6 +481,7 @@ export class CityView {
         if (im.count) im.computeBoundingSphere();
       }
     this.billboards?.end();
+    this.kitSigns?.end();
   }
 
   update(x: number, z: number, dt: number): void {
@@ -507,7 +531,8 @@ export class CityView {
             mesh.castShadow = this.quality.shadows && name === 'facade';
             mesh.receiveShadow = this.quality.shadows;
           });
-          // Вывески-коробки — только у городов без набора модулей (у модулей свои вывески и щиты)
+          // Вывески-коробки по коллайдерам — у городов без набора модулей; у модульных
+          // городов вывески ставит KitSigns от самих модулей (см. updateInstances)
           if (!this.city.kit) obj.add(this.signsFor(t));
           // Блок могли уже «разхотеть», пока грузился
           this.loaded.set(k, obj);
