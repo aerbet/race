@@ -72,6 +72,7 @@ export class CityView {
   private facade: THREE.MeshStandardMaterial;
   private road: THREE.MeshStandardMaterial;
   private roof: THREE.MeshStandardMaterial;
+  private shop: THREE.MeshBasicMaterial;
   private snow: THREE.Points | null = null;
   private rain: THREE.LineSegments | null = null;
   readonly radius: number;
@@ -113,6 +114,30 @@ export class CityView {
       polygonOffsetFactor: -1,
       side: THREE.DoubleSide,
     });
+    // Витрины: светящиеся панели с переплётами и тёмной полосой вывески, цвет — из вершин
+    const shopTex = canvasTexture(256, 64, (g) => {
+      const gr = g.createLinearGradient(0, 64, 0, 14);
+      gr.addColorStop(0, '#fff2d6');
+      gr.addColorStop(1, '#b49a78');
+      g.fillStyle = gr;
+      g.fillRect(0, 14, 256, 50);
+      g.fillStyle = '#0d0e12';
+      g.fillRect(0, 0, 256, 14);
+      for (let x = 0; x < 256; x += 64) {
+        g.fillRect(x, 14, 5, 50);
+        g.fillRect(x + 40, 30, 3, 34);
+      }
+      g.fillStyle = 'rgba(255,255,255,0.9)';
+      g.fillRect(12, 4, 90, 5);
+      g.fillRect(140, 4, 60, 5);
+    });
+    this.shop = new THREE.MeshBasicMaterial({
+      map: shopTex,
+      vertexColors: true,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    });
+    this.shop.color.setScalar(quality.name === 'high' ? 1.1 : 0.9);
     this.roof = new THREE.MeshStandardMaterial({
       vertexColors: true,
       color: snowy ? 0xb8c0cc : 0xffffff,
@@ -348,7 +373,13 @@ export class CityView {
             if (!mesh.isMesh) return;
             const name = (mesh.material as THREE.Material).name;
             mesh.material =
-              name === 'facade' ? this.facade : name === 'road' ? this.road : this.roof;
+              name === 'facade'
+                ? this.facade
+                : name === 'road'
+                  ? this.road
+                  : name === 'shop'
+                    ? this.shop
+                    : this.roof;
             mesh.castShadow = this.quality.shadows && name === 'facade';
             mesh.receiveShadow = this.quality.shadows;
           });

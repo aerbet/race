@@ -166,9 +166,126 @@ function addRoad(
 }
 
 /** Здание: стены с UV под сетку окон (u — метры/4, v — этажи) и плоская крыша. */
+/** Коробка (6 граней) в меш — надстройки на крышах. */
+function addBox(
+  mb: MeshBuilder,
+  cx: number,
+  y0: number,
+  cz: number,
+  sx: number,
+  sy: number,
+  sz: number,
+  col: [number, number, number],
+) {
+  const x0 = cx - sx / 2,
+    x1 = cx + sx / 2,
+    z0 = cz - sz / 2,
+    z1 = cz + sz / 2,
+    y1 = y0 + sy;
+  const quad = (p: number[][], n: [number, number, number]) => {
+    const i = p.map(([x, y, z]) => mb.vertex(x!, y!, z!, n[0], n[1], n[2], col));
+    mb.indices.push(i[0]!, i[1]!, i[2]!, i[0]!, i[2]!, i[3]!);
+  };
+  quad(
+    [
+      [x0, y1, z0],
+      [x0, y1, z1],
+      [x1, y1, z1],
+      [x1, y1, z0],
+    ],
+    [0, 1, 0],
+  );
+  quad(
+    [
+      [x0, y0, z1],
+      [x1, y0, z1],
+      [x1, y1, z1],
+      [x0, y1, z1],
+    ],
+    [0, 0, 1],
+  );
+  quad(
+    [
+      [x1, y0, z0],
+      [x0, y0, z0],
+      [x0, y1, z0],
+      [x1, y1, z0],
+    ],
+    [0, 0, -1],
+  );
+  quad(
+    [
+      [x1, y0, z1],
+      [x1, y0, z0],
+      [x1, y1, z0],
+      [x1, y1, z1],
+    ],
+    [1, 0, 0],
+  );
+  quad(
+    [
+      [x0, y0, z0],
+      [x0, y0, z1],
+      [x0, y1, z1],
+      [x0, y1, z0],
+    ],
+    [-1, 0, 0],
+  );
+}
+
+/** Стены многоугольника от y0 до y1 (UV: u — метры/4, v — этажи от земли). */
+function addWalls(
+  walls: MeshBuilder,
+  pts: P[],
+  y0: number,
+  y1: number,
+  col: [number, number, number],
+) {
+  let u = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, z1] = pts[i]!,
+      [x2, z2] = pts[(i + 1) % pts.length]!;
+    const len = Math.hypot(x2 - x1, z2 - z1);
+    if (len < 0.01) continue;
+    // Наружная нормаль для обхода против часовой: (dz, -dx)
+    const nx = (z2 - z1) / len,
+      nz = -(x2 - x1) / len;
+    const u2 = u + len / 4;
+    const a = walls.vertex(x1, y0, z1, nx, 0, nz, col, u, y0 / 3.2);
+    const b = walls.vertex(x2, y0, z2, nx, 0, nz, col, u2, y0 / 3.2);
+    const c = walls.vertex(x2, y1, z2, nx, 0, nz, col, u2, y1 / 3.2);
+    const d = walls.vertex(x1, y1, z1, nx, 0, nz, col, u, y1 / 3.2);
+    walls.indices.push(a, c, b, a, d, c);
+    u = u2;
+  }
+}
+
+function addRoof(roofs: MeshBuilder, pts: P[], h: number, col: [number, number, number]) {
+  const tri = triangulate(pts);
+  const start = roofs.positions.length / 3;
+  for (const [x, z] of pts) roofs.vertex(x, h, z, 0, 1, 0, col);
+  for (let i = 0; i < tri.length; i += 3)
+    roofs.indices.push(start + tri[i]!, start + tri[i + 2]!, start + tri[i + 1]!);
+}
+
+/** Цвета подсветки витрин (тёплый свет, неон). */
+const SHOP_TINTS: [number, number, number][] = [
+  [1, 0.85, 0.6],
+  [1, 0.95, 0.85],
+  [0.6, 0.9, 1],
+  [1, 0.5, 0.8],
+  [0.7, 1, 0.6],
+  [1, 0.75, 0.4],
+];
+
+/**
+ * Здание: стены с UV под сетку окон, плоская крыша; у высоток — ступенчатая верхушка,
+ * на крышах — технические надстройки, на первом этаже — светящиеся витрины.
+ */
 function addBuilding(
   walls: MeshBuilder,
   roofs: MeshBuilder,
+  shops: MeshBuilder,
   fp: P[],
   h: number,
   seed: number,
@@ -179,29 +296,60 @@ function addBuilding(
   const base = pal[Math.floor(hash(seed) * pal.length)]!;
   const shade = 0.85 + hash(seed + 7) * 0.2;
   const col: [number, number, number] = [base[0] * shade, base[1] * shade, base[2] * shade];
-  let u = 0;
-  for (let i = 0; i < pts.length; i++) {
-    const [x1, z1] = pts[i]!,
-      [x2, z2] = pts[(i + 1) % pts.length]!;
-    const len = Math.hypot(x2 - x1, z2 - z1);
-    if (len < 0.01) continue;
-    // Наружная нормаль для обхода против часовой при Z вниз-экрана: (dz, -dx)
-    const nx = (z2 - z1) / len,
-      nz = -(x2 - x1) / len;
-    const u2 = u + len / 4;
-    const a = walls.vertex(x1, 0, z1, nx, 0, nz, col, u, 0);
-    const b = walls.vertex(x2, 0, z2, nx, 0, nz, col, u2, 0);
-    const c = walls.vertex(x2, h, z2, nx, 0, nz, col, u2, h / 3.2);
-    const d = walls.vertex(x1, h, z1, nx, 0, nz, col, u, h / 3.2);
-    walls.indices.push(a, c, b, a, d, c);
-    u = u2;
-  }
-  const tri = triangulate(pts);
   const roofCol: [number, number, number] = [0.22, 0.23, 0.26];
-  const start = roofs.positions.length / 3;
-  for (const [x, z] of pts) roofs.vertex(x, h, z, 0, 1, 0, roofCol);
-  for (let i = 0; i < tri.length; i += 3)
-    roofs.indices.push(start + tri[i]!, start + tri[i + 2]!, start + tri[i + 1]!);
+  const [cx, cz] = centroid(pts);
+  // Ступенчатая верхушка: верхние 20 % — уменьшенный контур
+  const tiered = h > 36 && hash(seed + 3) < 0.5;
+  const hBase = tiered ? Math.round((h * 0.8) / 3.2) * 3.2 : h;
+  addWalls(walls, pts, 0, hBase, col);
+  addRoof(roofs, pts, hBase, roofCol);
+  let topPts = pts;
+  let hTop = hBase;
+  if (tiered) {
+    const k = 0.72;
+    topPts = pts.map(([x, z]) => [cx + (x - cx) * k, cz + (z - cz) * k] as P);
+    addWalls(walls, topPts, hBase, h, col);
+    addRoof(roofs, topPts, h, roofCol);
+    hTop = h;
+  }
+  // Надстройки на крыше (вентиляция, лифтовые)
+  const box = orientedBox(topPts);
+  const units = 1 + Math.floor(hash(seed + 11) * 3);
+  for (let n = 0; n < units; n++) {
+    const ox = (hash(seed + 20 + n) - 0.5) * box.hx * 0.8;
+    const oz = (hash(seed + 30 + n) - 0.5) * box.hz * 0.8;
+    const c = Math.cos(box.yaw),
+      sn = Math.sin(box.yaw);
+    const sz = 2 + hash(seed + 40 + n) * 3;
+    addBox(
+      roofs,
+      box.cx + ox * c + oz * sn,
+      hTop,
+      box.cz - ox * sn + oz * c,
+      sz,
+      1.2 + hash(seed + 50 + n) * 2.2,
+      sz * 0.8,
+      [0.3, 0.31, 0.34],
+    );
+  }
+  // Витрины первого этажа на длинных фасадах
+  if (h > 6) {
+    for (let i = 0; i < pts.length; i++) {
+      const [x1, z1] = pts[i]!,
+        [x2, z2] = pts[(i + 1) % pts.length]!;
+      const len = Math.hypot(x2 - x1, z2 - z1);
+      if (len < 5 || hash(seed + 60 + i) < 0.35) continue;
+      const nx = (z2 - z1) / len,
+        nz = -(x2 - x1) / len;
+      const o = 0.08;
+      const tint = SHOP_TINTS[Math.floor(hash(seed + 70 + i) * SHOP_TINTS.length)]!;
+      const a = shops.vertex(x1 + nx * o, 0.3, z1 + nz * o, nx, 0, nz, tint, 0, 0);
+      const b = shops.vertex(x2 + nx * o, 0.3, z2 + nz * o, nx, 0, nz, tint, len / 6, 0);
+      const c = shops.vertex(x2 + nx * o, 3.6, z2 + nz * o, nx, 0, nz, tint, len / 6, 1);
+      const d = shops.vertex(x1 + nx * o, 3.6, z1 + nz * o, nx, 0, nz, tint, 0, 1);
+      shops.indices.push(a, c, b, a, d, c);
+    }
+  }
 }
 
 /** Коллайдеры здания: почти прямоугольное → один ориентированный бокс, иначе — стенки по рёбрам. */
@@ -268,6 +416,7 @@ export function buildCity(
     walls: MeshBuilder;
     roofs: MeshBuilder;
     roads: MeshBuilder;
+    shops: MeshBuilder;
     colliders: CityTile['colliders'];
     buildings: number;
   };
@@ -282,6 +431,7 @@ export function buildCity(
         i,
         j,
         walls: new MeshBuilder(),
+        shops: new MeshBuilder(),
         roofs: new MeshBuilder(),
         roads: new MeshBuilder(),
         colliders: [],
@@ -310,7 +460,7 @@ export function buildCity(
   for (const b of buildings) {
     const c = centroid(b.footprint);
     const t = tileAt(c[0], c[1]);
-    addBuilding(t.walls, t.roofs, b.footprint, b.height, b.id, opt.style);
+    addBuilding(t.walls, t.roofs, t.shops, b.footprint, b.height, b.id, opt.style);
     t.colliders.push(...buildingColliders(b.footprint, b.height));
     t.buildings++;
   }
@@ -323,6 +473,10 @@ export function buildCity(
       { ...t.roads, material: { name: 'road', color: [1, 1, 1, 1], roughness: 0.85 } },
       { ...t.walls, material: { name: 'facade', color: [1, 1, 1, 1], roughness: 0.9 } },
       { ...t.roofs, material: { name: 'roof', color: [1, 1, 1, 1], roughness: 0.95 } },
+      {
+        ...t.shops,
+        material: { name: 'shop', color: [1, 1, 1, 1], emissive: [1, 1, 1], roughness: 0.5 },
+      },
     ];
     const file = `tiles/${t.i}_${t.j}.glb`;
     files.set(file, writeGlb(prims));
