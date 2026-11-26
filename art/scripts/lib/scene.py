@@ -101,4 +101,5 @@ def apply_all(root):
 
 
 def save_blend(path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)

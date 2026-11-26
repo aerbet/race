@@ -4,7 +4,8 @@
  *   pnpm art:car <id> [--publish] [--no-render]   # собрать машину по art/specs/cars/<id>.json
  *   pnpm art:car:all                              # все машины
  *   pnpm art:render <id>                          # только рендеры (из art/source/cars/<id>.blend)
- *   pnpm art:wheels | pnpm art:city <kit>         # этапы B1 / B5
+ *   pnpm art:wheels [<id>] [--publish]            # диски (art/specs/wheels), этап B1
+ *   pnpm art:city <kit>                           # этап B5
  *
  * --publish копирует сжатую модель в apps/client/public/cars/<id>/base.glb —
  * только после утверждения владельцем (кроме тестовой модели).
@@ -14,7 +15,7 @@ import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateGlb } from '../../car-validate/src/validate';
+import { validateGlb, validateWheelGlb } from '../../car-validate/src/validate';
 import { findBlender } from './blender';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -104,6 +105,49 @@ function car(id: string): void {
   console.log(`✓ ${id}: рендеры — art/renders/${id}/sheet.png`);
 }
 
+/** Колёса: все диски × диаметры (art/specs/wheels/w*.json), сжатие, валидатор. */
+function wheels(only?: string): void {
+  const args = [
+    ...(only ? ['--only', only] : []),
+    ...(flags.has('--no-render') ? ['--no-render'] : []),
+  ];
+  blender('art/scripts/cars/wheels.py', args, `Блендер: колёса${only ? ` ${only}` : ''}`);
+  const dir = join(root, 'art/export/wheels');
+  const files = readdirSync(dir).filter(
+    (f) => f.endsWith('.glb') && !f.endsWith('.min.glb') && (!only || f.startsWith(`${only}_`)),
+  );
+  const ktx = hasTool('toktx');
+  if (!ktx)
+    console.warn(
+      '! toktx не найден — карта нормалей шины остаётся PNG (BLENDER_PLAN, раздел 1, п. 5)',
+    );
+  let failed = 0;
+  for (const f of files) {
+    const raw = join(dir, f);
+    const min = join(dir, f.replace(/\.glb$/, '.min.glb'));
+    gltfTransform(['meshopt', raw, min, '--level', 'medium'], `Сжатие ${f}`);
+    if (ktx) gltfTransform(['uastc', min, min, '--slots', 'normalTexture'], `KTX2 ${f}`);
+    const r = validateWheelGlb(new Uint8Array(readFileSync(min)));
+    const kb = (statSync(min).size / 1024).toFixed(0);
+    console.log(
+      `  ${r.errors.length ? '✗' : '✓'} ${f}: ${r.stats.lod0}/${r.stats.lod1}/${r.stats.lod2} тр., ${kb} КБ`,
+    );
+    for (const e of r.errors) console.log(`    ✗ ${e}`);
+    for (const w of r.warnings) console.log(`    ! ${w}`);
+    if (r.errors.length) failed++;
+    else if (flags.has('--publish')) {
+      const out = join(root, 'apps/client/public/wheels');
+      mkdirSync(out, { recursive: true });
+      copyFileSync(min, join(out, f));
+    }
+  }
+  if (failed) {
+    console.error(`✗ Валидатор: ${failed} колёс с ошибками`);
+    process.exit(1);
+  }
+  console.log('✓ Колёса: рендеры — art/renders/wheels/sheet.png');
+}
+
 function readGlbJson(file: string): string {
   const b = readFileSync(file);
   const len = b.readUInt32LE(12);
@@ -133,8 +177,7 @@ switch (cmd) {
     break;
   }
   case 'wheels':
-    console.error('Колёса — этап B1, генератор ещё не написан (art/scripts/cars/wheels.py)');
-    process.exit(1);
+    wheels(rest[0]);
     break;
   case 'city':
     console.error('Город — этап B5, генератор ещё не написан (art/scripts/city/)');

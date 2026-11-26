@@ -221,3 +221,73 @@ export function validateGlb(buf: Uint8Array, limits: Partial<Limits> = {}): Repo
 }
 
 const pct = (a: number, b: number) => `${Math.round((a / b) * 100)}%`;
+
+export const WHEEL_LIMITS = { wheelMax: 3000, textureMax: 1024 };
+
+/**
+ * Колесо из библиотеки дисков (BLENDER_PLAN 5.3): wheel_root → wheel (+_LOD1/_LOD2),
+ * brake (+_LOD1, _LOD2 — пустой). Ось вращения — X, начало — центр колеса.
+ */
+export function validateWheelGlb(buf: Uint8Array): Report {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const { json, bin } = parseGlb(buf);
+  const nodes = walk(json);
+  const byName = new Map(nodes.map((n) => [n.name, n]));
+  const root = byName.get('wheel_root');
+  if (!root) errors.push('нет узла wheel_root');
+  else if (root.parent !== null) errors.push('wheel_root должен быть корнем сцены');
+  const tris = (name: string) => {
+    const n = byName.get(name);
+    return n?.mesh !== undefined ? meshTriangles(json, n.mesh) : 0;
+  };
+  for (const name of ['wheel', 'wheel_LOD1', 'wheel_LOD2', 'brake', 'brake_LOD1']) {
+    const n = byName.get(name);
+    if (!n) errors.push(`нет узла ${name}`);
+    else if (n.mesh === undefined) errors.push(`${name} без меша`);
+    else if (root && n.parent !== root.index)
+      errors.push(`${name} должен быть дочерним узлом wheel_root`);
+  }
+  if (!byName.has('brake_LOD2')) errors.push('нет узла brake_LOD2 (может быть пустым)');
+  const [t0, t1, t2] = ['wheel', 'wheel_LOD1', 'wheel_LOD2'].map(tris) as [number, number, number];
+  if (t0 > WHEEL_LIMITS.wheelMax)
+    errors.push(`wheel: ${t0} треугольников > ${WHEEL_LIMITS.wheelMax}`);
+  if (t1 >= t0 || t2 >= t1) errors.push(`LOD не легчают: ${t0} / ${t1} / ${t2}`);
+
+  const w = byName.get('wheel');
+  const box = w?.mesh !== undefined ? meshBox(json, w.mesh, w.world) : null;
+  const size = box ? [0, 1, 2].map((k) => box.max[k]! - box.min[k]!) : [0, 0, 0];
+  if (box) {
+    const [sx, sy, sz] = size as [number, number, number];
+    if (Math.abs(sy - sz) > 0.01)
+      errors.push(
+        `колесо не круглое в плоскости YZ (${sy.toFixed(3)} × ${sz.toFixed(3)}) — ось должна быть X`,
+      );
+    if (sx >= sy * 0.6)
+      errors.push(`ширина ${sx.toFixed(2)} м слишком большая — ось вращения должна быть X`);
+    if (sy < 0.5 || sy > 0.85) errors.push(`диаметр ${sy.toFixed(2)} м вне 0,5–0,85`);
+    const cy = (box.min[1]! + box.max[1]!) / 2;
+    const cz = (box.min[2]! + box.max[2]!) / 2;
+    if (Math.hypot(cy, cz) > 0.005) errors.push('начало координат не в оси колеса');
+  }
+
+  const textures: string[] = [];
+  for (const [i, img] of (json.images ?? []).entries()) {
+    if (img.bufferView === undefined || !bin) {
+      errors.push(`картинка ${i}: только встроенные в GLB`);
+      continue;
+    }
+    const bv = json.bufferViews![img.bufferView]!;
+    const s = imageSize(bin.subarray(bv.byteOffset ?? 0, (bv.byteOffset ?? 0) + bv.byteLength));
+    if (!s) continue;
+    textures.push(`${s.w}×${s.h} ${s.format}`);
+    if (s.w > WHEEL_LIMITS.textureMax || s.h > WHEEL_LIMITS.textureMax)
+      errors.push(`картинка ${i}: ${s.w}×${s.h} > ${WHEEL_LIMITS.textureMax}`);
+  }
+  if (!textures.length) warnings.push('нет карты нормалей протектора');
+  return {
+    errors,
+    warnings,
+    stats: { lod0: t0, lod1: t1, lod2: t2, size, wheels: [tris('brake')], textures },
+  };
+}

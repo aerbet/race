@@ -7,9 +7,9 @@
  * Код выхода 1 — есть ошибки.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateGlb } from './validate';
+import { validateGlb, validateWheelGlb } from './validate';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -25,6 +25,11 @@ function defaults(): string[] {
       }
     }
   }
+  for (const dir of ['apps/client/public/wheels', 'art/export/wheels']) {
+    const abs = join(root, dir);
+    if (existsSync(abs))
+      for (const f of readdirSync(abs)) if (f.endsWith('.glb')) out.push(join(abs, f));
+  }
   return out;
 }
 
@@ -36,10 +41,22 @@ if (!list.length) {
 }
 let failed = 0;
 for (const f of list) {
-  const r = validateGlb(new Uint8Array(readFileSync(f)));
+  const buf = new Uint8Array(readFileSync(f));
+  const isWheel = f.split(sep).join('/').includes('/wheels/');
+  const r = isWheel ? validateWheelGlb(buf) : validateGlb(buf);
   const s = r.stats;
   const ok = r.errors.length === 0;
   if (!ok) failed++;
+  if (isWheel) {
+    console.log(
+      `${ok ? 'OK  ' : 'FAIL'} ${relative(root, f)} — колесо ${s.lod0}/${s.lod1}/${s.lod2} тр., тормоз ${s.wheels[0]}; ` +
+        `Ø ${s.size[1]!.toFixed(3)} м` +
+        (s.textures.length ? `; ${s.textures.join(', ')}` : ''),
+    );
+    for (const e of r.errors) console.log(`   ✗ ${e}`);
+    for (const w of r.warnings) console.log(`   ! ${w}`);
+    continue;
+  }
   console.log(
     `${ok ? 'OK  ' : 'FAIL'} ${relative(root, f)} — LOD0 ${s.lod0}, LOD1 ${s.lod1}, LOD2 ${s.lod2} тр.; ` +
       `${s.size.map((v) => v.toFixed(2)).join('×')} м; колёса ${s.wheels.join('/')}` +

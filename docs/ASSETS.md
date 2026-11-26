@@ -9,3 +9,4 @@
 | Окружение отражений `RoomEnvironment` | входит в three.js (examples) | MIT |
 | Тестовая модель `apps/client/public/cars/test_rig/base.glb` | собственная, строится скриптом `art/scripts/cars/test_rig.py` в Блендере | собственные |
 | Декодер meshopt (`three/examples/jsm/libs/meshopt_decoder.module.js`) | входит в three.js (examples), meshoptimizer | MIT |
+| Диски и шины `art/export/wheels/*.glb`, карта нормалей протектора | собственные, строятся скриптом `art/scripts/cars/wheels.py` (рисунок протектора — numpy, без надписей) | собственные |

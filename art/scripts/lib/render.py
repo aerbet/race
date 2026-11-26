@@ -301,3 +301,38 @@ def all_car(root, out):
     lod_strip(root, out)
     files = [os.path.join(out, f'{n}.png') for n in SHEET_ORDER]
     return compose(files, os.path.join(out, 'sheet.png'), cols=3, tile=512)
+
+
+def _label(cam, text):
+    """Подпись внизу кадра (дочерний объект камеры — всегда смотрит в камеру)."""
+    cu = bpy.data.curves.new('label', 'FONT')
+    cu.body = text
+    cu.align_x = 'CENTER'
+    cu.size = 0.055
+    o = bpy.data.objects.new('label', cu)
+    bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(materials.pbr('label', '#ffffff', emission='#ffffff', strength=3.0))
+    o.parent = cam
+    o.location = (0, -0.31, -1.0)
+    return o
+
+
+def wheel_tile(root, path, label, radius):
+    """Колесо 3/4 спереди-сбоку на полу, Cycles 32 сэмпла, подпись внизу."""
+    show_lod(root, 0)
+    root.location = (0, 0, radius)  # колесо стоит на полу
+    bpy.context.view_layer.update()
+    temp = _studio()
+    cam = _camera()
+    cam.data.type = 'PERSP'
+    cam.data.lens = 50
+    target = Vector((0, 0, radius))
+    _aim(cam, target + Vector((1.0, -0.6, 0.28)).normalized() * 1.45, target + Vector((0, 0, -0.03)))
+    temp.append(_label(cam, label))
+    _setup('CYCLES', 32)
+    s = bpy.context.scene
+    s.render.resolution_x = s.render.resolution_y = 512
+    _render(path)
+    _temp(temp)
+    root.location = (0, 0, 0)
+    return path

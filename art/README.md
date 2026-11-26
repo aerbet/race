@@ -22,7 +22,9 @@
 | `pnpm art:car:all` | Все машины из `art/specs/cars/` |
 | `pnpm art:render <id>` | Только рендеры из `art/source/cars/<id>.blend` |
 | `pnpm art:validate` | Валидатор всех машин (`tools/car-validate`) |
-| `pnpm art:wheels`, `pnpm art:city <kit>` | Этапы B1 и B5 — ещё не написаны |
+| `pnpm art:wheels [<id>]` | Все диски из `art/specs/wheels/w*.json` × диаметры из `_common.json` → `art/export/wheels/<id>_<дюймы>.min.glb`, валидатор, лист `art/renders/wheels/sheet.png` (~2 мин) |
+| `pnpm art:wheels --publish` | То же + копия в `apps/client/public/wheels/` (после утверждения) |
+| `pnpm art:city <kit>` | Этап B5 — ещё не написан |
 
 Посмотреть модель в игре: `pnpm dev` → `http://localhost:5173/?carModel=<id>` (все машины заезда
 получают эту модель; краска из гаража пока не применяется — задача 9.2).
@@ -31,8 +33,9 @@
 
 ```
 scripts/lib/      scene, materials, uv, lod, export, render, checks — общее для всех моделей
-scripts/cars/     build_car.py (точка входа), test_rig.py (тестовая модель B0)
+scripts/cars/     build_car.py (точка входа), test_rig.py (тестовая модель B0), wheels.py (диски, B1)
 specs/cars/       <id>.json — параметры машины
+specs/wheels/     w*.json — параметры дисков, _common.json — размеры шины и диаметры
 renders/<id>/     side, front, rear, top, three_quarter_*, night, uv_check, lod → sheet.png
 source/, export/  .blend и .glb — в .gitignore
 ```
@@ -41,3 +44,14 @@ source/, export/  .blend и .glb — в .gitignore
 
 Не игровая машина: «кубик» с колёсами и всеми узлами из ART_BRIEF, габариты как у физики
 `era2000_coupe`. Нужна, чтобы проверять конвейер от Блендера до игры.
+
+## Колёса (B1)
+
+Узлы glb: `wheel_root` → `wheel` (шина + диск, вращается), `wheel_LOD1`, `wheel_LOD2`, `brake`
+(диск + суппорт, не вращается), `brake_LOD1`, `brake_LOD2` (пустой). Ось вращения — X, лицо диска
+смотрит в +X (правый борт); для левых колёс игра зеркалит колесо по X (`scale.x = −1`), а не
+поворачивает на 180°, иначе суппорт окажется спереди. Эталонный диаметр — 0,66 м, игра масштабирует.
+
+Параметры диска: `style` (straight, double, star, mesh, turbine), `spokes` (5–10), `spokeWidth`,
+`thickness`, `dish` (насколько спицы утоплены от кромки), `concave` (насколько ступица глубже обода),
+`finish` и `lip` (silver, gunmetal, bronze, black, white, chrome или same), `lugs` (число гаек).

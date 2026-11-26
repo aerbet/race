@@ -7,7 +7,7 @@ import bpy
 from . import scene
 
 
-def glb(root, path):
+def glb(root, path, tangents=False):
     objs = [root, *root.children_recursive]
     scene.select_only(objs)
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -22,6 +22,7 @@ def glb(root, path):
         export_extras=True,
         export_texcoords=True,
         export_normals=True,
+        export_tangents=tangents,  # нужны для карт нормалей
         export_materials='EXPORT',
         export_animations=False,
     )
