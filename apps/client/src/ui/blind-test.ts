@@ -112,7 +112,7 @@ export class BlindTest {
         <button class="btn" data-k="dl">Скачать результаты (${all.length})</button>
         <button class="btn" data-k="sum">Сводка</button>
       </div>
-      <p class="hint">Результаты хранятся в этом браузере, пока не скачаны. Управление: W/S/A/D, пробел — ручник, Shift — нитро, R — сброс. Геймпад и сенсор тоже работают.</p>`);
+      <p class="hint">Результаты хранятся в этом браузере, пока не скачаны. Управление: W/S/A/D, пробел — резкий тормоз (с газом и рулём — занос), Shift — нитро, R — сброс. Геймпад и сенсор тоже работают.</p>`);
     const name = el.querySelector('[data-k="name"]') as HTMLInputElement;
     (el.querySelector('[data-k="go"]') as HTMLElement).onclick = () => {
       this.tester = name.value.trim() || `T-${Date.now().toString(36)}`;

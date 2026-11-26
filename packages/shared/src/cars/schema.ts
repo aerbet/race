@@ -60,8 +60,23 @@ export const AssistsSchema = z.object({
       turnBrake: unit,
       /** На сколько градусов ручником можно перекрутить предел угла дрифта. */
       extraAngleDeg: nonneg,
+      /**
+       * Срыв в занос ручником — только с зажатым газом (газ + пробел + руль) или в дрифт-гонке;
+       * без газа пробел — просто сильный тормоз.
+       */
+      driftNeedsThrottle: z.boolean().default(true),
     })
-    .default({ enabled: true, straightBrake: 0.8, turnBrake: 0.2, extraAngleDeg: 8 }),
+    .default({
+      enabled: true,
+      straightBrake: 1,
+      turnBrake: 1,
+      extraAngleDeg: 8,
+      driftNeedsThrottle: true,
+    }),
+  /** Аркадное усиление торможения: дополнительное замедление на полном тормозе, g. */
+  brakeAssist: z
+    .object({ enabled: z.boolean(), extraG: nonneg })
+    .default({ enabled: true, extraG: 0.6 }),
   driftInit: z.object({
     enabled: z.boolean(),
     /**

@@ -56,7 +56,7 @@ describe.each(Object.values(CARS))('управляемость $id', (cfg) => {
       R,
       cfg,
       100,
-      (t) => ({ handbrake: t < 0.6 ? 1 : 0, throttle: t < 0.6 ? 0 : 0.8, key: t < 2 ? 1 : 0 }),
+      (t) => ({ handbrake: t < 0.6 ? 1 : 0, throttle: t < 0.6 ? 1 : 0.8, key: t < 2 ? 1 : 0 }),
       4,
     );
     expect(Math.max(...log.filter((l) => l.t < 2).map((l) => Math.abs(l.slip)))).toBeGreaterThan(
@@ -66,14 +66,31 @@ describe.each(Object.values(CARS))('управляемость $id', (cfg) => {
     expect(out && out.t - 2).toBeLessThanOrEqual(0.9);
   });
 
-  it('ручник без руля: остановка со 100 км/ч до 3,2 с, по прямой', () => {
+  it('пробел без руля: остановка со 100 км/ч до 2 с, по прямой', () => {
     const log = run(R, cfg, 100, () => ({ handbrake: 1 }), 6);
-    expect(stopAt(log)).toBeLessThanOrEqual(3.2);
+    expect(stopAt(log)).toBeLessThanOrEqual(2);
     expect(sum(log).peakSlip).toBeLessThanOrEqual(5);
   });
 
-  it('ручник с рулём: занос до 55°, без разворота поперёк', () => {
-    const log = run(R, cfg, 100, (t) => ({ handbrake: t < 1.5 ? 1 : 0, key: t < 0.8 ? 1 : 0 }), 4);
+  it('пробел в повороте без газа — сильный тормоз, без заноса', () => {
+    const log = run(R, cfg, 120, (t) => ({ handbrake: 1, key: t < 1 ? 1 : 0 }), 4);
+    expect(stopAt(log)).toBeLessThanOrEqual(2.2);
+    expect(sum(log.filter((l) => l.kmh > 30)).peakSlip).toBeLessThanOrEqual(18);
+  });
+
+  it('тормоз со 200 км/ч: S и пробел — до 3,6 с', () => {
+    expect(stopAt(run(R, cfg, 200, () => ({ brake: 1 }), 6))).toBeLessThanOrEqual(3.6);
+    expect(stopAt(run(R, cfg, 200, () => ({ handbrake: 1 }), 6))).toBeLessThanOrEqual(3.6);
+  });
+
+  it('газ + пробел + руль: занос до 55°, без разворота поперёк', () => {
+    const log = run(
+      R,
+      cfg,
+      100,
+      (t) => ({ handbrake: t < 1.5 ? 1 : 0, throttle: 1, key: t < 0.8 ? 1 : 0 }),
+      4,
+    );
     const s = sum(log);
     expect(s.peakSlip).toBeGreaterThan(20); // занос есть
     expect(s.peakSlip).toBeLessThanOrEqual(55);

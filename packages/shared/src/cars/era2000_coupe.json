@@ -103,9 +103,14 @@
     },
     "handbrake": {
       "enabled": true,
-      "straightBrake": 0.8,
-      "turnBrake": 0.2,
-      "extraAngleDeg": 8
+      "straightBrake": 1,
+      "turnBrake": 1,
+      "extraAngleDeg": 8,
+      "driftNeedsThrottle": true
+    },
+    "brakeAssist": {
+      "enabled": true,
+      "extraG": 0.6
     },
     "turnAssist": {
       "enabled": true,

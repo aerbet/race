@@ -164,9 +164,9 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     <button class="btn" data-k="online" style="width:100%;margin-top:8px;text-align:center">Онлайн-гонка</button>
     <p class="hint">
       <span class="kbd">W/↑</span> газ · <span class="kbd">S/↓</span> тормоз/задний · <span class="kbd">A D</span> руль ·
-      <span class="kbd">Пробел</span> ручник · <span class="kbd">Shift</span> нитро · <span class="kbd">C</span> камера ·
+      <span class="kbd">Пробел</span> резкий тормоз (с газом и рулём — занос) · <span class="kbd">Shift</span> нитро · <span class="kbd">C</span> камера ·
       <span class="kbd">R</span> сброс · <span class="kbd">Esc</span> пауза · <span class="kbd">Q/E</span> передачи (ручная)<br/>
-      Геймпад: стик — руль, R2/L2 — газ/тормоз, A — ручник, B — нитро. На телефоне — экранные кнопки, газ автоматический.<br/>
+      Геймпад: стик — руль, R2/L2 — газ/тормоз, A — резкий тормоз / занос с газом, B — нитро. На телефоне — экранные кнопки, газ автоматический.<br/>
       <a href="?blind" style="color:var(--accent)">Слепой тест управления</a> · <a href="?q=low" style="color:var(--muted)">низкое качество</a> · <a href="?q=high" style="color:var(--muted)">высокое</a>
     </p>
   </div></div>`);

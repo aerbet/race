@@ -441,7 +441,13 @@ export class Vehicle {
       this.grounded >= 2 &&
       fwdSpeed > 0
     ) {
-      const hb = inp.handbrake > 0.5 && steerAbs > 0.2;
+      // Ручник срывает в занос только по явному намерению: с газом или в дрифт-гонке
+      const hbIntent =
+        !A.handbrake.enabled ||
+        !A.handbrake.driftNeedsThrottle ||
+        this.driftMode ||
+        inp.throttle > 0.5;
+      const hb = inp.handbrake > 0.5 && steerAbs > 0.2 && hbIntent;
       // Автосрывы (сброс газа, скольжение на газу) — только в дрифт-гонке или по конфигу
       const auto = this.driftMode || A.driftInit.autoTriggers;
       const lift = auto && this.liftTimer > 0 && steerAbs > 0.6;
@@ -617,6 +623,18 @@ export class Vehicle {
       wheelForces.push({ p: add(p, scale(up, 0.0)), f: scale(up, loads[i]!) });
     }
     for (const wf of wheelForces) body.addForceAtPoint(wf.f, wf.p, true);
+
+    // --- Аркадное усиление торможения (тормоз и ручник): замедление сверх сцепления шин
+    if (
+      A.brakeAssist.enabled &&
+      grounded >= 2 &&
+      brakeInput > 0.05 &&
+      this.gear > 0 &&
+      fwdSpeed > 1
+    ) {
+      const decel = A.brakeAssist.extraG * 9.81 * brakeInput * clamp(fwdSpeed / 4, 0, 1);
+      body.addForce(scale(norm(v), -m * decel), true);
+    }
 
     // --- Аэродинамика
     if (speed > 0.1) {

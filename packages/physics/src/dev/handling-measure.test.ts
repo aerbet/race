@@ -46,13 +46,29 @@ describe.skipIf(!process.env.MEASURE)('что вызывает занос в о�
   });
 });
 
+describe.skipIf(!process.env.MEASURE)('торможение', () => {
+  it('S и пробел с 100 и 200 км/ч, пробел в повороте', () => {
+    const stop = (l: Step[]) => l.find((x) => x.kmh < 2)?.t ?? -1;
+    for (const id of ['era2000_coupe', 'kaizen_rx34', 'nimbus_e1']) {
+      const r: Record<string, unknown> = {};
+      for (const v of [100, 200]) {
+        r[`S${v}`] = +stop(run(CARS[id]!, v, () => ({ brake: 1 }), 10)).toFixed(2);
+        r[`space${v}`] = +stop(run(CARS[id]!, v, () => ({ handbrake: 1 }), 10)).toFixed(2);
+      }
+      const turn = run(CARS[id]!, 120, (t) => ({ handbrake: 1, key: t < 1 ? 1 : 0 }), 6);
+      r.spaceTurn120 = { stop: +stop(turn).toFixed(2), slip: sum(turn).peakSlip };
+      console.log('BRAKE', id, JSON.stringify(r));
+    }
+  });
+});
+
 describe.skipIf(!process.env.MEASURE)('выход из дрифта', () => {
   it('ручник+руль 0,6 с, держим занос до 2 с, затем руль прямо и газ', () => {
     for (const id of ['era2000_coupe', 'kaizen_rx34', 'voss_kleiner', 'falkner_heck']) {
       const log = run(
         CARS[id]!,
         100,
-        (t) => ({ handbrake: t < 0.6 ? 1 : 0, throttle: t < 0.6 ? 0 : 0.8, key: t < 2 ? 1 : 0 }),
+        (t) => ({ handbrake: t < 0.6 ? 1 : 0, throttle: t < 0.6 ? 1 : 0.8, key: t < 2 ? 1 : 0 }),
         5,
       );
       const peak = Math.max(...log.filter((l) => l.t < 2).map((l) => Math.abs(l.slip)));
