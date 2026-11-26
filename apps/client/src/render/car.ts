@@ -5,8 +5,11 @@ import {
   carModelParam,
   loadCarKit,
   loadCarModel,
+  loadWheel,
   mergeStatic,
   splitCarModel,
+  wheelFile,
+  wheelInstance,
 } from './car-model';
 import { applyModelPaint, paintMaterial } from './paint';
 import { getQuality } from './quality';
@@ -602,6 +605,20 @@ export class CarView {
     });
     this.modelTail = parts.tailMaterial;
     this.wheelInset = 0;
+    // Диски из гаража: колесо из библиотеки вместо колеса модели (тормоза — от модели)
+    const file = wheelFile(this.opts.rims, this.cfg.era);
+    if (file)
+      loadWheel(file)
+        .then((src) =>
+          this.wheels.forEach((wg, i) => {
+            const spin = wg.getObjectByName('spin')!;
+            spin.remove(parts.wheels[i]!);
+            spin.add(
+              wheelInstance(src, this.cfg.wheels.radius, this.cfg.wheels.width, i % 2 === 0),
+            );
+          }),
+        )
+        .catch((e: unknown) => console.warn(`wheel ${file} failed to load`, e));
     // Подъёмные фары: ночь в каждом городе — крышки поднимаются через секунду после появления машины
     this.popups = [];
     for (const n of ['popup_L', 'popup_R']) {

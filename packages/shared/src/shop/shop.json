@@ -120,6 +120,30 @@
       "rarity": "common"
     },
     {
+      "id": "rims_star",
+      "slot": "rims",
+      "value": "star",
+      "name": "Диски «Звезда»",
+      "price": 100,
+      "rarity": "rare"
+    },
+    {
+      "id": "rims_deep",
+      "slot": "rims",
+      "value": "deep",
+      "name": "Диски «Глубокие»",
+      "price": 120,
+      "rarity": "rare"
+    },
+    {
+      "id": "rims_multi",
+      "slot": "rims",
+      "value": "multi",
+      "name": "Диски «Мультиспица»",
+      "price": 150,
+      "rarity": "epic"
+    },
+    {
       "id": "spoiler_gt",
       "slot": "spoiler",
       "value": "gt",

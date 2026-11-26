@@ -45,6 +45,50 @@ function load(path: string): Promise<THREE.Object3D> {
 }
 
 export const loadCarModel = (id: string) => load(`cars/${id}/base.glb`);
+
+/** Диски из гаража (`visual.rims`) → колесо из `public/wheels/`; stock и прочее — колёса самой модели. */
+export const RIM_WHEELS: Record<string, string> = {
+  five: 'w01_split5',
+  star: 'w02_star5',
+  mesh: 'w03_mesh',
+  turbine: 'w04_turbine',
+  multi: 'w05_multi10',
+  deep: 'w06_deep6',
+};
+
+/** Файл колеса: 17" у машин 2000-х, 19" у современных. null — оставить колёса модели. */
+export function wheelFile(rims: string | undefined, era: string): string | null {
+  const id = rims ? RIM_WHEELS[rims] : undefined;
+  return id ? `wheels/${id}_${era === '2000' ? 17 : 19}.glb` : null;
+}
+
+export const loadWheel = (path: string) => load(path);
+
+/** Эталон колёс `art/specs/wheels/_common.json`: радиус 0,33 м, ширина шины 0,235 м, ось — X. */
+const WHEEL_REF = { radius: 0.33, width: 0.235 };
+
+/**
+ * Экземпляр колеса под машину: только узлы `wheel*` (тормоза остаются от модели машины),
+ * масштаб под радиус и ширину, LOD; лицевая сторона диска (+X) — наружу.
+ */
+export function wheelInstance(
+  src: THREE.Object3D,
+  radius: number,
+  width: number,
+  left: boolean,
+): THREE.Group {
+  const root = src.getObjectByName('wheel_root') ?? src;
+  const g = new THREE.Group();
+  g.name = 'wheel_swap';
+  for (const s of ['', '_LOD1', '_LOD2']) {
+    const o = root.getObjectByName(`wheel${s}`);
+    if (o) g.add(o.clone());
+  }
+  groupLods(g);
+  g.scale.set(width / WHEEL_REF.width, radius / WHEEL_REF.radius, radius / WHEEL_REF.radius);
+  if (left) g.rotation.y = Math.PI;
+  return g;
+}
 export const loadCarKit = (id: string, kit: string) => load(`cars/${id}/kit_${kit}.glb`);
 
 /** Базовое имя материала: `paint__track` → `paint` (маска покраски по слотам, см. kits.py). */

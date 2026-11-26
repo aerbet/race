@@ -53,6 +53,7 @@ const FREE_PARTS: [string, string, string][] = [
   ['spoiler', 'none', 'free.spoiler.none'],
   ['spoiler', 'lip', 'free.spoiler.lip'],
   ['spoiler', 'wing', 'free.spoiler.wing'],
+  ['rims', 'stock', 'free.rims.stock'],
   ['rims', 'five', 'free.rims.five'],
   ['livery', 'none', 'free.vinyl.none'],
   ['look', 'none', 'free.look.none'],

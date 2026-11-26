@@ -121,3 +121,39 @@ describe('краска (9.2)', () => {
     expect(z.rear[0] + 2.15 * z.k).toBeLessThanOrEqual(1);
   });
 });
+
+describe('диски из гаража у glTF-машин (хвост 9.x)', () => {
+  it('каждый диск ателье — колесо из public/wheels в обоих диаметрах', async () => {
+    const { existsSync } = await import('node:fs');
+    const { SHOP } = await import('@sr/shared');
+    const { RIM_WHEELS, wheelFile } = await import('./car-model');
+    const pub = new URL('../../public/', import.meta.url).pathname;
+    const rims = SHOP.cosmetics.filter((c) => c.slot === 'rims').map((c) => c.value);
+    for (const r of [...rims, 'five']) {
+      expect(RIM_WHEELS[r], r).toBeDefined();
+      for (const era of ['2000', '2026'])
+        expect(existsSync(pub + wheelFile(r, era)), `${r} ${era}`).toBe(true);
+    }
+    expect(wheelFile('stock', '2000')).toBeNull();
+    expect(wheelFile(undefined, '2026')).toBeNull();
+    expect(wheelFile('turbine', '2000')).toBe('wheels/w04_turbine_17.glb');
+  });
+
+  it('экземпляр колеса: только wheel*, масштаб под машину, левое развёрнуто', async () => {
+    const { wheelInstance } = await import('./car-model');
+    const src = new THREE.Group();
+    src.name = 'wheel_root';
+    for (const n of ['wheel', 'wheel_LOD1', 'brake']) {
+      const o = new THREE.Object3D();
+      o.name = n;
+      src.add(o);
+    }
+    const w = wheelInstance(src, 0.33, 0.235, true);
+    expect(w.getObjectByName('brake')).toBeUndefined();
+    expect(w.getObjectByName('wheel')).toBeDefined();
+    expect(w.rotation.y).toBeCloseTo(Math.PI);
+    const r = wheelInstance(src, 0.36, 0.265, false);
+    expect(r.scale.y).toBeCloseTo(0.36 / 0.33);
+    expect(r.scale.x).toBeCloseTo(0.265 / 0.235);
+  });
+});
