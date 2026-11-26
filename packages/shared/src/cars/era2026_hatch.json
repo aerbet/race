@@ -14,7 +14,7 @@
     "y": -0.28,
     "z": -0.05
   },
-  "inertiaScale": 1.0,
+  "inertiaScale": 1,
   "wheels": {
     "radius": 0.33,
     "width": 0.24,
@@ -61,11 +61,11 @@
       [0, 0],
       [6, 1.15],
       [12, 1.2],
-      [30, 1.0],
+      [30, 1],
       [90, 0.85]
     ],
     "frontGrip": 1.05,
-    "rearGrip": 1.0,
+    "rearGrip": 1,
     "rollingResistance": 0.012
   },
   "brakes": {
@@ -88,12 +88,30 @@
       "minAngleDeg": 6.5,
       "speedRefKmh": 190
     },
+    "gripSteer": {
+      "enabled": true,
+      "latG": 1,
+      "extraDeg": 2.5
+    },
+    "stability": {
+      "enabled": true,
+      "yawGain": 7,
+      "maxSlipDeg": 9,
+      "slipRate": 5
+    },
+    "handbrake": {
+      "enabled": true,
+      "straightBrake": 0.8,
+      "turnBrake": 0.2,
+      "extraAngleDeg": 8
+    },
     "turnAssist": {
       "enabled": true,
       "yawAccel": 1.4
     },
     "driftInit": {
       "enabled": true,
+      "autoTriggers": false,
       "rearGripScale": 0.48,
       "minSpeedKmh": 40,
       "attackRate": 4.5

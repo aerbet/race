@@ -147,9 +147,11 @@ export class Session {
       };
       name?: string;
       manual?: boolean;
+      /** Дрифт-гонка: срыв в занос и без ручника (сброс газа, скольжение на газу). */
+      driftMode?: boolean;
     } = {},
   ): SessionCar {
-    const v = this.sim.addCar(cfg, slot, { manualGearbox: opts.manual });
+    const v = this.sim.addCar(cfg, slot, { manualGearbox: opts.manual, driftMode: opts.driftMode });
     const view = new CarView(cfg, {
       color: opts.color ?? CAR_COLORS[slot % CAR_COLORS.length]!,
       neon: opts.neon === null ? undefined : (opts.neon ?? NEON_COLORS[slot % NEON_COLORS.length]),

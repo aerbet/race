@@ -162,6 +162,7 @@ export class RaceController {
       {
         player: true,
         manual: setup.manual,
+        driftMode: setup.mode === 'drift',
         name: setup.playerName,
         color: setup.paint?.startsWith('#') ? parseInt(setup.paint.slice(1), 16) : 0xe8eef7,
         // Неон: #цвет, off, или премиум-эффект (rainbow/pulse) на базовом циане

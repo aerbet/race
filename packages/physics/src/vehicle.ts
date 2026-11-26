@@ -82,6 +82,8 @@ export interface VehicleTelemetry {
 
 export interface VehicleOptions {
   manualGearbox?: boolean;
+  /** Дрифт-гонка: срыв в занос и от сброса газа / скольжения на газу (не только ручником). */
+  driftMode?: boolean;
 }
 
 const DRIVE_EFFICIENCY = 0.85;
@@ -122,6 +124,8 @@ export class Vehicle {
   grounded = 0;
   lastInput: InputFrame | null = null;
   private yawInertia = 1;
+  /** Дрифт-гонка: автосрыв от сброса газа и скольжения на газу. */
+  driftMode = false;
   private inertia: V3 = v3();
 
   constructor(
@@ -134,6 +138,7 @@ export class Vehicle {
   ) {
     this.cfg = cfg;
     this.manual = !!opts.manualGearbox;
+    this.driftMode = !!opts.driftMode;
     const b = cfg.body;
     const m = cfg.mass;
     const s = cfg.inertiaScale;
@@ -315,6 +320,14 @@ export class Vehicle {
       const tt = clamp(kmh / A.speedSteer.speedRefKmh, 0, 1);
       maxSteer = lerp(maxSteer, minA, Math.sqrt(tt));
     }
+    // Руль по сцеплению: угол колёс не больше того, что держат шины (иначе машину срывает)
+    const latPeak = Math.max(...cfg.tires.lateral.map((pt) => pt[1]));
+    const aLatMax =
+      latPeak * Math.min(cfg.tires.frontGrip, cfg.tires.rearGrip) * this.surfaceGrip * 9.81;
+    if (A.gripSteer.enabled && speed > 3) {
+      const kin = Math.atan((cfg.wheels.wheelbase * aLatMax * A.gripSteer.latG) / (speed * speed));
+      maxSteer = Math.min(maxSteer, kin + (A.gripSteer.extraDeg * Math.PI) / 180);
+    }
     // В дрифте даём больше угла для контрруления
     maxSteer = lerp(
       maxSteer,
@@ -341,6 +354,12 @@ export class Vehicle {
         driveInput = inp.brake;
         brakeInput = inp.throttle;
       }
+    }
+
+    // Ручник: без руля — почти полный тормоз по прямой, с рулём — немного (занос)
+    if (A.handbrake.enabled && inp.handbrake > 0.5) {
+      const blend = Math.abs(inp.steer) < 0.2 ? A.handbrake.straightBrake : A.handbrake.turnBrake;
+      brakeInput = Math.max(brakeInput, blend);
     }
 
     // --- Обороты
@@ -423,10 +442,13 @@ export class Vehicle {
       fwdSpeed > 0
     ) {
       const hb = inp.handbrake > 0.5 && steerAbs > 0.2;
-      const lift = this.liftTimer > 0 && steerAbs > 0.6;
+      // Автосрывы (сброс газа, скольжение на газу) — только в дрифт-гонке или по конфигу
+      const auto = this.driftMode || A.driftInit.autoTriggers;
+      const lift = auto && this.liftTimer > 0 && steerAbs > 0.6;
       const brakeThrottle = inp.brake > 0.3 && inp.throttle > 0.5 && steerAbs > 0.3;
       // Срыв «мощностью»: машина уже идёт боком и газ нажат
-      const powerOver = absBeta > (12 * Math.PI) / 180 && inp.throttle > 0.4 && steerAbs > 0.2;
+      const powerOver =
+        auto && absBeta > (12 * Math.PI) / 180 && inp.throttle > 0.4 && steerAbs > 0.2;
       if (hb || lift || brakeThrottle || powerOver) this.driftLatch = 1;
       // Выход: угол мал какое-то время, или газ брошен надолго
       this.lowAngleTime = absBeta < (7 * Math.PI) / 180 ? this.lowAngleTime + dt : 0;
@@ -612,6 +634,26 @@ export class Vehicle {
         torqueYaw(-inp.steer * A.turnAssist.yawAccel * k * Math.sign(fwdSpeed || 1));
       }
 
+      // --- Стабилизация вне дрифта (как ESP): рыскание — к ожидаемому по рулю,
+      // скольжение — не больше maxSlipDeg. Плавно уходит, когда включается дрифт.
+      if (A.stability.enabled && fwdSpeed > 2) {
+        const g = 1 - clamp(this.driftFactor / 0.5, 0, 1);
+        if (g > 0) {
+          const wb = cfg.wheels.wheelbase;
+          const lim = aLatMax / Math.max(speed, 1);
+          const target = clamp(-(fwdSpeed * Math.tan(this.steerAngle)) / wb, -lim, lim);
+          torqueYaw(-(yawRate - target) * A.stability.yawGain * g);
+          const maxSlip = (A.stability.maxSlipDeg * Math.PI) / 180;
+          const allowed = Math.abs(fwdSpeed) * Math.tan(maxSlip);
+          const excess = Math.abs(latSpeed) - allowed;
+          if (excess > 0)
+            body.addForce(
+              scale(right, -Math.sign(latSpeed) * excess * m * A.stability.slipRate * g),
+              true,
+            );
+        }
+      }
+
       // --- Удержание дрифта
       if (A.driftHold.enabled && this.driftFactor > 0.25 && fwdSpeed > 3) {
         const minA = (A.driftHold.minAngleDeg * Math.PI) / 180;
@@ -622,7 +664,10 @@ export class Vehicle {
         const target = lerp(minA, maxA, clamp(0.5 + along * 0.5, 0, 1));
         const err = target - absBeta;
         const betaRate = (absBeta - this.prevAbsBeta) / dt;
-        const explicitError = inp.handbrake > 0.5 && along > 0.9 && absBeta > maxA;
+        // Ручником можно чуть перекрутить предел угла, но не развернуться поперёк
+        const extra = A.handbrake.enabled ? (A.handbrake.extraAngleDeg * Math.PI) / 180 : Math.PI;
+        const explicitError =
+          inp.handbrake > 0.5 && along > 0.9 && absBeta > maxA && absBeta < maxA + extra;
         // PD-регулятор угла заноса: kp — из конфига, kd — около критического демпфирования
         let kp = A.driftHold.strength * this.driftFactor;
         if (absBeta > maxA) kp *= 1.8;

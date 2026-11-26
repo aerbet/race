@@ -120,7 +120,9 @@ class TestClient {
       const track = getTrack('polygon');
       this.sim = new Sim(R, track);
       this.car = this.sim.addCar(CARS.era2026_hatch!, this.slot);
-      this.bot = new Bot(this.car, track, { level: 'hard', lane: ((this.slot % 3) - 1) * 2 });
+      // Каждому клиенту — своя полоса: локально клиент едет один, и толкотня на сервере
+      // (её нет в локальной симуляции) не должна путать проверку порядка финиша
+      this.bot = new Bot(this.car, track, { level: 'hard', lane: (this.slot - 2.5) * 1.6 });
       this.localRace = new RaceTracker(track, this.room.laps, 0);
       this.localRace.addRacer('me', this.car.position.x, this.car.position.z);
     }

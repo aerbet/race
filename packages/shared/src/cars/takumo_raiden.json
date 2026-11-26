@@ -68,7 +68,7 @@
       [90, 0.85]
     ],
     "frontGrip": 1.05,
-    "rearGrip": 1.0,
+    "rearGrip": 1,
     "rollingResistance": 0.012
   },
   "brakes": {
@@ -91,12 +91,30 @@
       "minAngleDeg": 7,
       "speedRefKmh": 180
     },
+    "gripSteer": {
+      "enabled": true,
+      "latG": 1,
+      "extraDeg": 2.5
+    },
+    "stability": {
+      "enabled": true,
+      "yawGain": 7,
+      "maxSlipDeg": 9,
+      "slipRate": 5
+    },
+    "handbrake": {
+      "enabled": true,
+      "straightBrake": 0.8,
+      "turnBrake": 0.2,
+      "extraAngleDeg": 8
+    },
     "turnAssist": {
       "enabled": true,
       "yawAccel": 1.6
     },
     "driftInit": {
       "enabled": true,
+      "autoTriggers": false,
       "rearGripScale": 0.42,
       "minSpeedKmh": 35,
       "attackRate": 5
@@ -136,7 +154,7 @@
     "chargePerOvertake": 0.15
   },
   "specs": {
-    "zeroTo100": 5.0,
+    "zeroTo100": 5,
     "topSpeedKmh": 255
   }
 }
