@@ -3,6 +3,7 @@
  *
  *   pnpm art:car <id> [--publish] [--no-render]   # собрать машину по art/specs/cars/<id>.json
  *   pnpm art:car:all                              # все машины
+ *   pnpm art:silhouette <id>                      # схема силуэта (шаг 1 конвейера машины)
  *   pnpm art:render <id>                          # только рендеры (из art/source/cars/<id>.blend)
  *   pnpm art:wheels [<id>] [--publish]            # диски (art/specs/wheels), этап B1
  *   pnpm art:city <kit>                           # этап B5
@@ -179,6 +180,20 @@ switch (cmd) {
   case 'wheels':
     wheels(rest[0]);
     break;
+  case 'silhouette': {
+    const id = rest[0];
+    if (!id) {
+      console.error('Укажи id машины: pnpm art:silhouette <id>');
+      process.exit(1);
+    }
+    blender(
+      'art/scripts/cars/silhouette.py',
+      ['--spec', join(root, 'art/specs/cars', `${id}.json`)],
+      `Силуэт: ${id}`,
+    );
+    console.log(`✓ art/renders/${id}/silhouette.png и silhouette.svg`);
+    break;
+  }
   case 'city':
     console.error('Город — этап B5, генератор ещё не написан (art/scripts/city/)');
     process.exit(1);

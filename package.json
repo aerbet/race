@@ -20,7 +20,8 @@
     "art:wheels": "pnpm --filter art art wheels",
     "art:city": "pnpm --filter art art city",
     "art:render": "pnpm --filter art art render",
-    "art:validate": "pnpm --filter car-validate validate"
+    "art:validate": "pnpm --filter car-validate validate",
+    "art:silhouette": "pnpm --filter art art silhouette"
   },
   "devDependencies": {
     "@eslint/js": "9.19.0",

@@ -16,6 +16,7 @@
 
 | Команда | Что делает |
 |---|---|
+| `pnpm art:silhouette <id>` | Схема силуэта по спецификации: виды спереди, сбоку, сзади, сверху → `art/renders/<id>/silhouette.png` и `.svg` (~5 с) |
 | `pnpm art:car <id>` | Блендер в фоне: модель → проверки `checks.py` → UV → LOD → `art/export/cars/<id>/base.glb` → meshopt (+KTX2) → `base.min.glb` → валидатор → рендеры `art/renders/<id>/` |
 | `pnpm art:car <id> --publish` | То же + копия в `apps/client/public/cars/<id>/base.glb` (только после утверждения владельцем) |
 | `pnpm art:car <id> --no-render` | Без рендеров (быстро, ~5 с) |
@@ -32,8 +33,8 @@
 ## Структура
 
 ```
-scripts/lib/      scene, materials, uv, lod, export, render, checks — общее для всех моделей
-scripts/cars/     build_car.py (точка входа), test_rig.py (тестовая модель B0), wheels.py (диски, B1)
+scripts/lib/      scene, materials, uv, lod, export, render, checks, curves — общее для всех моделей
+scripts/cars/     build_car.py (точка входа), test_rig.py (тестовая модель B0), wheels.py (диски, B1), silhouette.py (схема силуэта)
 specs/cars/       <id>.json — параметры машины
 specs/wheels/     w*.json — параметры дисков, _common.json — размеры шины и диаметры
 renders/<id>/     side, front, rear, top, three_quarter_*, night, uv_check, lod → sheet.png
