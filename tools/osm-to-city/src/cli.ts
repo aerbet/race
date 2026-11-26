@@ -1,17 +1,18 @@
 /**
  * osm-to-city: OpenStreetMap → упрощённая дорожная сеть → блоки 256 м → glTF.
  *
- *   pnpm --filter osm-to-city build -- --synth --id moscow_synth --name "Москва (процедурная)"
+ *   pnpm --filter osm-to-city build -- --synth --id moscow_synth --name "Москва (процедурная)" --kit moscow
  *   pnpm --filter osm-to-city build -- --bbox 55.743,37.581,55.761,37.613 --id moscow_arbat --name "Москва, Арбат"
  *   pnpm --filter osm-to-city build -- --in data/arbat.json --id moscow_arbat --name "Москва, Арбат"
  *
  * Результат: apps/client/public/cities/<id>/city.json + tiles/*.glb
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseOverpass, type OverpassJson } from './osm';
 import { buildCity } from './build';
+import type { ModuleCatalog } from './modules';
 import { synthDistrict, synthTracks } from './synth';
 import { synthTokyo, tokyoTracks } from './synth-tokyo';
 import type { TrackDef } from '@sr/shared';
@@ -65,6 +66,17 @@ if (arg('synth') === 'tokyo') {
 }
 
 if (arg('tracks')) tracks = JSON.parse(readFileSync(resolve(arg('tracks')!), 'utf8')) as TrackDef[];
+// Библиотека модулей зданий (pnpm art:city <kit> публикует её в apps/client/public/cities/kits/<kit>)
+const kitId = arg('kit');
+let modules: ModuleCatalog | undefined;
+if (kitId) {
+  const f = join(root, 'apps/client/public/cities/kits', kitId, 'modules.json');
+  if (!existsSync(f)) {
+    console.error(`нет ${f} — сначала pnpm art:city ${kitId}`);
+    process.exit(1);
+  }
+  modules = JSON.parse(readFileSync(f, 'utf8')) as ModuleCatalog;
+}
 const parsed = parseOverpass(data, origin);
 const { city, files } = buildCity(parsed.roads, parsed.buildings, {
   id,
@@ -74,6 +86,7 @@ const { city, files } = buildCity(parsed.roads, parsed.buildings, {
   attribution,
   tracks,
   style,
+  modules,
 });
 const out = join(root, 'apps/client/public/cities', id);
 mkdirSync(join(out, 'tiles'), { recursive: true });

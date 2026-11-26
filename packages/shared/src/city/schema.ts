@@ -42,6 +42,20 @@ export const CityTileSchema = z.object({
   colliders: z.array(
     z.tuple([z.number(), z.number(), z.number(), z.number(), z.number(), z.number()]),
   ),
+  /** Экземпляры модулей зданий (10.1): [индекс в city.modules, x, z, yaw, sx, sy, sz]. */
+  instances: z
+    .array(
+      z.tuple([
+        z.number().int().nonnegative(),
+        z.number(),
+        z.number(),
+        z.number(),
+        z.number(),
+        z.number(),
+        z.number(),
+      ]),
+    )
+    .default([]),
 });
 
 export const CitySchema = z.object({
@@ -59,6 +73,17 @@ export const CitySchema = z.object({
   tracks: z.array(TrackDefSchema).default([]),
   /** Стиль: палитра и плотность неона. */
   style: z.enum(['moscow', 'tokyo']).default('moscow'),
+  /** Набор модулей зданий: cities/kits/<kit>/modules.glb (BLENDER_PLAN 6). */
+  kit: z
+    .string()
+    .regex(/^[a-z0-9_]+$/)
+    .optional(),
+  /** id модулей по индексам из tiles[].instances. */
+  modules: z.array(z.string()).default([]),
+  /** Ориентиры (10.3): cities/kits/<kit>/landmarks.glb, узел id в точке (x, z) с поворотом yaw. */
+  landmarks: z
+    .array(z.object({ id: z.string(), x: z.number(), z: z.number(), yaw: z.number() }))
+    .default([]),
 });
 
 export type CityRoad = z.infer<typeof CityRoadSchema>;

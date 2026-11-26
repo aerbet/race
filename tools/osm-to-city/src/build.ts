@@ -11,6 +11,13 @@ import {
 import { centroid, orientedBox, polygonArea, simplify, triangulate, type P } from './geom';
 import { writeGlb, type Primitive } from './glb';
 import type { RawBuilding, RawRoad } from './osm';
+import {
+  placeLandmarks,
+  placeModules,
+  placeProps,
+  type Instance,
+  type ModuleCatalog,
+} from './modules';
 
 export interface BuildOptions {
   id: string;
@@ -23,6 +30,8 @@ export interface BuildOptions {
   tracks?: TrackDef[];
   /** Стиль застройки: палитра фасадов и плотность неона в клиенте. */
   style?: 'moscow' | 'tokyo';
+  /** Библиотека модулей зданий из Блендера (10.1); без неё — здания-коробки. */
+  modules?: ModuleCatalog;
 }
 
 export interface BuildResult {
@@ -401,9 +410,22 @@ export function buildCity(
       const [cx, cz] = centroid(fp);
       return Math.hypot(cx - c.x, cz - c.z) < c.r;
     });
+  // Ориентиры: место на карте и зона, свободная от домов
+  const landmarks = opt.modules ? placeLandmarks(opt.modules, opt.id, roads) : [];
+  const inClear = (fp: P[]) =>
+    landmarks.some(({ clear: q }) => {
+      const c = Math.cos(q.yaw),
+        s = Math.sin(q.yaw);
+      return fp.some(([x, z]) => {
+        const u = (x - q.x) * c - (z - q.z) * s,
+          v = (x - q.x) * s + (z - q.z) * c;
+        return Math.abs(u) < q.hx && Math.abs(v) < q.hz;
+      });
+    });
   const buildings = rawBuildings.filter((b) => {
     const c = centroid(b.footprint);
     return (
+      !inClear(b.footprint) &&
       Math.abs(c[0]) <= half &&
       Math.abs(c[1]) <= half &&
       Math.abs(polygonArea(b.footprint)) > 12 &&
@@ -419,6 +441,7 @@ export function buildCity(
     shops: MeshBuilder;
     colliders: CityTile['colliders'];
     buildings: number;
+    instances: Instance[];
   };
   const tiles = new Map<string, Tile & { i: number; j: number }>();
   const tileAt = (x: number, z: number) => {
@@ -436,6 +459,7 @@ export function buildCity(
         roads: new MeshBuilder(),
         colliders: [],
         buildings: 0,
+        instances: [],
       };
       tiles.set(k, t);
     }
@@ -460,10 +484,17 @@ export function buildCity(
   for (const b of buildings) {
     const c = centroid(b.footprint);
     const t = tileAt(c[0], c[1]);
-    addBuilding(t.walls, t.roofs, t.shops, b.footprint, b.height, b.id, opt.style);
+    const inst = opt.modules ? placeModules(b.footprint, b.height, b.id, opt.modules) : [];
+    if (inst.length) t.instances.push(...inst);
+    else addBuilding(t.walls, t.roofs, t.shops, b.footprint, b.height, b.id, opt.style);
     t.colliders.push(...buildingColliders(b.footprint, b.height));
     t.buildings++;
   }
+
+  for (const l of landmarks) tileAt(l.x, l.z).colliders.push(...l.colliders);
+  // Реквизит вдоль улиц — экземпляры тех же модулей (без коллайдеров: стоит на тротуаре)
+  if (opt.modules)
+    for (const p of placeProps(opt.modules, roads)) tileAt(p[1], p[2]).instances.push(p);
 
   const files = new Map<string, Uint8Array>();
   const cityTiles: CityTile[] = [];
@@ -486,6 +517,7 @@ export function buildCity(
       file,
       buildings: t.buildings,
       colliders: t.colliders.map((c) => c.map(round) as CityTile['colliders'][number]),
+      instances: t.instances,
     });
   }
   let minX = Infinity,
@@ -510,6 +542,14 @@ export function buildCity(
     tiles: cityTiles.sort((a, b) => a.j - b.j || a.i - b.i),
     tracks: opt.tracks ?? [],
     style: opt.style ?? 'moscow',
+    ...(opt.modules ? { kit: opt.modules.kit } : {}),
+    modules: opt.modules ? opt.modules.modules.map((m) => m.id) : [],
+    landmarks: landmarks.map(({ id, x, z, yaw }) => ({
+      id,
+      x: Math.round(x * 100) / 100,
+      z: Math.round(z * 100) / 100,
+      yaw: Math.round(yaw * 1000) / 1000,
+    })),
   };
   return { city, files };
 }

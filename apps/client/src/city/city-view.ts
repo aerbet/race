@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { parseCity, registerTrack, tileOf, type City, type Weather } from '@sr/shared';
 import type { Quality } from '../render/quality';
 
@@ -63,9 +64,18 @@ function windowsTextures(): { map: THREE.Texture; emissive: THREE.Texture } {
  * Город: стриминг блоков 256 м вокруг камеры (glb), фонари вдоль улиц,
  * неон, погода. LOD: дальние блоки на low не грузятся, туман скрывает край.
  */
+/** Модуль здания из библиотеки набора: геометрия LOD0/LOD1, общий материал, матрица узла. */
+interface KitModule {
+  lods: { geometry: THREE.BufferGeometry; material: THREE.Material; node: THREE.Matrix4 }[];
+}
+
 export class CityView {
   readonly group = new THREE.Group();
-  private loader = new GLTFLoader();
+  private loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+  /** Модули зданий (10.1): по InstancedMesh на модуль и LOD на весь видимый город. */
+  private kit: KitModule[] | null = null;
+  private inst: THREE.InstancedMesh[][] = [];
+  private instKey = '';
   private loaded = new Map<string, THREE.Object3D>();
   private loading = new Set<string>();
   private byKey = new Map<string, City['tiles'][number]>();
@@ -146,6 +156,7 @@ export class CityView {
     });
     this.buildGround();
     this.buildLamps();
+    if (city.kit) this.loadKit(city.kit);
     if (snowy) this.buildSnow();
     if (wet) this.buildRain();
   }
@@ -337,6 +348,101 @@ export class CityView {
   }
 
   /** Стриминг: загрузить блоки рядом с (x, z), выгрузить дальние. */
+  /** Библиотека модулей: InstancedMesh ёмкостью «сколько раз модуль встречается в городе». */
+  private loadKit(kit: string): void {
+    const counts = this.city.modules.map(() => 0);
+    for (const t of this.city.tiles) for (const i of t.instances) counts[i[0]]!++;
+    this.loader.load(`${import.meta.env.BASE_URL}cities/kits/${kit}/modules.glb`, (gltf) => {
+      gltf.scene.updateMatrixWorld(true);
+      const byName = new Map<string, THREE.Mesh>();
+      gltf.scene.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) byName.set(o.name, o as THREE.Mesh);
+      });
+      this.kit = this.city.modules.map((id) => ({
+        lods: [id, `${id}_LOD1`].flatMap((n) => {
+          const m = byName.get(n);
+          if (!m) return [];
+          const mat = m.material as THREE.MeshStandardMaterial;
+          mat.emissive.setScalar(1);
+          mat.emissiveIntensity = 1.15;
+          mat.envMapIntensity = 0.25;
+          // Матрица узла (с поправкой квантования meshopt) — в каждую матрицу экземпляра
+          return [{ geometry: m.geometry, material: mat, node: m.matrixWorld.clone() }];
+        }),
+      }));
+      this.inst = this.kit.map((k, i) =>
+        k.lods.map((l) => {
+          const im = new THREE.InstancedMesh(l.geometry, l.material, Math.max(1, counts[i]!));
+          im.count = 0;
+          im.visible = false;
+          im.castShadow = this.quality.shadows;
+          im.receiveShadow = this.quality.shadows;
+          this.group.add(im);
+          return im;
+        }),
+      );
+      this.instKey = '';
+      // Ориентиры — после модулей: их материал (атлас) общий с модулями
+      if (this.city.landmarks.length) this.loadLandmarks(kit, this.kit[0]?.lods[0]?.material);
+    });
+  }
+
+  /** Ориентиры (10.3): по одному мешу на место; в glb нет текстур — материал атласа из модулей. */
+  private loadLandmarks(kit: string, atlas: THREE.Material | undefined): void {
+    this.loader.load(`${import.meta.env.BASE_URL}cities/kits/${kit}/landmarks.glb`, (gltf) => {
+      gltf.scene.updateMatrixWorld(true);
+      for (const l of this.city.landmarks) {
+        const src = gltf.scene.getObjectByName(l.id) as THREE.Mesh | undefined;
+        if (!src?.isMesh) continue;
+        const mesh = new THREE.Mesh(src.geometry, atlas ?? src.material);
+        mesh.matrixAutoUpdate = false;
+        mesh.matrix
+          .compose(
+            new THREE.Vector3(l.x, 0, l.z),
+            new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), l.yaw),
+            new THREE.Vector3(1, 1, 1),
+          )
+          .multiply(src.matrixWorld);
+        mesh.castShadow = this.quality.shadows;
+        this.group.add(mesh);
+      }
+    });
+  }
+
+  /** Экземпляры модулей в блоках want: ближние (±1 блок) — LOD0, дальше — LOD1. */
+  private updateInstances(want: Set<string>, ti: number, tj: number): void {
+    if (!this.kit) return;
+    const key = `${ti}_${tj}|${[...want].sort().join(',')}`;
+    if (key === this.instKey) return;
+    this.instKey = key;
+    for (const row of this.inst) for (const im of row) im.count = 0;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const pos = new THREE.Vector3();
+    const scl = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    for (const k of want) {
+      const t = this.byKey.get(k);
+      if (!t) continue;
+      const near = Math.max(Math.abs(t.i - ti), Math.abs(t.j - tj)) <= 1;
+      for (const [mi, x, z, yaw, sx, sy, sz] of t.instances) {
+        const lods = this.kit[mi]?.lods;
+        if (!lods?.length) continue;
+        const li = near || lods.length < 2 ? 0 : 1;
+        const im = this.inst[mi]![li]!;
+        m.compose(pos.set(x, 0, z), q.setFromAxisAngle(up, yaw), scl.set(sx, sy, sz));
+        m.multiply(lods[li]!.node);
+        im.setMatrixAt(im.count++, m);
+      }
+    }
+    for (const row of this.inst)
+      for (const im of row) {
+        im.instanceMatrix.needsUpdate = true;
+        im.visible = im.count > 0; // пустые не рисуются и не считаются
+        if (im.count) im.computeBoundingSphere();
+      }
+  }
+
   update(x: number, z: number, dt: number): void {
     const [ti, tj] = tileOf(x, z, this.city.blockSize);
     const want = new Set<string>();
@@ -344,6 +450,7 @@ export class CityView {
     for (let di = -R; di <= R; di++)
       for (let dj = -R; dj <= R; dj++)
         if (di * di + dj * dj <= R * R + 1) want.add(`${ti + di}_${tj + dj}`);
+    this.updateInstances(want, ti, tj);
     for (const [k, obj] of this.loaded) {
       if (want.has(k)) continue;
       this.group.remove(obj);
@@ -383,7 +490,8 @@ export class CityView {
             mesh.castShadow = this.quality.shadows && name === 'facade';
             mesh.receiveShadow = this.quality.shadows;
           });
-          obj.add(this.signsFor(t));
+          // Вывески-коробки — только у городов без набора модулей (у модулей свои вывески и щиты)
+          if (!this.city.kit) obj.add(this.signsFor(t));
           // Блок могли уже «разхотеть», пока грузился
           this.loaded.set(k, obj);
           this.group.add(obj);

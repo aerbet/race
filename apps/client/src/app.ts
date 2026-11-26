@@ -210,7 +210,10 @@ export class App {
     const race = this.race;
     const hud = this.hud;
     if (!race || !hud) return;
-    this.fps.tick(dt, this.quality.name);
+    // Бюджет 10.5: draw calls кадра рядом с FPS
+    const info = race.session.gfx.renderer.info;
+    this.fps.tick(dt, `${this.quality.name} · ${info.render.calls} dc`);
+    info.reset();
     this.inputDebug?.update();
     race.updateGhost(alpha);
     race.frame(dt, alpha);

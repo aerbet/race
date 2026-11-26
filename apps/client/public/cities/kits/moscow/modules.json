@@ -1,0 +1,431 @@
+{
+ "kit": "moscow",
+ "atlas": {
+  "size": 2048,
+  "metersU": 12.0,
+  "strips": {
+   "plaster_beige": [
+    0.875,
+    1.0
+   ],
+   "plaster_cream": [
+    0.75,
+    0.875
+   ],
+   "brick_red": [
+    0.625,
+    0.75
+   ],
+   "brick_sand": [
+    0.5,
+    0.625
+   ],
+   "panel": [
+    0.375,
+    0.5
+   ],
+   "glass": [
+    0.25,
+    0.375
+   ]
+  },
+  "windows": [
+   [
+    0.0,
+    0.125,
+    0.0625,
+    0.25
+   ],
+   [
+    0.0625,
+    0.125,
+    0.125,
+    0.25
+   ],
+   [
+    0.125,
+    0.125,
+    0.1875,
+    0.25
+   ],
+   [
+    0.1875,
+    0.125,
+    0.25,
+    0.25
+   ],
+   [
+    0.25,
+    0.125,
+    0.3125,
+    0.25
+   ],
+   [
+    0.3125,
+    0.125,
+    0.375,
+    0.25
+   ],
+   [
+    0.375,
+    0.125,
+    0.4375,
+    0.25
+   ],
+   [
+    0.4375,
+    0.125,
+    0.5,
+    0.25
+   ],
+   [
+    0.5,
+    0.125,
+    0.5625,
+    0.25
+   ],
+   [
+    0.5625,
+    0.125,
+    0.625,
+    0.25
+   ],
+   [
+    0.625,
+    0.125,
+    0.6875,
+    0.25
+   ],
+   [
+    0.6875,
+    0.125,
+    0.75,
+    0.25
+   ],
+   [
+    0.75,
+    0.125,
+    0.8125,
+    0.25
+   ],
+   [
+    0.8125,
+    0.125,
+    0.875,
+    0.25
+   ],
+   [
+    0.875,
+    0.125,
+    0.9375,
+    0.25
+   ],
+   [
+    0.9375,
+    0.125,
+    1.0,
+    0.25
+   ]
+  ],
+  "lit": [
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   14,
+   15
+  ],
+  "misc": {
+   "cornice": [
+    0.09375,
+    0.125
+   ],
+   "railing": [
+    0.0625,
+    0.09375
+   ],
+   "shop": [
+    0.0,
+    0.0625
+   ]
+  }
+ },
+ "modules": [
+  {
+   "id": "stalinka_a",
+   "type": "stalinka",
+   "w": 36,
+   "d": 16,
+   "h": 24.8,
+   "tris": 526,
+   "trisLod1": 66
+  },
+  {
+   "id": "stalinka_b",
+   "type": "stalinka",
+   "w": 48,
+   "d": 16,
+   "h": 28.2,
+   "tris": 690,
+   "trisLod1": 74
+  },
+  {
+   "id": "stalinka_c",
+   "type": "stalinka",
+   "w": 60,
+   "d": 18,
+   "h": 31.6,
+   "tris": 930,
+   "trisLod1": 82
+  },
+  {
+   "id": "stalinka_d",
+   "type": "stalinka",
+   "w": 24,
+   "d": 16,
+   "h": 24.8,
+   "tris": 398,
+   "trisLod1": 66
+  },
+  {
+   "id": "panel9_a",
+   "type": "panel9",
+   "w": 36,
+   "d": 12,
+   "h": 25.2,
+   "tris": 1418,
+   "trisLod1": 66
+  },
+  {
+   "id": "panel9_b",
+   "type": "panel9",
+   "w": 60,
+   "d": 12,
+   "h": 25.2,
+   "tris": 2218,
+   "trisLod1": 66
+  },
+  {
+   "id": "panel16_a",
+   "type": "panel16",
+   "w": 36,
+   "d": 13,
+   "h": 44.8,
+   "tris": 2594,
+   "trisLod1": 114
+  },
+  {
+   "id": "panel16_b",
+   "type": "panel16",
+   "w": 48,
+   "d": 13,
+   "h": 44.8,
+   "tris": 3330,
+   "trisLod1": 114
+  },
+  {
+   "id": "khrush_a",
+   "type": "khrush",
+   "w": 40,
+   "d": 12,
+   "h": 13.5,
+   "tris": 382,
+   "trisLod1": 34
+  },
+  {
+   "id": "khrush_b",
+   "type": "khrush",
+   "w": 60,
+   "d": 12,
+   "h": 13.5,
+   "tris": 522,
+   "trisLod1": 34
+  },
+  {
+   "id": "khrush_c",
+   "type": "khrush",
+   "w": 48,
+   "d": 12,
+   "h": 13.5,
+   "tris": 442,
+   "trisLod1": 34
+  },
+  {
+   "id": "tower_a",
+   "type": "tower",
+   "w": 30,
+   "d": 30,
+   "h": 90.8,
+   "tris": 426,
+   "trisLod1": 242
+  },
+  {
+   "id": "tower_b",
+   "type": "tower",
+   "w": 36,
+   "d": 28,
+   "h": 121.2,
+   "tris": 508,
+   "trisLod1": 322
+  },
+  {
+   "id": "tower_c",
+   "type": "tower",
+   "w": 28,
+   "d": 28,
+   "h": 159.2,
+   "tris": 770,
+   "trisLod1": 426
+  },
+  {
+   "id": "mall_a",
+   "type": "mall",
+   "w": 60,
+   "d": 40,
+   "h": 14.5,
+   "tris": 216,
+   "trisLod1": 34
+  },
+  {
+   "id": "mall_b",
+   "type": "mall",
+   "w": 40,
+   "d": 30,
+   "h": 10.0,
+   "tris": 120,
+   "trisLod1": 26
+  },
+  {
+   "id": "gas_a",
+   "type": "gas",
+   "w": 24,
+   "d": 16,
+   "h": 6.0,
+   "tris": 74,
+   "trisLod1": 18
+  },
+  {
+   "id": "pavilion_a",
+   "type": "pavilion",
+   "w": 6,
+   "d": 4,
+   "h": 3.3,
+   "tris": 22,
+   "trisLod1": 10
+  },
+  {
+   "id": "pavilion_b",
+   "type": "pavilion",
+   "w": 10,
+   "d": 5,
+   "h": 3.3,
+   "tris": 22,
+   "trisLod1": 10
+  },
+  {
+   "id": "church_a",
+   "type": "church",
+   "w": 16,
+   "d": 24,
+   "h": 23.0,
+   "tris": 356,
+   "trisLod1": 58
+  },
+  {
+   "id": "prop_bus_stop",
+   "type": "prop_bus_stop",
+   "w": 8,
+   "d": 2,
+   "h": 2.8,
+   "tris": 48,
+   "trisLod1": 48
+  },
+  {
+   "id": "prop_barrier",
+   "type": "prop_barrier",
+   "w": 12,
+   "d": 0.2,
+   "h": 0.75,
+   "tris": 60,
+   "trisLod1": 60
+  },
+  {
+   "id": "prop_billboard",
+   "type": "prop_billboard",
+   "w": 9,
+   "d": 0.6,
+   "h": 9.2,
+   "tris": 26,
+   "trisLod1": 26
+  },
+  {
+   "id": "prop_traffic_light",
+   "type": "prop_traffic_light",
+   "w": 0.5,
+   "d": 3,
+   "h": 5.6,
+   "tris": 32,
+   "trisLod1": 32
+  },
+  {
+   "id": "prop_snowbank",
+   "type": "prop_snowbank",
+   "w": 9,
+   "d": 3,
+   "h": 0.9,
+   "tris": 144,
+   "trisLod1": 144
+  }
+ ],
+ "landmarks": [
+  {
+   "id": "spire_tower",
+   "w": 78,
+   "d": 44,
+   "h": 157.2,
+   "place": "plot",
+   "tris": 2612
+  },
+  {
+   "id": "tv_tower",
+   "w": 30,
+   "d": 30,
+   "h": 360.0,
+   "place": "plot",
+   "tris": 348
+  },
+  {
+   "id": "arch_bridge",
+   "w": 60,
+   "d": 14,
+   "h": 23.3,
+   "place": "span",
+   "tris": 532
+  }
+ ],
+ "placements": [
+  {
+   "id": "spire_tower",
+   "city": "moscow_synth",
+   "x": -260,
+   "z": 180
+  },
+  {
+   "id": "tv_tower",
+   "city": "moscow_synth",
+   "x": 520,
+   "z": -460
+  },
+  {
+   "id": "arch_bridge",
+   "city": "moscow_synth",
+   "x": 0,
+   "z": -300
+  }
+ ]
+}

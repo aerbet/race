@@ -6,6 +6,7 @@ import { buildCity, buildingColliders } from './build';
 import { synthDistrict, synthTracks } from './synth';
 import { buildTrack } from '@sr/shared';
 import { writeGlb } from './glb';
+import { placeLandmarks, placeModules, type ModuleCatalog } from './modules';
 
 describe('geometry', () => {
   it('simplify removes collinear points', () => {
@@ -199,5 +200,106 @@ describe('city build', () => {
 
   it('empty mesh list still writes a valid glb', () => {
     expect(writeGlb([]).length).toBeGreaterThan(20);
+  });
+});
+
+describe('модули зданий (10.1) и ориентиры (10.3)', () => {
+  const cat: ModuleCatalog = {
+    kit: 't',
+    modules: [
+      { id: 'khrush_a', type: 'khrush', w: 40, d: 12, h: 13.5 },
+      { id: 'stalinka_a', type: 'stalinka', w: 36, d: 16, h: 24.8 },
+      { id: 'tower_a', type: 'tower', w: 30, d: 30, h: 90 },
+      { id: 'pavilion_a', type: 'pavilion', w: 6, d: 4, h: 3.3 },
+    ],
+    landmarks: [
+      { id: 'tower', w: 30, d: 30, h: 200, place: 'plot' },
+      { id: 'bridge', w: 60, d: 14, h: 23, place: 'span' },
+    ],
+    placements: [
+      { id: 'tower', city: 'c', x: 0, z: 0 },
+      { id: 'bridge', city: 'c', x: 5, z: 40 },
+    ],
+  };
+  const rect = (cx: number, cz: number, w: number, d: number, yaw = 0): P[] => {
+    const c = Math.cos(yaw),
+      s = Math.sin(yaw);
+    return [
+      [-w / 2, -d / 2],
+      [w / 2, -d / 2],
+      [w / 2, d / 2],
+      [-w / 2, d / 2],
+    ].map(([u, v]) => [cx + u! * c + v! * s, cz - u! * s + v! * c] as P);
+  };
+
+  it('подбирает тип по высоте и ставит модуль вдоль длинной стороны', () => {
+    const inst = placeModules(rect(100, 50, 12, 40), 14, 1, cat);
+    expect(inst).toHaveLength(1);
+    const [mi, x, z, yaw, sx, , sz] = inst[0]!;
+    expect(cat.modules[mi]!.type).toBe('khrush');
+    expect(x).toBeCloseTo(100, 1);
+    expect(z).toBeCloseTo(50, 1);
+    // Длинная сторона — вдоль Z: ось X модуля повёрнута на ±90°
+    expect(Math.abs(Math.cos(yaw))).toBeLessThan(0.01);
+    expect(sx).toBeCloseTo(1, 1);
+    expect(sz).toBeCloseTo(1, 1);
+    expect(cat.modules[placeModules(rect(0, 0, 30, 30), 95, 2, cat)[0]![0]]!.type).toBe('tower');
+  });
+
+  it('длинный дом собирается из нескольких секций без растяжения больше 35 %', () => {
+    const inst = placeModules(rect(0, 0, 150, 16), 25, 3, cat);
+    expect(inst.length).toBeGreaterThanOrEqual(3);
+    for (const i of inst) expect(i[4]).toBeLessThanOrEqual(1.35);
+    const xs = inst.map((i) => i[1]).sort((a, b) => a - b);
+    expect(xs[xs.length - 1]! - xs[0]!).toBeGreaterThan(90);
+  });
+
+  it('ориентир-участок уходит с дороги, мост встаёт поперёк улицы', () => {
+    const roads = [
+      {
+        width: 20,
+        points: [
+          [-200, 40],
+          [200, 40],
+        ] as P[],
+      },
+    ];
+    const out = placeLandmarks(cat, 'c', roads);
+    const tower = out.find((l) => l.id === 'tower')!;
+    expect(Math.abs(tower.z - 40)).toBeGreaterThan(10 + 21);
+    const bridge = out.find((l) => l.id === 'bridge')!;
+    expect(bridge.z).toBeCloseTo(40);
+    // ось X моста (cos yaw, −sin yaw) — поперёк улицы, идущей по X
+    expect(Math.abs(Math.cos(bridge.yaw))).toBeLessThan(0.01);
+    expect(bridge.colliders).toHaveLength(2);
+    for (const c of bridge.colliders) expect(Math.abs(c[1] - 40)).toBeGreaterThan(10);
+    expect(placeLandmarks(cat, 'other', roads)).toEqual([]);
+  });
+
+  it('город с набором: экземпляры вместо геометрии зданий, ориентиры не под домами', () => {
+    const { city } = buildCity(
+      [
+        {
+          id: 1,
+          cls: 'primary',
+          name: '',
+          lanes: 0,
+          oneway: false,
+          points: [
+            [-300, 40],
+            [300, 40],
+          ],
+        },
+      ],
+      [
+        { id: 1, footprint: rect(100, 0, 40, 12), height: 14 },
+        { id: 2, footprint: rect(0, 0, 10, 10), height: 20 },
+      ],
+      { id: 'c', name: 'c', half: 400, origin: { lat: 0, lon: 0 }, modules: cat },
+    );
+    expect(parseCity(city).modules).toEqual(cat.modules.map((m) => m.id));
+    const n = city.tiles.reduce((a, t) => a + t.instances.length, 0);
+    expect(n).toBe(1); // второй дом попал в зону башни-ориентира
+    expect(city.landmarks.map((l) => l.id).sort()).toEqual(['bridge', 'tower']);
   });
 });

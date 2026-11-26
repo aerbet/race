@@ -37,6 +37,10 @@ export class SceneRenderer {
       antialias: quality.antialias,
       powerPreference: 'high-performance',
     });
+    // Счётчик draw calls за весь кадр (все проходы постобработки), сбрасывается в App.frame
+    this.renderer.info.autoReset = false;
+    // Отладка (только dev-сборка): сцена и рендерер в консоли
+    if (import.meta.env.DEV) (window as unknown as { __sr: unknown }).__sr = this;
     this.renderer.setPixelRatio(quality.pixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
