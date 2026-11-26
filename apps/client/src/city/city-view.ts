@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { parseCity, registerTrack, tileOf, type City, type Weather } from '@sr/shared';
 import type { Quality } from '../render/quality';
+import { Billboards } from './billboards';
 
 /** Загрузка city.json и регистрация городских трасс. */
 export async function loadCity(id: string): Promise<City> {
@@ -80,6 +81,9 @@ export class CityView {
   private kit: KitModule[] | null = null;
   private inst: THREE.InstancedMesh[][] = [];
   private instKey = '';
+  /** Бренды на щитах (модуль prop_billboard). */
+  private billboards: Billboards | null = null;
+  private billboardModule = -1;
   private loaded = new Map<string, THREE.Object3D>();
   private loading = new Set<string>();
   private byKey = new Map<string, City['tiles'][number]>();
@@ -385,6 +389,12 @@ export class CityView {
           return im;
         }),
       );
+      this.billboardModule = this.city.modules.indexOf('prop_billboard');
+      if (this.billboardModule >= 0) {
+        // Каждой стороне — свой бренд; запас на все щиты города
+        this.billboards = new Billboards(kit, counts[this.billboardModule]! * 2);
+        for (const im of this.billboards.meshes) this.group.add(im);
+      }
       this.instKey = '';
       // Ориентиры — после модулей: их материал (атлас) общий с модулями
       if (this.city.landmarks.length) this.loadLandmarks(kit, this.kit[0]?.lods[0]?.material);
@@ -420,6 +430,7 @@ export class CityView {
     if (key === this.instKey) return;
     this.instKey = key;
     for (const row of this.inst) for (const im of row) im.count = 0;
+    this.billboards?.begin();
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const pos = new THREE.Vector3();
@@ -435,6 +446,7 @@ export class CityView {
         const li = near || lods.length < 2 ? 0 : 1;
         const im = this.inst[mi]![li]!;
         m.compose(pos.set(x, 0, z), q.setFromAxisAngle(up, yaw), scl.set(sx, sy, sz));
+        if (mi === this.billboardModule) this.billboards?.add(m, x, z);
         m.multiply(lods[li]!.node);
         im.setMatrixAt(im.count++, m);
       }
@@ -445,6 +457,7 @@ export class CityView {
         im.visible = im.count > 0; // пустые не рисуются и не считаются
         if (im.count) im.computeBoundingSphere();
       }
+    this.billboards?.end();
   }
 
   update(x: number, z: number, dt: number): void {

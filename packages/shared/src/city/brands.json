@@ -1,0 +1,18 @@
+{
+  "moscow": [
+    { "name": "НИТРОКОЛА", "tag": "Газ до упора", "bg": "#1a0612", "fg": "#ff3b6b" },
+    { "name": "ПОЛЮС", "tag": "Шины для зимы и ночи", "bg": "#04121c", "fg": "#2ef2ff" },
+    { "name": "РАДИО ВОЛНА 7", "tag": "Ночной эфир 24/7", "bg": "#100a1e", "fg": "#c38bff" },
+    { "name": "ГАРАЖ №9", "tag": "Тюнинг · покраска · неон", "bg": "#151004", "fg": "#ffc94a" },
+    { "name": "СЕВЕРНЫЙ ЛЁД", "tag": "Энергетик без сахара", "bg": "#03141a", "fg": "#7fe8ff" },
+    { "name": "ТАКСИ КОМЕТА", "tag": "Довезём быстрее всех", "bg": "#16120a", "fg": "#ffe066" }
+  ],
+  "tokyo": [
+    { "name": "YAKOU SODA", "tag": "Glow in the night", "bg": "#0c0718", "fg": "#ff3bbd" },
+    { "name": "KAMINARI FM", "tag": "88.8 · all night drive", "bg": "#03101c", "fg": "#2ef2ff" },
+    { "name": "TSUKI NOODLE", "tag": "Open till dawn", "bg": "#181004", "fg": "#ffb02b" },
+    { "name": "MIDORI GRIP", "tag": "Street tires", "bg": "#061408", "fg": "#8dff4a" },
+    { "name": "NEON ARCADE", "tag": "Insert coin", "bg": "#120418", "fg": "#ff6fd8" },
+    { "name": "SORA CAMERA", "tag": "Catch the moment", "bg": "#0a0c16", "fg": "#9fb8ff" }
+  ]
+}
