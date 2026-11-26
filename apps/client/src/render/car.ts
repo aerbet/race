@@ -564,13 +564,13 @@ export class CarView {
         // Кит не загрузился — машина остаётся на стоковых деталях
         kit
           ? loadCarKit(modelId, kit).catch((e: unknown) => {
-              console.warn(`кит ${kit} не загрузился`, e);
+              console.warn(`kit ${kit} failed to load`, e);
               return null;
             })
           : null,
       ])
         .then(([m, k]) => this.useModel(m, k, kit))
-        .catch((e: unknown) => console.warn(`модель ${modelId} не загрузилась`, e));
+        .catch((e: unknown) => console.warn(`model ${modelId} failed to load`, e));
     } else {
       // Процедурный кузов: неподвижные детали — по мешу на материал (бюджет draw calls 10.5)
       mergeStatic(this.body, new Set(this.nitroFlames));

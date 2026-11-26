@@ -1,3 +1,4 @@
+import { t } from '@sr/shared';
 import type { InputFrame } from '@sr/shared';
 
 type Btn = 'left' | 'right' | 'brake' | 'gas' | 'drift' | 'nitro';
@@ -84,10 +85,10 @@ export class TouchInput {
     };
     mk('left', '◀', 'left');
     mk('right', '▶', 'right');
-    mk('brake', 'ТОРМ', 'brake');
-    mk('drift', 'ДРИФТ', 'drift');
+    mk('brake', t('touch.brake'), 'brake');
+    mk('drift', t('touch.drift'), 'drift');
     mk('nitro', 'N₂O', 'nitro');
-    mk('gas', 'ГАЗ', 'gas');
+    mk('gas', t('touch.gas'), 'gas');
     parent.appendChild(this.el);
     window.addEventListener('deviceorientation', (e) => {
       if (!this.tilt || e.gamma == null) return;

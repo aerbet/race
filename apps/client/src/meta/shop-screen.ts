@@ -1,6 +1,7 @@
+import { t, tn, has } from '@sr/shared';
 import { escapeHtml } from '../ui/menu';
 import { account } from './account';
-import { ApiError, api, newKey, wallet } from './api';
+import { api, errText, newKey, wallet } from './api';
 
 interface Offer {
   id: string;
@@ -24,18 +25,8 @@ interface PaymentView {
   tokens: number;
 }
 
-const PROVIDER_NAMES: Record<string, string> = {
-  cryptobot: 'Telegram · крипта (USDT/TON)',
-  sbp: 'СБП',
-};
-const SLOT_NAMES: Record<string, string> = {
-  paint: 'Краска',
-  neon: 'Неон',
-  vinyl: 'Винил',
-  rims: 'Диски',
-  spoiler: 'Антикрыло',
-  kit: 'Кузов',
-};
+const provName = (p: string) => (has(`pay.${p}`) ? t(`pay.${p}`) : p);
+const slotName = (s: string) => (has(`slot.${s}`) ? t(`slot.${s}`) : s);
 
 function h(html: string): HTMLElement {
   const t = document.createElement('template');
@@ -65,21 +56,20 @@ export function showShop(root: HTMLElement, done: () => void, returnedPayment?: 
   const waitFor = (id: string, msg: HTMLElement) => {
     clearInterval(polling);
     const started = Date.now();
-    msg.textContent = 'Ждём подтверждения оплаты…';
+    msg.textContent = t('shop.waiting');
     polling = window.setInterval(async () => {
       try {
         const p = await api<PaymentView>(`/api/payments/${id}`);
         if (p.status === 'paid') {
           clearInterval(polling);
-          notice = `Оплачено: +${p.tokens} жетонов`;
+          notice = tn('shop.paid', p.tokens);
           void render();
         } else if (p.status === 'failed' || p.status === 'expired') {
           clearInterval(polling);
-          msg.textContent = p.status === 'failed' ? 'Оплата не прошла' : 'Счёт истёк';
+          msg.textContent = t(p.status === 'failed' ? 'shop.payFailed' : 'shop.expired');
         } else if (Date.now() - started > 15 * 60_000) {
           clearInterval(polling);
-          msg.textContent =
-            'Подтверждение задерживается — жетоны придут автоматически после оплаты.';
+          msg.textContent = t('shop.slow');
         }
       } catch {
         /* сеть — попробуем на следующем тике */
@@ -89,12 +79,12 @@ export function showShop(root: HTMLElement, done: () => void, returnedPayment?: 
 
   const render = async (): Promise<void> => {
     if (!account.token) {
-      panel.innerHTML = `<p class="big" style="font:900 italic 30px var(--font);margin:0">Магазин</p>
-        <p class="sub">Войдите в аккаунт, чтобы покупать.</p><div class="btnrow"><button class="btn" data-k="back">Назад</button></div>`;
+      panel.innerHTML = `<p class="big" style="font:900 italic 30px var(--font);margin:0">${t('menu.shop')}</p>
+        <p class="sub">${t('shop.login')}</p><div class="btnrow"><button class="btn" data-k="back">${t('ui.back')}</button></div>`;
       (panel.querySelector('[data-k="back"]') as HTMLElement).onclick = close;
       return;
     }
-    panel.innerHTML = `<p class="sub">Загрузка…</p>`;
+    panel.innerHTML = `<p class="sub">${t('ui.loading')}</p>`;
     let offers: Offer[], items: Item[], tokens: number;
     try {
       [offers, items, tokens] = await Promise.all([
@@ -103,14 +93,14 @@ export function showShop(root: HTMLElement, done: () => void, returnedPayment?: 
         wallet().then((w) => w.tokens),
       ]);
     } catch (e) {
-      panel.innerHTML = `<p class="sub">${escapeHtml(e instanceof ApiError ? e.message : 'Ошибка')}</p><div class="btnrow"><button class="btn" data-k="back">Назад</button></div>`;
+      panel.innerHTML = `<p class="sub">${escapeHtml(errText(e))}</p><div class="btnrow"><button class="btn" data-k="back">${t('ui.back')}</button></div>`;
       (panel.querySelector('[data-k="back"]') as HTMLElement).onclick = close;
       return;
     }
     const anyProvider = offers.some((o) => Object.keys(o.prices).length > 0);
-    panel.innerHTML = `<p class="big" style="font:900 italic 30px var(--font);margin:0">Магазин</p>
-      <p class="sub">Жетоны: <b>${tokens}</b> · за жетоны — только внешний вид, на скорость не влияет</p>
-      <h2>Жетоны</h2>
+    panel.innerHTML = `<p class="big" style="font:900 italic 30px var(--font);margin:0">${t('menu.shop')}</p>
+      <p class="sub">${t('shop.tokens', { n: `<b>${tokens}</b>` })}</p>
+      <h2>${t('shop.packs')}</h2>
       ${
         anyProvider
           ? `<div class="grid2">${offers
@@ -121,27 +111,27 @@ export function showShop(root: HTMLElement, done: () => void, returnedPayment?: 
                 ${Object.entries(o.prices)
                   .map(
                     ([prov, pr]) =>
-                      `<button class="btn" data-pay="${o.id}" data-prov="${prov}">${PROVIDER_NAMES[prov] ?? prov}<small>${pr.amount} ${pr.currency === 'RUB' ? '₽' : '$'}</small></button>`,
+                      `<button class="btn" data-pay="${o.id}" data-prov="${prov}">${provName(prov)}<small>${pr.amount} ${pr.currency === 'RUB' ? '₽' : '$'}</small></button>`,
                   )
                   .join('')}</div>`,
               )
               .join('')}</div>`
-          : '<p class="sub">Оплата пока не подключена на сервере.</p>'
+          : `<p class="sub">${t('shop.noPay')}</p>`
       }
       <p class="sub" data-k="msg"></p>
-      <h2>Косметика</h2>
+      <h2>${t('shop.looks')}</h2>
       <table>${items
         .map(
           (i) =>
-            `<tr><td>${SLOT_NAMES[i.slot] ?? i.slot}</td><td>${escapeHtml(i.name)}</td><td>${
+            `<tr><td>${slotName(i.slot)}</td><td>${escapeHtml(i.name)}</td><td>${
               i.owned
-                ? 'куплено'
-                : `<button class="btn" data-buy="${i.id}" ${i.price > tokens ? 'disabled' : ''}>${i.price} жет.</button>`
+                ? t('shop.owned')
+                : `<button class="btn" data-buy="${i.id}" ${i.price > tokens ? 'disabled' : ''}>${t('shop.price', { n: i.price })}</button>`
             }</td></tr>`,
         )
         .join('')}</table>
-      <p class="hint">Купленное ставится в «Гараже». Оплата проходит у провайдера (Telegram @CryptoBot или банк через СБП); после оплаты вернитесь в игру — жетоны начислятся автоматически.</p>
-      <div class="btnrow"><button class="btn" data-k="back">Готово</button></div>`;
+      <p class="hint">${t('shop.hint')}</p>
+      <div class="btnrow"><button class="btn" data-k="back">${t('ui.done')}</button></div>`;
     const msg = panel.querySelector('[data-k="msg"]') as HTMLElement;
     msg.textContent = notice;
     (panel.querySelector('[data-k="back"]') as HTMLElement).onclick = close;
@@ -159,7 +149,7 @@ export function showShop(root: HTMLElement, done: () => void, returnedPayment?: 
           waitFor(p.id, msg);
         } catch (e) {
           win?.close();
-          msg.textContent = e instanceof ApiError ? e.message : 'Не удалось создать платёж';
+          msg.textContent = errText(e);
         }
       };
     });
@@ -169,7 +159,7 @@ export function showShop(root: HTMLElement, done: () => void, returnedPayment?: 
           await api(`/api/shop/cosmetics/${b.dataset.buy}/buy`, { body: {} });
           void render();
         } catch (e) {
-          msg.textContent = e instanceof ApiError ? e.message : 'Ошибка';
+          msg.textContent = errText(e);
         }
       };
     });

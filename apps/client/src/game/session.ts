@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {
+  t,
   FixedStepLoop,
   FIXED_DT,
   InputRecorder,
@@ -160,7 +161,7 @@ export class Session {
     this.gfx.scene.add(view.root);
     v.surfaceGrip = WEATHER_GRIP[this.weather];
     const c = new SessionCar(v, view, this.cars.length);
-    c.name = opts.name ?? `Машина ${slot + 1}`;
+    c.name = opts.name ?? t('net.carSlot', { n: slot + 1 });
     this.cars.push(c);
     if (opts.player) {
       this.player = c;

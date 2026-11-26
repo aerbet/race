@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {
+  t,
   CarFlags,
   Msg,
   RaceEventType,
@@ -206,7 +207,7 @@ export class OnlineRace extends RaceController {
       setup: this.setup,
       rows: rows.map((r) => ({
         id: String(r.id),
-        name: r.bot ? `${r.name} (бот)` : r.name,
+        name: r.bot ? t('net.botName', { name: r.name }) : r.name,
         position: r.position,
         time: r.finishSteps / 60,
         bestLap: r.bestLapSteps / 60,

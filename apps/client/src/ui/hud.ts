@@ -1,4 +1,4 @@
-import { formatTime, type BuiltTrack, type City, type DriftSnapshot } from '@sr/shared';
+import { t, formatTime, type BuiltTrack, type City, type DriftSnapshot } from '@sr/shared';
 
 export interface HudState {
   speedKmh: number;
@@ -68,7 +68,7 @@ export class Hud {
       <canvas class="hud-map" width="180" height="180"></canvas>
       <div class="hud-br">
         <canvas class="hud-rpm" width="220" height="120"></canvas>
-        <div class="hud-speed"><span class="v">0</span><span class="u">км/ч</span></div>
+        <div class="hud-speed"><span class="v">0</span><span class="u">${t('hud.kmh')}</span></div>
         <div class="hud-gear">N</div>
         <div class="hud-nitro"><div class="fill"></div><span>N₂O</span></div>
       </div>
@@ -126,7 +126,9 @@ export class Hud {
         attr.className = 'hud-attr';
         this.el.appendChild(attr);
       }
-      attr.textContent = city.attribution;
+      attr.textContent = city.attribution.includes('OpenStreetMap')
+        ? t('osm.attribution')
+        : city.attribution;
     }
     g.lineJoin = 'round';
     const path = () => {
@@ -177,11 +179,12 @@ export class Hud {
     this.pos.style.display = s.total > 1 ? '' : 'none';
     this.pos.innerHTML = `<span class="v">${s.position}</span><span class="of">/${s.total}</span>`;
     this.lap.textContent = showRace
-      ? `КРУГ ${Math.min(s.lap + 1, s.laps)}/${s.laps}`
-      : 'СВОБОДНАЯ ЕЗДА';
+      ? t('hud.lap', { n: Math.min(s.lap + 1, s.laps), of: s.laps })
+      : t('hud.free');
     this.time.textContent = showRace ? formatTime(s.time) : formatTime(s.lapTime);
-    const bestTxt = s.bestLap > 0 ? `ЛУЧШИЙ ${formatTime(s.bestLap)}` : '';
-    const ghostTxt = s.ghostBest > 0 ? ` · ПРИЗРАК ${formatTime(s.ghostBest)}` : '';
+    const bestTxt = s.bestLap > 0 ? t('hud.best', { time: formatTime(s.bestLap) }) : '';
+    const ghostTxt =
+      s.ghostBest > 0 ? ` · ${t('hud.ghost', { time: formatTime(s.ghostBest) })}` : '';
     this.best.textContent = bestTxt + ghostTxt;
 
     // Обратный отсчёт
@@ -195,14 +198,14 @@ export class Hud {
         this.lastCount = n;
       }
     } else if (this.lastCount > 0 && s.racing) {
-      this.center.textContent = 'СТАРТ!';
+      this.center.textContent = t('hud.go');
       this.center.className = 'hud-center pop go go-anim';
       this.lastCount = 0;
       setTimeout(() => (this.center.textContent = ''), 900);
     }
 
     this.banner.classList.toggle('hidden', !s.wrongWay);
-    this.banner.textContent = 'НЕ ТУДА — РАЗВЕРНИСЬ';
+    this.banner.textContent = t('hud.wrongWay');
 
     if (s.drift) {
       this.driftBox.classList.remove('hidden');

@@ -7,7 +7,7 @@ import type { Quality } from '../render/quality';
 /** Загрузка city.json и регистрация городских трасс. */
 export async function loadCity(id: string): Promise<City> {
   const res = await fetch(`${import.meta.env.BASE_URL}cities/${id}/city.json`);
-  if (!res.ok) throw new Error(`город ${id} не найден`);
+  if (!res.ok) throw new Error(`city ${id} not found`);
   const city = parseCity(await res.json());
   for (const t of city.tracks) registerTrack(t);
   return city;
@@ -15,10 +15,11 @@ export async function loadCity(id: string): Promise<City> {
 
 export const CITIES = [
   // Реальные районы 2×2 км из OpenStreetMap (10.2), © участники OpenStreetMap (ODbL)
-  { id: 'moscow_center', name: 'Москва, центр', country: 'Россия' },
-  { id: 'tokyo_shinjuku', name: 'Токио, Синдзюку', country: 'Япония' },
-  { id: 'moscow_synth', name: 'Москва (процедурная)', country: 'Россия' },
-  { id: 'tokyo_synth', name: 'Токио (процедурный)', country: 'Япония' },
+  // Названия — в i18n: city.<id>, страна — country.<код>
+  { id: 'moscow_center', country: 'ru' },
+  { id: 'tokyo_shinjuku', country: 'jp' },
+  { id: 'moscow_synth', country: 'ru' },
+  { id: 'tokyo_synth', country: 'jp' },
 ];
 
 function canvasTexture(

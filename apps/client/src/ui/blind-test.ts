@@ -1,5 +1,5 @@
 import type { Rapier } from '@sr/physics';
-import { CAR_IDS } from '@sr/shared';
+import { t, CAR_IDS } from '@sr/shared';
 
 /** Слепой тест — три машины разных схем привода (rwd / fwd / awd), а не весь автопарк. */
 const BLIND_IDS = ['era2000_coupe', 'era2026_hatch', 'kaizen_rx34'].filter((id) =>
@@ -11,11 +11,11 @@ import { escapeHtml } from './menu';
 import { api, newKey } from '../meta/api';
 
 export const QUESTIONS = [
-  { id: 'smooth', text: 'Плавность управления' },
-  { id: 'responsive', text: 'Отзывчивость (машина делает то, что я хочу)' },
-  { id: 'drift', text: 'Дрифт (легко войти, удержать и выйти)' },
-  { id: 'speed', text: 'Ощущение скорости' },
-  { id: 'more', text: 'Хочется поиграть ещё' },
+  { id: 'smooth' },
+  { id: 'responsive' },
+  { id: 'drift' },
+  { id: 'speed' },
+  { id: 'more' },
 ] as const;
 
 export interface BlindResult {
@@ -104,17 +104,16 @@ export class BlindTest {
   private intro(): void {
     const all = loadResults();
     const el = this.show(`
-      <p class="big" style="font:900 italic 34px var(--font);margin:0">Слепой тест управления</p>
-      <p class="sub">Вы прокатитесь на ${BLIND_IDS.length} машинах под буквами. После каждой — 5 вопросов по шкале 1–5.
-      Мин. ${MIN_DRIVE_SECONDS} с езды на машину. Полигон: прямая с трамплином, шпилька, S-повороты, дрифт-круг.</p>
-      <h2>Имя или номер тестера</h2>
-      <input type="text" maxlength="24" data-k="name" placeholder="например, Т-07" />
-      <button class="btn primary" data-k="go">Начать</button>
+      <p class="big" style="font:900 italic 34px var(--font);margin:0">${t('blind.title')}</p>
+      <p class="sub">${t('blind.sub', { n: BLIND_IDS.length, s: MIN_DRIVE_SECONDS })}</p>
+      <h2>${t('blind.tester')}</h2>
+      <input type="text" maxlength="24" data-k="name" placeholder="T-07" />
+      <button class="btn primary" data-k="go">${t('blind.start')}</button>
       <div class="btnrow">
-        <button class="btn" data-k="dl">Скачать результаты (${all.length})</button>
-        <button class="btn" data-k="sum">Сводка</button>
+        <button class="btn" data-k="dl">${t('blind.download', { n: all.length })}</button>
+        <button class="btn" data-k="sum">${t('blind.summary')}</button>
       </div>
-      <p class="hint">Результаты хранятся в этом браузере, пока не скачаны. Управление: W/S/A/D, пробел — резкий тормоз (с газом и рулём — занос), Shift — нитро, R — сброс. Геймпад и сенсор тоже работают.</p>`);
+      <p class="hint">${t('blind.hint')}</p>`);
     const name = el.querySelector('[data-k="name"]') as HTMLInputElement;
     (el.querySelector('[data-k="go"]') as HTMLElement).onclick = () => {
       this.tester = name.value.trim() || `T-${Date.now().toString(36)}`;
@@ -148,15 +147,15 @@ export class BlindTest {
     const bar = document.createElement('div');
     bar.style.cssText =
       'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:25;display:flex;gap:8px;align-items:center';
-    bar.innerHTML = `<span class="btn" style="pointer-events:none">Машина ${label}</span><button class="btn" data-k="rate" disabled>Оценить</button>`;
+    bar.innerHTML = `<span class="btn" style="pointer-events:none">${t('blind.car', { label })}</span><button class="btn" data-k="rate" disabled>${t('blind.rate')}</button>`;
     this.root.appendChild(bar);
     const rate = bar.querySelector('[data-k="rate"]') as HTMLButtonElement;
     const tick = setInterval(() => {
       const s = (performance.now() - this.driveStart) / 1000;
       if (s >= MIN_DRIVE_SECONDS) {
         rate.disabled = false;
-        rate.textContent = 'Оценить';
-      } else rate.textContent = `Оценить (${Math.ceil(MIN_DRIVE_SECONDS - s)} с)`;
+        rate.textContent = t('blind.rate');
+      } else rate.textContent = t('blind.rateIn', { n: Math.ceil(MIN_DRIVE_SECONDS - s) });
     }, 250);
     rate.onclick = () => {
       clearInterval(tick);
@@ -171,7 +170,7 @@ export class BlindTest {
   private form(label: string, carId: string, seconds: number, device: string): void {
     const qs = QUESTIONS.map(
       (q) =>
-        `<h2>${q.text}</h2><div class="row" data-q="${q.id}">${[1, 2, 3, 4, 5]
+        `<h2>${t(`blind.q.${q.id}`)}</h2><div class="row" data-q="${q.id}">${[1, 2, 3, 4, 5]
           .map(
             (n) =>
               `<button class="btn" data-v="${n}" style="flex:1;text-align:center">${n}</button>`,
@@ -179,10 +178,10 @@ export class BlindTest {
           .join('')}</div>`,
     ).join('');
     const el = this
-      .show(`<p class="big" style="font:900 italic 30px var(--font);margin:0">Машина ${label}</p>
-      <p class="sub">1 — плохо, 5 — отлично</p>${qs}
-      <h2>Комментарий (необязательно)</h2><input type="text" maxlength="300" data-k="comment" />
-      <button class="btn primary" data-k="save" disabled>Сохранить</button>`);
+      .show(`<p class="big" style="font:900 italic 30px var(--font);margin:0">${t('blind.car', { label })}</p>
+      <p class="sub">${t('blind.scale')}</p>${qs}
+      <h2>${t('blind.comment')}</h2><input type="text" maxlength="300" data-k="comment" />
+      <button class="btn primary" data-k="save" disabled>${t('blind.save')}</button>`);
     const scores: Record<string, number> = {};
     const save = el.querySelector('[data-k="save"]') as HTMLButtonElement;
     el.querySelectorAll('[data-q]').forEach((row) => {
@@ -219,9 +218,9 @@ export class BlindTest {
 
   private thanks(): void {
     const el = this
-      .show(`<p class="big" style="font:900 italic 34px var(--font);margin:0">Спасибо!</p>
-      <p class="sub">Ответы сохранены. Передайте устройство следующему тестеру.</p>
-      <div class="btnrow"><button class="btn" data-k="next">Следующий тестер</button><button class="btn" data-k="dl">Скачать JSON</button></div>`);
+      .show(`<p class="big" style="font:900 italic 34px var(--font);margin:0">${t('blind.thanks')}</p>
+      <p class="sub">${t('blind.thanks.sub')}</p>
+      <div class="btnrow"><button class="btn" data-k="next">${t('blind.next')}</button><button class="btn" data-k="dl">${t('blind.json')}</button></div>`);
     (el.querySelector('[data-k="next"]') as HTMLElement).onclick = () => this.intro();
     (el.querySelector('[data-k="dl"]') as HTMLElement).onclick = () => this.download();
   }
@@ -250,7 +249,7 @@ export class BlindTest {
   private async summary(): Promise<void> {
     // Сначала общая сводка с сервера, без сети — по этому браузеру
     let avg = averages(loadResults());
-    let source = 'по этому устройству';
+    let source = t('blind.local');
     try {
       const srv = await api<{
         testers: number;
@@ -258,7 +257,7 @@ export class BlindTest {
       }>('/api/blind/summary', { auth: false });
       if (srv.cars.length) {
         avg = Object.fromEntries(srv.cars.map((c) => [c.car_id, c]));
-        source = `все тестеры: ${srv.testers}`;
+        source = t('blind.all', { n: srv.testers });
       }
     } catch {
       /* офлайн */
@@ -273,10 +272,10 @@ export class BlindTest {
       )
       .join('');
     const el = this
-      .show(`<div class="results"><p class="big" style="font:900 italic 30px var(--font);margin:0">Сводка</p>
-      <p class="sub">Цель — ≥ 4,0 по каждому пункту · ${source}</p>
-      <table><tr><th>Машина</th>${QUESTIONS.map((q) => `<th>${q.id}</th>`).join('')}</tr>${rows}</table>
-      <div class="btnrow"><button class="btn" data-k="back">Назад</button></div></div>`);
+      .show(`<div class="results"><p class="big" style="font:900 italic 30px var(--font);margin:0">${t('blind.summary')}</p>
+      <p class="sub">${t('blind.goal')} · ${source}</p>
+      <table><tr><th>${t('menu.car')}</th>${QUESTIONS.map((q) => `<th>${q.id}</th>`).join('')}</tr>${rows}</table>
+      <div class="btnrow"><button class="btn" data-k="back">${t('ui.back')}</button></div></div>`);
     (el.querySelector('[data-k="back"]') as HTMLElement).onclick = () => this.intro();
   }
 

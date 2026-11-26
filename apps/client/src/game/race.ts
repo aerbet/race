@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {
+  t,
   DriftScorer,
   FIXED_DT,
   RaceTracker,
@@ -56,48 +57,35 @@ export interface RaceSetup {
   ownedCarId?: string;
 }
 
-export const MODES: Record<
-  ModeId,
-  { title: string; desc: string; track: string; laps: number; bots: boolean }
-> = {
+export const MODES: Record<ModeId, { track: string; laps: number; bots: boolean }> = {
   circuit: {
-    title: 'Круг',
-    desc: 'Кольцо, несколько кругов против ботов',
     track: 'polygon',
     laps: 3,
     bots: true,
   },
   sprint: {
-    title: 'Спринт',
-    desc: 'Из точки А в точку Б, кто первый',
     track: 'night_sprint',
     laps: 1,
     bots: true,
   },
   drift: {
-    title: 'Дрифт',
-    desc: 'Очки за угол, скорость и длину цепочки',
     track: 'polygon',
     laps: 2,
     bots: false,
   },
   timeattack: {
-    title: 'На время',
-    desc: 'Один на трассе против своего призрака',
     track: 'polygon',
     laps: 3,
     bots: false,
   },
   free: {
-    title: 'Свободная езда',
-    desc: 'Полигон без правил и таймера',
     track: 'polygon',
     laps: 999,
     bots: false,
   },
 };
 
-const BOT_NAMES = ['Вега', 'Шторм', 'Кира', 'Марат', 'Нова', 'Рэй', 'Ли', 'Оскар'];
+const botNames = () => t('bot.names').split(',');
 
 export interface ResultRow {
   id: string;
@@ -200,7 +188,7 @@ export class RaceController {
       if (slot === playerSlot) slot++;
       const carId = rivals[i % rivals.length]!;
       const sc = this.session.addCar(getCar(carId), slot, {
-        name: BOT_NAMES[i % BOT_NAMES.length],
+        name: botNames()[i % botNames().length],
       });
       const bot = new Bot(sc.vehicle, track, {
         level: setup.botLevel,
@@ -208,7 +196,7 @@ export class RaceController {
         rubberBand: setup.rubberBand,
       });
       const id = `bot${i}`;
-      this.register(sc, id, BOT_NAMES[i % BOT_NAMES.length]!);
+      this.register(sc, id, botNames()[i % botNames().length]!);
       sc.controller = () =>
         this.tracker.phase === 'countdown' ? { ...emptyInput(), handbrake: 1 } : bot.think();
       this.bots.push({ car: sc, bot, id });

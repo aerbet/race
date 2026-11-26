@@ -1,4 +1,5 @@
 import {
+  t,
   CARS,
   Msg,
   PROTOCOL_VERSION,
@@ -47,19 +48,19 @@ export function startOnline(app: App): void {
 
   const chooser = () => {
     const el = h(`<div class="screen"><div class="menu panel">
-      <p class="big" style="font:900 italic 36px var(--font);margin:0">Онлайн</p>
-      <p class="sub">До 8 игроков. Если за 30 с никто не подключился — добавятся боты.</p>
+      <p class="big" style="font:900 italic 36px var(--font);margin:0">${t('on.title')}</p>
+      <p class="sub">${t('on.sub')}</p>
       <div class="btnrow" style="flex-direction:column">
-        <button class="btn" data-k="quick">Быстрая игра<small>Случайная открытая комната</small></button>
-        <button class="btn" data-k="create">Создать приватную комнату<small>Получите ссылку для друзей</small></button>
-        <button class="btn" data-k="freeroam">Свободная езда: Москва<small>До 16 игроков · мигните фарами (H) рядом с соперником, чтобы вызвать на гонку</small></button>
-        <button class="btn" data-k="freeroam_tyo">Свободная езда: Токио<small>Неоновый квартал, вызов фарами (H)</small></button>
+        <button class="btn" data-k="quick">${t('on.quick')}<small>${t('on.quick.sub')}</small></button>
+        <button class="btn" data-k="create">${t('on.create')}<small>${t('on.create.sub')}</small></button>
+        <button class="btn" data-k="freeroam">${t('on.free.msk')}<small>${t('on.free.msk.sub')}</small></button>
+        <button class="btn" data-k="freeroam_tyo">${t('on.free.tyo')}<small>${t('on.free.tyo.sub')}</small></button>
       </div>
-      <h2>Код комнаты</h2>
+      <h2>${t('on.code')}</h2>
       <div class="row"><input type="text" maxlength="6" data-k="code" placeholder="ABC123" style="flex:1;text-transform:uppercase" />
-      <button class="btn" data-k="join">Войти</button></div>
-      <div class="btnrow"><button class="btn" data-k="back">Назад</button></div>
-      <p class="hint">Тест плохой сети: добавьте к адресу <span class="kbd">?lag=150&amp;jitter=30&amp;loss=2</span></p>
+      <button class="btn" data-k="join">${t('on.join')}</button></div>
+      <div class="btnrow"><button class="btn" data-k="back">${t('ui.back')}</button></div>
+      <p class="hint">${t('on.lagHint')} <span class="kbd">?lag=150&amp;jitter=30&amp;loss=2</span></p>
     </div></div>`);
     show(el);
     const q = (k: string) => el.querySelector(`[data-k="${k}"]`) as HTMLElement;
@@ -82,7 +83,9 @@ export function startOnline(app: App): void {
   ) => {
     const settings = loadSettings();
     show(
-      h(`<div class="screen"><div class="menu panel"><p class="sub">Подключение…</p></div></div>`),
+      h(
+        `<div class="screen"><div class="menu panel"><p class="sub">${t('on.connecting')}</p></div></div>`,
+      ),
     );
     const net = new NetClient();
     let welcome: WelcomeMsg | null = null;
@@ -105,10 +108,10 @@ export function startOnline(app: App): void {
       if (!race || !freeroam) return;
       if (e.code === 'KeyH') {
         race.flashLights();
-        const t = race.nearestAhead(CHALLENGE_RANGE_CLIENT);
-        if (t) {
-          net.send({ type: Msg.Challenge, target: t.id });
-          app.toast(`Вызов отправлен: ${t.name}`);
+        const rival = race.nearestAhead(CHALLENGE_RANGE_CLIENT);
+        if (rival) {
+          net.send({ type: Msg.Challenge, target: rival.id });
+          app.toast(t('on.challengeSent', { name: rival.name }));
         }
       }
       if (e.code === 'KeyY') reply(true);
@@ -124,15 +127,15 @@ export function startOnline(app: App): void {
       race = null;
       app.endRace();
       const el =
-        h(`<div class="screen"><div class="menu panel"><p class="big" style="font:800 24px var(--font)">Не удалось</p>
-        <p class="sub">${escapeHtml(text)}</p><div class="btnrow"><button class="btn" data-k="back">Назад</button></div></div></div>`);
+        h(`<div class="screen"><div class="menu panel"><p class="big" style="font:800 24px var(--font)">${t('on.failed')}</p>
+        <p class="sub">${escapeHtml(text)}</p><div class="btnrow"><button class="btn" data-k="back">${t('ui.back')}</button></div></div></div>`);
       show(el);
       (el.querySelector('[data-k="back"]') as HTMLElement).onclick = chooser;
     };
 
     net.onClose = (reason) => {
       cleanup();
-      if (race && !race.done && !switching) fail(`Соединение потеряно: ${reason}`);
+      if (race && !race.done && !switching) fail(t('on.lost', { reason }));
     };
     let switching = false;
 
@@ -180,7 +183,7 @@ export function startOnline(app: App): void {
         },
       });
       race.session.start();
-      if (freeroam) app.toast('Свободная езда · H — мигнуть фарами / вызвать на гонку', 4);
+      if (freeroam) app.toast(t('on.freeToast'), 4);
     };
 
     const renderLobby = () => {
@@ -190,21 +193,21 @@ export function startOnline(app: App): void {
       const rows = lobby.players
         .map(
           (p) =>
-            `<tr class="${p.id === welcome!.playerId ? 'me' : ''}"><td>${escapeHtml(p.name)}${p.bot ? ' (бот)' : ''}${
+            `<tr class="${p.id === welcome!.playerId ? 'me' : ''}"><td>${escapeHtml(p.name)}${p.bot ? ` ${t('on.bot')}` : ''}${
               p.id === lobby!.hostId ? ' ★' : ''
-            }</td><td>${escapeHtml(CARS[p.carId]?.name ?? p.carId)}</td><td>${p.ready ? 'готов' : '…'}</td></tr>`,
+            }</td><td>${escapeHtml(CARS[p.carId]?.name ?? p.carId)}</td><td>${p.ready ? t('on.ready') : '…'}</td></tr>`,
         )
         .join('');
       const el = h(`<div class="screen"><div class="menu panel results">
-        <p class="big" style="font:900 italic 30px var(--font);margin:0">Комната ${welcome.room}</p>
-        <p class="sub">${lobby.phase === 'lobby' ? `Боты через ${Math.ceil(lobby.timer)} с` : 'Старт!'} · пинг ${Math.round(net.rtt)} мс · протокол v${PROTOCOL_VERSION}</p>
-        <table><tr><th>Гонщик</th><th>Машина</th><th></th></tr>${rows}</table>
-        <h2>Ссылка для друзей</h2>
-        <div class="row"><input type="text" readonly value="${link}" style="flex:1" data-k="link"/><button class="btn" data-k="copy">Копировать</button></div>
+        <p class="big" style="font:900 italic 30px var(--font);margin:0">${t('on.room', { room: welcome.room })}</p>
+        <p class="sub">${lobby.phase === 'lobby' ? t('on.botsIn', { n: Math.ceil(lobby.timer) }) : t('hud.go')} · ${t('on.ping', { ms: Math.round(net.rtt) })} · v${PROTOCOL_VERSION}</p>
+        <table><tr><th>${t('res.racer')}</th><th>${t('menu.car')}</th><th></th></tr>${rows}</table>
+        <h2>${t('on.link')}</h2>
+        <div class="row"><input type="text" readonly value="${link}" style="flex:1" data-k="link"/><button class="btn" data-k="copy">${t('on.copy')}</button></div>
         <div class="btnrow">
-          <button class="btn ${ready ? 'sel' : ''}" data-k="ready">${ready ? 'Готов ✓' : 'Готов'}</button>
-          ${isHost ? '<button class="btn" data-k="start">Старт сейчас (с ботами)</button>' : ''}
-          <button class="btn" data-k="leave">Выйти</button>
+          <button class="btn ${ready ? 'sel' : ''}" data-k="ready">${ready ? `${t('on.readyBtn')} ✓` : t('on.readyBtn')}</button>
+          ${isHost ? `<button class="btn" data-k="start">${t('on.startNow')}</button>` : ''}
+          <button class="btn" data-k="leave">${t('on.leave')}</button>
         </div></div></div>`);
       show(el);
       const q = (k: string) => el.querySelector(`[data-k="${k}"]`) as HTMLElement | null;
@@ -245,8 +248,9 @@ export function startOnline(app: App): void {
       if (m.type === Msg.ChallengeInvite) {
         pendingInvite = { from: m.from };
         inviteEl?.remove();
-        inviteEl = h(`<div class="invite panel"><b>${escapeHtml(m.name)}</b> вызывает на гонку
-          <div class="btnrow"><button class="btn" data-k="yes">Принять (Y)</button><button class="btn" data-k="no">Отказ (N)</button></div></div>`);
+        inviteEl =
+          h(`<div class="invite panel">${t('on.invite', { name: `<b>${escapeHtml(m.name)}</b>` })}
+          <div class="btnrow"><button class="btn" data-k="yes">${t('on.accept')}</button><button class="btn" data-k="no">${t('on.decline')}</button></div></div>`);
         root.appendChild(inviteEl);
         (inviteEl.querySelector('[data-k="yes"]') as HTMLElement).onclick = () => reply(true);
         (inviteEl.querySelector('[data-k="no"]') as HTMLElement).onclick = () => reply(false);
@@ -265,7 +269,7 @@ export function startOnline(app: App): void {
         cleanup();
         net.close();
         app.endRace();
-        app.toast('Гонка-вызов!');
+        app.toast(t('on.challengeGo'));
         void connect('join', m.room, { autoReady: true });
         return;
       }
@@ -293,7 +297,7 @@ export function startOnline(app: App): void {
     try {
       await net.opened();
     } catch {
-      return fail('Сервер гонок недоступен. Запустите его: pnpm --filter race-server dev');
+      return fail(t('on.noServer'));
     }
     net.send({
       type: Msg.Hello,

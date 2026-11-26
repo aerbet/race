@@ -20,7 +20,7 @@ export class FpsCounter {
       this.fps = Math.round(this.frames / this.acc);
       this.frames = 0;
       this.acc = 0;
-      this.el.textContent = `${this.fps} fps · ${this.frameMs.toFixed(1)} мс ${extra}`;
+      this.el.textContent = `${this.fps} fps · ${this.frameMs.toFixed(1)} ms ${extra}`;
     }
   }
 }

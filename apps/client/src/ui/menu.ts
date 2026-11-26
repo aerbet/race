@@ -1,4 +1,14 @@
-import { BRAND, CARS, WEATHER_NAMES, formatTime, type Weather } from '@sr/shared';
+import {
+  BRAND,
+  CARS,
+  formatTime,
+  getLang,
+  setLang,
+  t,
+  tn,
+  type Lang,
+  type Weather,
+} from '@sr/shared';
 import { CITIES } from '../city/city-view';
 import { loadQualitySetting, saveQualitySetting } from '../render/quality';
 import { account } from '../meta/account';
@@ -56,20 +66,35 @@ const CITY_TRACKS: Record<string, Record<ModeId, string>> = {
 const TRACK_LOCATIONS: Record<string, string> = { jp_touge: 'jp_touge' };
 
 const LOCATIONS = [
-  { id: 'polygon', title: 'Полигон', desc: 'Тестовая трасса 1×1 км' },
+  { id: 'polygon', title: () => t('loc.polygon'), desc: () => t('loc.polygon.desc') },
   ...CITIES.map((c) => ({
     id: c.id,
-    title: c.name,
-    desc: c.id.endsWith('_synth')
-      ? `${c.country} · ночной город, блоки 256 м`
-      : `${c.country} · реальные улицы (© OpenStreetMap)`,
+    title: () => t(`city.${c.id}`),
+    desc: () =>
+      t(c.id.endsWith('_synth') ? 'loc.synth.desc' : 'loc.real.desc', {
+        country: t(`country.${c.country}`),
+      }),
   })),
-  {
-    id: 'jp_touge',
-    title: 'Япония: горный перевал',
-    desc: 'Серпантин в гору, 6 шпилек, подъём 140 м',
-  },
+  { id: 'jp_touge', title: () => t('loc.jp_touge'), desc: () => t('loc.jp_touge.desc') },
 ];
+
+/** Подсказка по клавишам: клавиша → ключ перевода. */
+const CONTROLS: [string, string][] = [
+  ['W/↑', 'ctl.gas'],
+  ['S/↓', 'ctl.brake'],
+  ['A D', 'ctl.steer'],
+  ['space', 'ctl.handbrake'],
+  ['Shift', 'ctl.nitro'],
+  ['C', 'ctl.camera'],
+  ['R', 'ctl.reset'],
+  ['Esc', 'ctl.pause'],
+  ['Q/E', 'ctl.shift'],
+];
+
+export const LANG_KEY = 'sr:lang';
+export function locale(): string {
+  return getLang() === 'ru' ? 'ru-RU' : 'en-US';
+}
 
 const DEFAULTS: MenuSettings = {
   mode: 'circuit',
@@ -77,7 +102,7 @@ const DEFAULTS: MenuSettings = {
   bots: 5,
   botLevel: 'medium',
   manual: false,
-  playerName: 'Игрок',
+  playerName: '',
   location: 'moscow_center',
   weather: 'snow',
 };
@@ -113,14 +138,14 @@ export function setupFromSettings(s: MenuSettings): RaceSetup {
     botLevel: s.botLevel,
     laps: m.laps,
     manual: s.manual,
-    playerName: s.playerName || 'Игрок',
+    playerName: s.playerName || t('menu.defaultName'),
   };
 }
 
-const LEVELS: { id: BotLevel; title: string }[] = [
-  { id: 'easy', title: 'Лёгкие' },
-  { id: 'medium', title: 'Средние' },
-  { id: 'hard', title: 'Сложные' },
+const LEVELS: { id: BotLevel; title: () => string }[] = [
+  { id: 'easy', title: () => t('level.easy') },
+  { id: 'medium', title: () => t('level.medium') },
+  { id: 'hard', title: () => t('level.hard') },
 ];
 
 function h(html: string): HTMLElement {
@@ -141,35 +166,34 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
   const s = loadSettings();
   const el = h(`<div class="screen"><div class="menu">
     <div class="topbar">
-      <button class="btn" data-meta="profile">${account.token ? `👤 ${escapeHtml(account.name ?? '')}` : 'Войти'}</button>
-      <button class="btn" data-meta="garage">Гараж</button>
-      <button class="btn" data-meta="shop">Магазин</button>
-      <button class="btn" data-meta="records">Рекорды</button>
-      <button class="btn" data-meta="ratings">Рейтинг</button>
-      <button class="btn" data-meta="dispatcher">Диспетчер</button>
+      <button class="btn" data-meta="profile">${account.token ? `👤 ${escapeHtml(account.name ?? '')}` : t('menu.login')}</button>
+      <button class="btn" data-meta="garage">${t('menu.garage')}</button>
+      <button class="btn" data-meta="shop">${t('menu.shop')}</button>
+      <button class="btn" data-meta="records">${t('menu.records')}</button>
+      <button class="btn" data-meta="ratings">${t('menu.ratings')}</button>
+      <button class="btn" data-meta="dispatcher">${t('menu.dispatcher')}</button>
     </div>
     <h1>${BRAND.title}</h1>
-    <p class="tagline">${BRAND.tagline}</p>
-    <a class="btn blind-cta" href="?blind">Помоги настроить управление<small>3 тачки, по минуте на каждую и 5 оценок. Анонимно.</small></a>
-    <h2>Где</h2><div class="grid2" data-k="loc"></div>
-    <div data-k="weatherBlock"><h2>Погода</h2><div class="row" data-k="weather"></div></div>
-    <h2>Режим</h2><div class="grid2" data-k="mode"></div>
+    <p class="tagline">${t('brand.tagline')}</p>
+    <a class="btn blind-cta" href="?blind">${t('menu.blind')}<small>${t('menu.blind.sub')}</small></a>
+    <h2>${t('menu.where')}</h2><div class="grid2" data-k="loc"></div>
+    <div data-k="weatherBlock"><h2>${t('menu.weather')}</h2><div class="row" data-k="weather"></div></div>
+    <h2>${t('menu.mode')}</h2><div class="grid2" data-k="mode"></div>
     <img data-k="map" class="trackmap" alt="" />
-    <h2>Машина</h2><div class="grid2" data-k="car"></div>
-    <div data-k="botsBlock"><h2>Соперники</h2>
+    <h2>${t('menu.car')}</h2><div class="grid2" data-k="car"></div>
+    <div data-k="botsBlock"><h2>${t('menu.rivals')}</h2>
       <div class="row" data-k="bots"></div>
       <div class="row" data-k="level" style="margin-top:8px"></div>
     </div>
-    <h2>Коробка</h2><div class="row" data-k="gear"></div>
-    <h2>Графика</h2><div class="row" data-k="quality"></div>
-    <h2>Имя</h2><input type="text" maxlength="16" data-k="name" />
-    <button class="btn primary" data-k="go">Поехали</button>
-    <button class="btn" data-k="online" style="width:100%;margin-top:8px;text-align:center">Онлайн-гонка</button>
+    <h2>${t('menu.gearbox')}</h2><div class="row" data-k="gear"></div>
+    <h2>${t('menu.graphics')}</h2><div class="row" data-k="quality"></div>
+    <h2>${t('menu.language')}</h2><div class="row" data-k="lang"></div>
+    <h2>${t('menu.name')}</h2><input type="text" maxlength="16" data-k="name" placeholder="${t('menu.defaultName')}" />
+    <button class="btn primary" data-k="go">${t('menu.go')}</button>
+    <button class="btn" data-k="online" style="width:100%;margin-top:8px;text-align:center">${t('menu.online')}</button>
     <p class="hint">
-      <span class="kbd">W/↑</span> газ · <span class="kbd">S/↓</span> тормоз/задний · <span class="kbd">A D</span> руль ·
-      <span class="kbd">Пробел</span> резкий тормоз (с газом и рулём — занос) · <span class="kbd">Shift</span> нитро · <span class="kbd">C</span> камера ·
-      <span class="kbd">R</span> сброс · <span class="kbd">Esc</span> пауза · <span class="kbd">Q/E</span> передачи (ручная)<br/>
-      Геймпад: стик — руль, R2/L2 — газ/тормоз, A — резкий тормоз / занос с газом, B — нитро. На телефоне — экранные кнопки, газ автоматический.
+      ${CONTROLS.map(([k, l]) => `<span class="kbd">${k === 'space' ? t('ctl.space') : k}</span> ${t(l)}`).join(' · ')}<br/>
+      ${t('ctl.gamepad')} ${t('ctl.touch')}
     </p>
   </div></div>`);
   root.appendChild(el);
@@ -180,7 +204,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     locBox.innerHTML = '';
     for (const l of LOCATIONS) {
       const b = h(
-        `<button class="btn ${s.location === l.id ? 'sel' : ''}">${l.title}<small>${l.desc}</small></button>`,
+        `<button class="btn ${s.location === l.id ? 'sel' : ''}">${l.title()}<small>${l.desc()}</small></button>`,
       );
       b.onclick = () => {
         s.location = l.id;
@@ -198,7 +222,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     wBox.innerHTML = '';
     for (const w of ['dry', 'wet', 'snow'] as Weather[]) {
       const b = h(
-        `<button class="btn ${s.weather === w ? 'sel' : ''}">${WEATHER_NAMES[w]}</button>`,
+        `<button class="btn ${s.weather === w ? 'sel' : ''}">${t(`weather.${w}`)}</button>`,
       );
       b.onclick = () => {
         s.weather = w;
@@ -208,9 +232,9 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     }
     const modeBox = q('mode');
     modeBox.innerHTML = '';
-    for (const [id, m] of Object.entries(MODES) as [ModeId, (typeof MODES)[ModeId]][]) {
+    for (const id of Object.keys(MODES) as ModeId[]) {
       const b = h(
-        `<button class="btn ${s.mode === id ? 'sel' : ''}">${m.title}<small>${m.desc}</small></button>`,
+        `<button class="btn ${s.mode === id ? 'sel' : ''}">${t(`mode.${id}`)}<small>${t(`mode.${id}.desc`)}</small></button>`,
       );
       b.onclick = () => {
         s.mode = id;
@@ -223,18 +247,25 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     if (account.token) {
       // Вошли: едем на машине из гаража (с тюнингом)
       const b = h(
-        `<button class="btn sel">Машина из гаража<small>выбор и тюнинг — в «Гараже»</small></button>`,
+        `<button class="btn sel">${t('menu.garageCar')}<small>${t('menu.garageCar.sub')}</small></button>`,
       );
       b.onclick = () => actions.meta('garage');
       carBox.appendChild(b);
     }
     for (const c of account.token ? [] : Object.values(CARS)) {
       const ghost = loadGhost(setupFromSettings(s).trackId, c.id);
-      const drive = { rwd: 'задний', fwd: 'передний', awd: 'полный' }[c.drive];
-      const b = h(`<button class="btn ${s.carId === c.id ? 'sel' : ''}">${c.name}
-        <small>эпоха ${c.era} · ${drive} привод · 0–100 за ${c.specs.zeroTo100} с · ${c.specs.topSpeedKmh} км/ч${
-          ghost ? `<br/>лучший круг: ${formatTime(ghost.lapSteps / 60)}` : ''
-        }</small></button>`);
+      const stats = t('menu.carStats', {
+        era: c.era,
+        drive: t(`drive.${c.drive}`),
+        t: c.specs.zeroTo100,
+        top: c.specs.topSpeedKmh,
+      });
+      const best = ghost
+        ? `<br/>${t('menu.bestLap', { time: formatTime(ghost.lapSteps / 60) })}`
+        : '';
+      const b = h(
+        `<button class="btn ${s.carId === c.id ? 'sel' : ''}">${c.name}<small>${stats}${best}</small></button>`,
+      );
       b.onclick = () => {
         s.carId = c.id;
         render();
@@ -246,7 +277,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     bots.innerHTML = '';
     for (const n of [0, 1, 3, 5, 7]) {
       const b = h(
-        `<button class="btn ${s.bots === n ? 'sel' : ''}">${n === 0 ? 'Один' : n}</button>`,
+        `<button class="btn ${s.bots === n ? 'sel' : ''}">${n === 0 ? t('menu.solo') : n}</button>`,
       );
       b.onclick = () => {
         s.bots = n;
@@ -266,11 +297,11 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     }
     const gear = q('gear');
     gear.innerHTML = '';
-    for (const [m, t] of [
-      [false, 'Автомат'],
-      [true, 'Ручная (Q/E)'],
+    for (const [m, key] of [
+      [false, 'gear.auto'],
+      [true, 'gear.manual'],
     ] as const) {
-      const b = h(`<button class="btn ${s.manual === m ? 'sel' : ''}">${t}</button>`);
+      const b = h(`<button class="btn ${s.manual === m ? 'sel' : ''}">${t(key)}</button>`);
       b.onclick = () => {
         s.manual = m;
         render();
@@ -281,17 +312,34 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
     const qBox = q('quality');
     qBox.innerHTML = '';
     const cur = loadQualitySetting();
-    for (const [v, t] of [
-      ['auto', 'Авто'],
-      ['low', 'Низкое'],
-      ['high', 'Высокое'],
+    for (const [v, key] of [
+      ['auto', 'quality.auto'],
+      ['low', 'quality.low'],
+      ['high', 'quality.high'],
     ] as const) {
-      const b = h(`<button class="btn ${cur === v ? 'sel' : ''}">${t}</button>`);
+      const b = h(`<button class="btn ${cur === v ? 'sel' : ''}">${t(key)}</button>`);
       b.onclick = () => {
         saveQualitySetting(v);
         render();
       };
       qBox.appendChild(b);
+    }
+    const langBox = q('lang');
+    langBox.innerHTML = '';
+    for (const l of ['ru', 'en'] as Lang[]) {
+      const b = h(`<button class="btn ${getLang() === l ? 'sel' : ''}">${t(`lang.${l}`)}</button>`);
+      b.onclick = () => {
+        try {
+          localStorage.setItem(LANG_KEY, l);
+        } catch {
+          /* без хранилища язык держится до перезагрузки */
+        }
+        setLang(l);
+        document.documentElement.lang = l;
+        // Шаблон меню собран на старом языке — пересобираем экран целиком
+        location.reload();
+      };
+      langBox.appendChild(b);
     }
   };
   render();
@@ -326,14 +374,25 @@ export function showResults(root: HTMLElement, r: RaceResults, actions: ResultAc
   let headline = '';
   let sub = '';
   if (r.setup.mode === 'drift') {
-    headline = `${(r.driftScore ?? 0).toLocaleString('ru-RU')} очков`;
-    sub = `Лучшая цепочка: ${(r.bestDriftChain ?? 0).toLocaleString('ru-RU')}`;
+    headline = tn('res.points', r.driftScore ?? 0);
+    sub = t('res.bestChain', { n: (r.bestDriftChain ?? 0).toLocaleString(locale()) });
   } else if (r.setup.mode === 'timeattack') {
     headline = formatTime(me?.time ?? 0);
-    sub = `Лучший круг: ${formatTime(r.bestLap ?? 0)}${r.newBestLap ? ' — новый рекорд, призрак сохранён' : ''}`;
+    sub = r.newBestLap
+      ? t('res.newRecord')
+      : t('res.bestLap', { time: formatTime(r.bestLap ?? 0) });
   } else {
-    headline = me?.finished ? `${me.position} место` : 'Не финишировал';
-    sub = `Время: ${formatTime(me?.time ?? 0)} · лучший круг: ${formatTime(r.bestLap ?? 0)}`;
+    const time = formatTime(me?.time ?? 0);
+    if (!me?.finished) {
+      headline = t('res.dnf');
+      sub = t('res.bestLap', { time: formatTime(r.bestLap ?? 0) });
+    } else if (me.position === 1) {
+      headline = t('res.win');
+      sub = t('res.win.sub', { time });
+    } else {
+      headline = t('res.place', { n: me.position });
+      sub = t('res.almost', { time });
+    }
   }
   const rows = r.rows
     .map(
@@ -346,8 +405,8 @@ export function showResults(root: HTMLElement, r: RaceResults, actions: ResultAc
   const el = h(`<div class="screen"><div class="menu results panel">
     <p class="big">${headline}</p>
     <p class="sub">${sub}</p>
-    ${r.rows.length > 1 ? `<table><tr><th>#</th><th>Гонщик</th><th>Время</th><th>Лучший круг</th></tr>${rows}</table>` : ''}
-    <div class="btnrow"><button class="btn" data-k="again">Ещё раз</button><button class="btn" data-k="menu">В меню</button></div>
+    ${r.rows.length > 1 ? `<table><tr><th>#</th><th>${t('res.racer')}</th><th>${t('res.time')}</th><th>${t('res.bestLapH')}</th></tr>${rows}</table>` : ''}
+    <div class="btnrow"><button class="btn" data-k="again">${t('res.again')}</button><button class="btn" data-k="menu">${t('res.menu')}</button></div>
   </div></div>`);
   root.appendChild(el);
   (el.querySelector('[data-k="again"]') as HTMLElement).onclick = actions.restart;
@@ -367,13 +426,13 @@ export interface PauseActions {
 
 export function showPause(root: HTMLElement, a: PauseActions): () => void {
   const el = h(`<div class="screen"><div class="menu panel">
-    <p class="big" style="font:900 italic 40px var(--font);margin:0 0 12px">Пауза</p>
+    <p class="big" style="font:900 italic 40px var(--font);margin:0 0 12px">${t('pause.title')}</p>
     <div class="btnrow" style="flex-direction:column">
-      <button class="btn" data-k="resume">Продолжить</button>
-      <button class="btn" data-k="restart">Заново</button>
-      <button class="btn" data-k="camera">Сменить камеру (C)</button>
-      <button class="btn" data-k="debug">Панель настройки машины (F2)</button>
-      <button class="btn" data-k="menu">В меню</button>
+      <button class="btn" data-k="resume">${t('pause.resume')}</button>
+      <button class="btn" data-k="restart">${t('pause.restart')}</button>
+      <button class="btn" data-k="camera">${t('pause.camera')}</button>
+      <button class="btn" data-k="debug">${t('pause.debug')}</button>
+      <button class="btn" data-k="menu">${t('pause.menu')}</button>
     </div></div></div>`);
   root.appendChild(el);
   for (const k of ['resume', 'restart', 'menu', 'camera', 'debug'] as const) {

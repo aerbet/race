@@ -1,10 +1,11 @@
 import {
+  t,
+  has,
   CARS,
   DISPATCHER,
   PART_CATEGORIES,
   TUNING,
   TRACKS,
-  WEATHER_NAMES,
   applyTuning,
   computePI,
   formatTime,
@@ -13,11 +14,11 @@ import {
   type PartCategory,
   type Weather,
 } from '@sr/shared';
-import { escapeHtml } from '../ui/menu';
+import { escapeHtml, locale } from '../ui/menu';
 import { account, logout, saveAccount } from './account';
 import {
-  ApiError,
   api,
+  errText,
   catalog,
   garageList,
   login,
@@ -45,16 +46,15 @@ function screen(root: HTMLElement, inner: string): { el: HTMLElement; close: () 
 
 const q = <T extends HTMLElement = HTMLElement>(el: HTMLElement, k: string) =>
   el.querySelector(`[data-k="${k}"]`) as T;
-const errText = (e: unknown) => (e instanceof ApiError ? e.message : 'Что-то пошло не так');
 
 /** Бесплатные варианты деталей кузова: [слот, значение, подпись]. */
 const FREE_PARTS: [string, string, string][] = [
-  ['spoiler', 'none', 'Без спойлера'],
-  ['spoiler', 'lip', 'Губа'],
-  ['spoiler', 'wing', 'Антикрыло'],
-  ['rims', 'five', 'Диски: 5 спиц'],
-  ['vinyl', 'none', 'Без винила'],
-  ['kit', 'stock', 'Кузов: сток'],
+  ['spoiler', 'none', 'free.spoiler.none'],
+  ['spoiler', 'lip', 'free.spoiler.lip'],
+  ['spoiler', 'wing', 'free.spoiler.wing'],
+  ['rims', 'five', 'free.rims.five'],
+  ['vinyl', 'none', 'free.vinyl.none'],
+  ['kit', 'stock', 'free.kit.stock'],
 ];
 
 export const PAINTS = [
@@ -75,14 +75,16 @@ export function showProfile(root: HTMLElement, done: () => void): void {
     const s = screen(
       root,
       `<p class="big" style="font:900 italic 32px var(--font);margin:0">${escapeHtml(account.name ?? '')}</p>
-      <p class="sub" data-k="wallet">Загрузка…</p>
-      <div class="btnrow"><button class="btn" data-k="out">Выйти из аккаунта</button><button class="btn" data-k="back">Назад</button></div>`,
+      <p class="sub" data-k="wallet">${t('ui.loading')}</p>
+      <div class="btnrow"><button class="btn" data-k="out">${t('acc.logout')}</button><button class="btn" data-k="back">${t('ui.back')}</button></div>`,
     );
     void wallet()
       .then(
         (w) =>
-          (q(s.el, 'wallet').textContent =
-            `Кредиты: ${w.credits.toLocaleString('ru-RU')} · жетоны: ${w.tokens}`),
+          (q(s.el, 'wallet').textContent = t('acc.wallet', {
+            cr: w.credits.toLocaleString(locale()),
+            tok: w.tokens,
+          })),
       )
       .catch((e) => (q(s.el, 'wallet').textContent = errText(e)));
     q(s.el, 'out').onclick = () => {
@@ -98,13 +100,13 @@ export function showProfile(root: HTMLElement, done: () => void): void {
   }
   const s = screen(
     root,
-    `<p class="big" style="font:900 italic 32px var(--font);margin:0">Аккаунт</p>
-    <p class="sub">Нужен для гаража, тюнинга, наград, рекордов и рейтинга. Без аккаунта можно просто кататься.</p>
-    <h2>Email</h2><input type="text" data-k="email" autocomplete="email" />
-    <h2>Пароль (от 8 символов)</h2><input type="text" data-k="pass" style="-webkit-text-security:disc" autocomplete="current-password" />
-    <h2>Имя в игре (для регистрации)</h2><input type="text" data-k="name" maxlength="32" />
+    `<p class="big" style="font:900 italic 32px var(--font);margin:0">${t('acc.title')}</p>
+    <p class="sub">${t('acc.sub')}</p>
+    <h2>${t('acc.email')}</h2><input type="text" data-k="email" autocomplete="email" />
+    <h2>${t('acc.pass')}</h2><input type="text" data-k="pass" style="-webkit-text-security:disc" autocomplete="current-password" />
+    <h2>${t('acc.name')}</h2><input type="text" data-k="name" maxlength="32" />
     <p class="sub" data-k="err" style="color:#ff7088"></p>
-    <div class="btnrow"><button class="btn" data-k="login">Войти</button><button class="btn" data-k="reg">Зарегистрироваться</button><button class="btn" data-k="back">Назад</button></div>`,
+    <div class="btnrow"><button class="btn" data-k="login">${t('acc.login')}</button><button class="btn" data-k="reg">${t('acc.register')}</button><button class="btn" data-k="back">${t('ui.back')}</button></div>`,
   );
   const val = (k: string) => q<HTMLInputElement>(s.el, k).value.trim();
   const run = async (f: () => Promise<void>) => {
@@ -119,7 +121,7 @@ export function showProfile(root: HTMLElement, done: () => void): void {
   };
   q(s.el, 'login').onclick = () => run(() => login(val('email'), val('pass')));
   q(s.el, 'reg').onclick = () =>
-    run(() => register(val('email'), val('pass'), val('name') || 'Гонщик'));
+    run(() => register(val('email'), val('pass'), val('name') || t('menu.defaultName')));
   q(s.el, 'back').onclick = () => {
     s.close();
     done();
@@ -129,7 +131,7 @@ export function showProfile(root: HTMLElement, done: () => void): void {
 /** Гараж: машины, выбор для заездов, тюнинг по категориям, покраска и неон, покупка машин. */
 export function showGarage(root: HTMLElement, done: () => void): void {
   if (!account.token) return showProfile(root, done);
-  const s = screen(root, `<p class="sub">Загрузка гаража…</p>`);
+  const s = screen(root, `<p class="sub">${t('garage.loading')}</p>`);
   const panel = s.el.querySelector('.panel') as HTMLElement;
   let selected: string | null = account.ownedCarId;
 
@@ -148,7 +150,7 @@ export function showGarage(root: HTMLElement, done: () => void): void {
       ]);
       owned = owned.filter((o) => o.owned);
     } catch (e) {
-      panel.innerHTML = `<p class="sub">${escapeHtml(errText(e))}</p><div class="btnrow"><button class="btn" data-k="back">Назад</button></div>`;
+      panel.innerHTML = `<p class="sub">${escapeHtml(errText(e))}</p><div class="btnrow"><button class="btn" data-k="back">${t('ui.back')}</button></div>`;
       q(panel, 'back').onclick = () => {
         s.close();
         done();
@@ -166,8 +168,8 @@ export function showGarage(root: HTMLElement, done: () => void): void {
       const price = TUNING.categories[cat].price[next];
       const piAfter =
         next <= 4 ? computePI(applyTuning(base, { ...cur.parts, [cat]: next })) : cur.pi;
-      return `<tr><td>${TUNING.categories[cat].name}</td><td>${'■'.repeat(lv)}${'□'.repeat(4 - lv)}</td>
-        <td>${next <= 4 ? `<button class="btn" data-buy="${cat}" ${price! > money ? 'disabled' : ''}>Ур. ${next} · ${price!.toLocaleString('ru-RU')} · PI ${piAfter}</button>` : 'максимум'}</td></tr>`;
+      return `<tr><td>${t(`part.${cat}`)}</td><td>${'■'.repeat(lv)}${'□'.repeat(4 - lv)}</td>
+        <td>${next <= 4 ? `<button class="btn" data-buy="${cat}" ${price! > money ? 'disabled' : ''}>${t('garage.level', { n: next, price: price!.toLocaleString(locale()), pi: piAfter })}</button>` : t('garage.max')}</td></tr>`;
     }).join('');
     const paint = cur.visual.paint ?? '#e8eef7';
     const neon = cur.visual.neon ?? '#29e0ff';
@@ -177,49 +179,49 @@ export function showGarage(root: HTMLElement, done: () => void): void {
       (!!base.kits?.length && (!value || value === 'stock' || base.kits.includes(value)));
     const mine = owned.filter((o) => fits(o.slot, o.value));
     panel.innerHTML = `<div class="results">
-      <p class="big" style="font:900 italic 30px var(--font);margin:0">Гараж</p>
-      <p class="sub">Кредиты: <b>${money.toLocaleString('ru-RU')}</b></p>
+      <p class="big" style="font:900 italic 30px var(--font);margin:0">${t('menu.garage')}</p>
+      <p class="sub">${t('garage.credits', { n: `<b>${money.toLocaleString(locale())}</b>` })}</p>
       <div class="grid2">${cars
         .map(
           (
             c,
           ) => `<button class="btn ${c.id === cur.id ? 'sel' : ''}" data-car="${c.id}">${escapeHtml(CARS[c.carId]?.name ?? c.carId)}
-          <small>PI ${c.pi} · класс ${c.carClass}</small></button>`,
+          <small>${t('garage.pi', { pi: c.pi, cls: c.carClass })}</small></button>`,
         )
         .join('')}</div>
-      <h2>Тюнинг — ${escapeHtml(base.name)} (PI ${cur.pi}, класс ${cur.carClass})</h2>
+      <h2>${t('garage.tuning', { car: escapeHtml(base.name), pi: cur.pi, cls: cur.carClass })}</h2>
       <table>${rows}</table>
-      <h2>Цвет</h2><div class="row">${PAINTS.map((c) => `<button class="swatch ${c === paint ? 'sel' : ''}" data-paint="${c}" style="background:${c}"></button>`).join('')}</div>
-      <h2>Неон</h2><div class="row">${NEONS.map((c) => `<button class="swatch ${c === neon ? 'sel' : ''}" data-neon="${c}" style="background:${c === 'off' ? '#222' : c}">${c === 'off' ? '×' : ''}</button>`).join('')}</div>
-      <h2>Кузов (бесплатно)</h2><div class="row">${FREE_PARTS.filter(([slot]) => fits(slot, ''))
+      <h2>${t('garage.paint')}</h2><div class="row">${PAINTS.map((c) => `<button class="swatch ${c === paint ? 'sel' : ''}" data-paint="${c}" style="background:${c}"></button>`).join('')}</div>
+      <h2>${t('garage.neon')}</h2><div class="row">${NEONS.map((c) => `<button class="swatch ${c === neon ? 'sel' : ''}" data-neon="${c}" style="background:${c === 'off' ? '#222' : c}">${c === 'off' ? '×' : ''}</button>`).join('')}</div>
+      <h2>${t('garage.body')}</h2><div class="row">${FREE_PARTS.filter(([slot]) => fits(slot, ''))
         .map(
           ([slot, value, name]) =>
-            `<button class="btn ${(cur.visual[slot] ?? (slot === 'kit' ? 'stock' : '')) === value ? 'sel' : ''}" data-slot="${slot}" data-val="${value}">${name}</button>`,
+            `<button class="btn ${(cur.visual[slot] ?? (slot === 'kit' ? 'stock' : '')) === value ? 'sel' : ''}" data-slot="${slot}" data-val="${value}">${t(name)}</button>`,
         )
         .join('')}</div>
       ${
         mine.length
-          ? `<h2>Купленное в магазине</h2><div class="row">${mine
+          ? `<h2>${t('garage.bought')}</h2><div class="row">${mine
               .map(
                 (o) =>
                   `<button class="btn ${cur.visual[o.slot] === o.value ? 'sel' : ''}" data-slot="${o.slot}" data-val="${o.value}">${escapeHtml(o.name)}</button>`,
               )
               .join('')}</div>`
-          : '<p class="hint">Премиум-краски, неон, винилы, диски и кузовные киты — в «Магазине».</p>'
+          : `<p class="hint">${t('garage.shopHint')}</p>`
       }
-      <h2>Автосалон</h2><div class="grid2">${
+      <h2>${t('garage.dealer')}</h2><div class="grid2">${
         shop
           .filter((c) => !cars.some((o) => o.carId === c.id))
           .map(
             (
               c,
             ) => `<button class="btn" data-shop="${c.id}" ${c.price > money ? 'disabled' : ''}>${escapeHtml(c.name)}
-          <small>эпоха ${c.era} · PI ${c.pi} · ${c.price.toLocaleString('ru-RU')} кр.</small></button>`,
+          <small>${t('garage.dealerCar', { era: c.era, pi: c.pi, price: c.price.toLocaleString(locale()) })}</small></button>`,
           )
-          .join('') || '<p class="sub">Все машины уже в гараже</p>'
+          .join('') || `<p class="sub">${t('garage.allOwned')}</p>`
       }</div>
       <p class="sub" data-k="err" style="color:#ff7088"></p>
-      <div class="btnrow"><button class="btn" data-k="back">Готово</button></div></div>`;
+      <div class="btnrow"><button class="btn" data-k="back">${t('ui.done')}</button></div></div>`;
     const act = async (f: () => Promise<unknown>) => {
       try {
         await f();
@@ -277,13 +279,13 @@ export function showRecords(root: HTMLElement, done: () => void): void {
   const s = screen(root, '');
   const panel = s.el.querySelector('.panel') as HTMLElement;
   const render = async () => {
-    panel.innerHTML = `<div class="results"><p class="big" style="font:900 italic 30px var(--font);margin:0">Рекорды</p>
-      <div class="row">${tracks.map((t) => `<button class="btn ${t.id === track ? 'sel' : ''}" data-t="${t.id}">${escapeHtml(t.name)}</button>`).join('')}</div>
-      <div class="row" style="margin-top:8px">${(['dry', 'wet', 'snow'] as Weather[]).map((w) => `<button class="btn ${w === weather ? 'sel' : ''}" data-w="${w}">${WEATHER_NAMES[w]}</button>`).join('')}</div>
+    panel.innerHTML = `<div class="results"><p class="big" style="font:900 italic 30px var(--font);margin:0">${t('menu.records')}</p>
+      <div class="row">${tracks.map((tr) => `<button class="btn ${tr.id === track ? 'sel' : ''}" data-t="${tr.id}">${t(`track.${tr.id}`)}</button>`).join('')}</div>
+      <div class="row" style="margin-top:8px">${(['dry', 'wet', 'snow'] as Weather[]).map((w) => `<button class="btn ${w === weather ? 'sel' : ''}" data-w="${w}">${t(`weather.${w}`)}</button>`).join('')}</div>
       <div class="row" style="margin-top:8px">${['D', 'C', 'B', 'A', 'S'].map((c) => `<button class="btn ${c === cls ? 'sel' : ''}" data-c="${c}">${c}</button>`).join('')}</div>
-      <div data-k="table"><p class="sub">Загрузка…</p></div>
-      <p class="hint">В топ-100 попадают только заезды, которые сервер повторил по записи ввода и получил то же время.</p>
-      <div class="btnrow"><button class="btn" data-k="back">Назад</button></div></div>`;
+      <div data-k="table"><p class="sub">${t('ui.loading')}</p></div>
+      <p class="hint">${t('rec.hint')}</p>
+      <div class="btnrow"><button class="btn" data-k="back">${t('ui.back')}</button></div></div>`;
     panel
       .querySelectorAll<HTMLElement>('[data-t]')
       .forEach((b) => (b.onclick = () => ((track = b.dataset.t!), void render())));
@@ -302,7 +304,7 @@ export function showRecords(root: HTMLElement, done: () => void): void {
         { rank: number; userId: string; name: string; carId: string; lapSteps: number }[]
       >(`/api/records/${track}?weather=${weather}&class=${cls}`, { auth: false });
       q(panel, 'table').innerHTML = rows.length
-        ? `<table><tr><th>#</th><th>Гонщик</th><th>Машина</th><th>Круг</th></tr>${rows
+        ? `<table><tr><th>#</th><th>${t('res.racer')}</th><th>${t('menu.car')}</th><th>${t('rec.lap')}</th></tr>${rows
             .map(
               (
                 r,
@@ -310,7 +312,7 @@ export function showRecords(root: HTMLElement, done: () => void): void {
               <td>${escapeHtml(CARS[r.carId]?.name ?? r.carId)}</td><td>${formatTime(r.lapSteps / 60)}</td></tr>`,
             )
             .join('')}</table>`
-        : '<p class="sub">Пока пусто — будьте первым.</p>';
+        : `<p class="sub">${t('rec.empty')}</p>`;
     } catch (e) {
       q(panel, 'table').innerHTML = `<p class="sub">${escapeHtml(errText(e))}</p>`;
     }
@@ -324,11 +326,11 @@ export function showRatings(root: HTMLElement, done: () => void): void {
   const s = screen(root, '');
   const panel = s.el.querySelector('.panel') as HTMLElement;
   const render = async () => {
-    panel.innerHTML = `<div class="results"><p class="big" style="font:900 italic 30px var(--font);margin:0">Рейтинг сезона</p>
-      <div class="row">${['D', 'C', 'B', 'A', 'S'].map((c) => `<button class="btn ${c === cls ? 'sel' : ''}" data-c="${c}">Класс ${c}</button>`).join('')}</div>
-      <div data-k="table"><p class="sub">Загрузка…</p></div>
-      <p class="hint">Считаются открытые онлайн-гонки от двух игроков с аккаунтом. Рейтинг — в классе вашей машины.</p>
-      <div class="btnrow"><button class="btn" data-k="back">Назад</button></div></div>`;
+    panel.innerHTML = `<div class="results"><p class="big" style="font:900 italic 30px var(--font);margin:0">${t('rat.title')}</p>
+      <div class="row">${['D', 'C', 'B', 'A', 'S'].map((c) => `<button class="btn ${c === cls ? 'sel' : ''}" data-c="${c}">${t('rat.class', { cls: c })}</button>`).join('')}</div>
+      <div data-k="table"><p class="sub">${t('ui.loading')}</p></div>
+      <p class="hint">${t('rat.hint')}</p>
+      <div class="btnrow"><button class="btn" data-k="back">${t('ui.back')}</button></div></div>`;
     panel
       .querySelectorAll<HTMLElement>('[data-c]')
       .forEach((b) => (b.onclick = () => ((cls = b.dataset.c!), void render())));
@@ -343,13 +345,13 @@ export function showRatings(root: HTMLElement, done: () => void): void {
         auth: false,
       });
       q(panel, 'table').innerHTML = rows.length
-        ? `<table><tr><th>#</th><th>Гонщик</th><th>Рейтинг</th><th>Гонок</th></tr>${rows
+        ? `<table><tr><th>#</th><th>${t('res.racer')}</th><th>${t('rat.rating')}</th><th>${t('rat.games')}</th></tr>${rows
             .map(
               (r) =>
                 `<tr class="${r.userId === account.userId ? 'me' : ''}"><td>${r.rank}</td><td>${escapeHtml(r.name)}</td><td>${r.rating}</td><td>${r.games}</td></tr>`,
             )
             .join('')}</table>`
-        : '<p class="sub">В этом классе ещё никто не гонялся.</p>';
+        : `<p class="sub">${t('rat.empty')}</p>`;
     } catch (e) {
       q(panel, 'table').innerHTML = `<p class="sub">${escapeHtml(errText(e))}</p>`;
     }
@@ -367,6 +369,9 @@ export function dispatcherSeen(): boolean {
 }
 
 /** Диалог с «Диспетчером». Гость проходит локально; вошедший — с сервером (награда в конце). */
+/** Реплика диспетчера на языке игрока; без перевода — из сценария. */
+const storyText = (k: string, fallback: string) => (has(`story.${k}`) ? t(`story.${k}`) : fallback);
+
 export function showDispatcher(root: HTMLElement, done: () => void): void {
   const s = screen(root, '');
   s.el.classList.add('dispatcher');
@@ -384,17 +389,18 @@ export function showDispatcher(root: HTMLElement, done: () => void): void {
   const render = () => {
     const n = DISPATCHER.nodes[node];
     if (!n || n.end) return finish();
-    panel.innerHTML = `<div class="radio"><span class="dot"></span>${escapeHtml(DISPATCHER.speaker)} · канал 7</div>
+    panel.innerHTML = `<div class="radio"><span class="dot"></span>${t('story.speaker')} · ${t('story.channel')}</div>
       <p class="line" data-k="text"></p>
-      <div class="btnrow" style="flex-direction:column">${n.choices.map((c, i) => `<button class="btn" data-i="${i}">${escapeHtml(c.text)}</button>`).join('')}</div>
-      <p class="hint">${account.token ? `За разговор — бонус ${DISPATCHER.reward.toLocaleString('ru-RU')} кредитов.` : 'Войдите в аккаунт, чтобы получить стартовый бонус.'}</p>`;
+      <div class="btnrow" style="flex-direction:column">${n.choices.map((c, i) => `<button class="btn" data-i="${i}">${escapeHtml(storyText(`${node}.c${i}`, c.text))}</button>`).join('')}</div>
+      <p class="hint">${account.token ? t('story.bonus', { n: DISPATCHER.reward.toLocaleString(locale()) }) : t('story.login')}</p>`;
     // Эффект «печатает по рации»
     const el = q(panel, 'text');
+    const text = storyText(node, n.text);
     let i = 0;
     const tick = setInterval(() => {
       i += 2;
-      el.textContent = n.text.slice(0, i);
-      if (i >= n.text.length) clearInterval(tick);
+      el.textContent = text.slice(0, i);
+      if (i >= text.length) clearInterval(tick);
     }, 16);
     panel.querySelectorAll<HTMLElement>('[data-i]').forEach((b) => {
       b.onclick = async () => {

@@ -1,3 +1,4 @@
+import { t, tn } from '@sr/shared';
 import { music } from '../audio/music';
 
 /** Мини-плеер: выбор папки/файлов, ⏮ ⏯ ⏭, перемешивание, громкость. M — пауза/воспроизведение. */
@@ -9,13 +10,13 @@ export class MusicWidget {
     this.el = document.createElement('div');
     this.el.className = 'music';
     this.el.innerHTML = `
-      <button class="mbtn" data-k="pick" title="Своя музыка (файлы не покидают устройство)">♪</button>
-      <span class="mname" data-k="name">Своя музыка</span>
-      <button class="mbtn" data-k="prev" title="Назад">⏮</button>
-      <button class="mbtn" data-k="play" title="Пауза (M)">⏯</button>
-      <button class="mbtn" data-k="next" title="Дальше">⏭</button>
-      <button class="mbtn" data-k="shuffle" title="Перемешать">⤮</button>
-      <input type="range" min="0" max="1" step="0.05" value="0.6" data-k="vol" title="Громкость" />
+      <button class="mbtn" data-k="pick" title="${t('music.own.title')}">♪</button>
+      <span class="mname" data-k="name">${t('music.own')}</span>
+      <button class="mbtn" data-k="prev" title="${t('music.prev')}">⏮</button>
+      <button class="mbtn" data-k="play" title="${t('music.play')}">⏯</button>
+      <button class="mbtn" data-k="next" title="${t('music.next')}">⏭</button>
+      <button class="mbtn" data-k="shuffle" title="${t('music.shuffle')}">⤮</button>
+      <input type="range" min="0" max="1" step="0.05" value="0.6" data-k="vol" title="${t('music.volume')}" />
       <input type="file" accept="audio/*" multiple hidden data-k="file" />`;
     parent.appendChild(this.el);
     const q = <T extends HTMLElement>(k: string) => this.el.querySelector(`[data-k="${k}"]`) as T;
@@ -54,8 +55,8 @@ export class MusicWidget {
     name.textContent = cur
       ? cur.name.replace(/\.[^.]+$/, '')
       : music.tracks.length
-        ? `${music.tracks.length} треков`
-        : 'Своя музыка';
+        ? tn('music.tracks', music.tracks.length)
+        : t('music.own');
     this.el.classList.toggle('has', music.tracks.length > 0);
     this.el.classList.toggle('on', music.playing);
     (this.el.querySelector('[data-k="shuffle"]') as HTMLElement).classList.toggle(

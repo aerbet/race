@@ -220,7 +220,7 @@ export function splitCarModel(
   const brakes: (THREE.Object3D | null)[] = [];
   WHEEL_NODES.forEach((name, i) => {
     const w = root.getObjectByName(name);
-    if (!w) throw new Error(`в модели нет ${name}`);
+    if (!w) throw new Error(`model has no ${name}`);
     const c = center(w);
     wheels.push(detach(name, c)!);
     brakes.push(detach(BRAKE_NODES[i]!, c));

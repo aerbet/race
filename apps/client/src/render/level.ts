@@ -167,7 +167,7 @@ export class LevelView {
     const base = `${import.meta.env.BASE_URL}tracks/terrain_${id}`;
     void Promise.all([
       fetch(`${base}.json`).then((r) => {
-        if (!r.ok) throw new Error('нет рельефа');
+        if (!r.ok) throw new Error('no terrain');
         return r.json() as Promise<{
           instances: [string, number, number, number, number, number][];
         }>;

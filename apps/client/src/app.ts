@@ -1,5 +1,5 @@
 import type { Rapier } from '@sr/physics';
-import { formatTime, toBase64, type City, type RaceEvent } from '@sr/shared';
+import { t, formatTime, toBase64, type City, type RaceEvent } from '@sr/shared';
 import { loadCity } from './city/city-view';
 import { RaceController, type RaceResults, type RaceSetup } from './game/race';
 import { getQuality, loadQualitySetting, saveQualitySetting, type Quality } from './render/quality';
@@ -7,14 +7,14 @@ import { FpsProbe } from './render/fps-probe';
 import { FpsCounter } from './render/fps';
 import { InputManager } from './input/input';
 import { Hud, type MinimapDot } from './ui/hud';
-import { showMenu, showPause, showResults } from './ui/menu';
+import { locale, showMenu, showPause, showResults } from './ui/menu';
 import { DebugPanel } from './ui/debug-panel';
 import { InputDebug } from './ui/input-debug';
 import { CarAudio, audio } from './audio/engine-audio';
 import { showShop } from './meta/shop-screen';
 import { MusicWidget } from './ui/music-ui';
 import { account } from './meta/account';
-import { ApiError, activeCar, api } from './meta/api';
+import { ApiError, activeCar, api, errText } from './meta/api';
 import {
   dispatcherSeen,
   showDispatcher,
@@ -215,14 +215,14 @@ export class App {
     if (e.racer !== 'player') return;
     if (e.type === 'lap' && race.setup.mode !== 'free') {
       const left = race.tracker.laps - (e.lap ?? 0);
-      const t = formatTime((e.lapSteps ?? 0) / 60);
-      if (left === 1) hud.showToast(`ПОСЛЕДНИЙ КРУГ · ${t}`);
-      else if (left > 1) hud.showToast(`КРУГ ${t}`);
+      const time = formatTime((e.lapSteps ?? 0) / 60);
+      if (left === 1) hud.showToast(t('hud.lastLap', { time }));
+      else if (left > 1) hud.showToast(t('hud.lapToast', { time }));
     }
     if (e.type === 'lap' && race.setup.mode === 'free')
-      hud.showToast(`КРУГ ${formatTime((e.lapSteps ?? 0) / 60)}`);
-    if (e.type === 'overtake') hud.showToast('ОБГОН +N₂O', 1.2, 'good');
-    if (e.type === 'finish') hud.showToast('ФИНИШ', 3);
+      hud.showToast(t('hud.lapToast', { time: formatTime((e.lapSteps ?? 0) / 60) }));
+    if (e.type === 'overtake') hud.showToast(t('hud.overtake'), 1.2, 'good');
+    if (e.type === 'finish') hud.showToast(t('hud.finish'), 3);
   }
 
   private frame(dt: number, alpha: number): void {
@@ -241,7 +241,7 @@ export class App {
       saveQualitySetting('low');
       const setup = this.lastSetup;
       if (setup) {
-        void this.start(setup).then(() => this.toast('Включили лёгкую графику — так плавнее', 3));
+        void this.start(setup).then(() => this.toast(t('toast.lowQuality'), 3));
         return;
       }
     }
@@ -261,7 +261,11 @@ export class App {
     const drift = race.drift?.snapshot() ?? null;
     if (race.drift && drift?.lastEvent) {
       if (drift.lastEvent === 'lost')
-        hud.showToast(`УДАР! −${drift.lastEventValue.toLocaleString('ru-RU')}`, 1.5, 'bad');
+        hud.showToast(
+          t('hud.crash', { n: drift.lastEventValue.toLocaleString(locale()) }),
+          1.5,
+          'bad',
+        );
       else hud.showToast(`+${drift.lastEventValue.toLocaleString('ru-RU')}`, 1.5, 'good');
       race.drift.lastEvent = null;
     }
@@ -357,11 +361,12 @@ export class App {
           this.input.device === 'touch'
             ? [
                 {
-                  label: () => `Руль: ${this.input.touch.tilt ? 'наклон телефона' : 'кнопки'}`,
+                  label: () =>
+                    t(this.input.touch.tilt ? 'touch.steer.tilt' : 'touch.steer.buttons'),
                   toggle: () => this.input.touch.enableTilt(!this.input.touch.tilt),
                 },
                 {
-                  label: () => `Газ: ${this.input.touch.autoGas ? 'автоматический' : 'кнопкой'}`,
+                  label: () => t(this.input.touch.autoGas ? 'touch.gas.auto' : 'touch.gas.button'),
                   toggle: () => {
                     this.input.touch.autoGas = !this.input.touch.autoGas;
                     this.input.touch.savePrefs();
@@ -418,7 +423,7 @@ export class App {
     if (!me.finished || !me.bestLapSteps) return;
     const note = document.createElement('p');
     note.className = 'sub record-note';
-    note.textContent = 'Отправляем рекорд на проверку…';
+    note.textContent = t('rec.sending');
     this.root.querySelector('.results')?.appendChild(note);
     try {
       const res = await api<{ verified: boolean; rank: number; carClass: string }>('/api/records', {
@@ -432,10 +437,13 @@ export class App {
           inputs: toBase64(race.session.recorder.toBytes()),
         },
       });
-      note.textContent = `Рекорд принят: ${res.rank} место в классе ${res.carClass}${res.verified ? ' (проверен повтором)' : ''}`;
+      note.textContent = t(res.verified ? 'rec.okVerified' : 'rec.ok', {
+        n: res.rank,
+        cls: res.carClass,
+      });
     } catch (e) {
       note.textContent =
-        e instanceof ApiError ? `Рекорд не принят: ${e.message}` : 'Рекорд не отправлен';
+        e instanceof ApiError ? t('rec.rejected', { why: errText(e) }) : t('rec.failed');
     }
   }
 

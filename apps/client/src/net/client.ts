@@ -1,4 +1,5 @@
 import {
+  t,
   DelayedChannel,
   Msg,
   decodeServer,
@@ -43,13 +44,13 @@ export class NetClient {
       try {
         this.inc.send(decodeServer(new Uint8Array(e.data as ArrayBuffer)));
       } catch (err) {
-        console.warn('плохое сообщение сервера', err);
+        console.warn('bad server message', err);
       }
     };
     this.ws.onclose = () => {
       this.closed = true;
       clearInterval(this.pingTimer);
-      this.onClose('соединение закрыто');
+      this.onClose(t('net.closed'));
     };
   }
 
@@ -63,7 +64,7 @@ export class NetClient {
         );
         res();
       });
-      this.ws.addEventListener('error', () => rej(new Error('сервер недоступен')));
+      this.ws.addEventListener('error', () => rej(new Error(t('net.unreachable'))));
     });
   }
 

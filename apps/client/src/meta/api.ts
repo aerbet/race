@@ -1,3 +1,4 @@
+import { t, has, getLang } from '@sr/shared';
 import { account, saveAccount, logout } from './account';
 
 export function apiUrl(): string {
@@ -38,16 +39,27 @@ export async function api<T>(
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
   } catch {
-    throw new ApiError(0, 'offline', 'Сервер API недоступен');
+    throw new ApiError(0, 'offline', t('err.offline'));
   }
   const text = await res.text();
   const data = text ? (JSON.parse(text) as unknown) : null;
   if (!res.ok) {
     if (res.status === 401 && account.token) logout();
     const d = (data ?? {}) as { error?: string; message?: string };
-    throw new ApiError(res.status, d.error ?? 'error', d.message ?? `Ошибка ${res.status}`);
+    throw new ApiError(
+      res.status,
+      d.error ?? 'error',
+      d.message ?? t('err.http', { status: res.status }),
+    );
   }
   return data as T;
+}
+
+/** Текст ошибки для игрока: свой перевод по коду, иначе сообщение сервера (оно на русском). */
+export function errText(e: unknown): string {
+  if (!(e instanceof ApiError)) return t('err.generic');
+  if (has(`err.${e.code}`)) return t(`err.${e.code}`);
+  return getLang() === 'ru' && e.message ? e.message : t('err.generic');
 }
 
 export interface OwnedCar {

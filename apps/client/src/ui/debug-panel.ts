@@ -65,7 +65,7 @@ export class DebugPanel {
   }
 
   private createGui(): void {
-    this.gui = new GUI({ title: `Настройка: ${this.cfg.name}`, width: 320 });
+    this.gui = new GUI({ title: `Tuning: ${this.cfg.name}`, width: 320 });
     this.gui.domElement.style.zIndex = '40';
     this.build(this.gui, this.cfg as unknown as Record<string, unknown>, '');
     const actions = {
@@ -77,8 +77,8 @@ export class DebugPanel {
         this.createGui();
       },
     };
-    this.gui.add(actions, 'save').name('💾 Сохранить JSON');
-    this.gui.add(actions, 'reset').name('↺ Сбросить к исходному');
+    this.gui.add(actions, 'save').name('💾 Save JSON');
+    this.gui.add(actions, 'reset').name('↺ Reset to default');
   }
 
   private build(folder: GUI, obj: Record<string, unknown>, path: string): void {
@@ -98,7 +98,7 @@ export class DebugPanel {
             f.add(v as unknown as Record<string, number>, String(i)).onChange(() => this.apply()),
           );
         } else if (v.every((x) => Array.isArray(x))) {
-          const f = folder.addFolder(`${k} (кривая)`);
+          const f = folder.addFolder(`${k} (curve)`);
           f.close();
           (v as number[][]).forEach((pt) =>
             f
@@ -117,7 +117,7 @@ export class DebugPanel {
 
   private apply(): void {
     try {
-      this.vehicle.setConfig(parseCarConfig(cloneCar(this.cfg), 'панель отладки'));
+      this.vehicle.setConfig(parseCarConfig(cloneCar(this.cfg), 'debug panel'));
       this.gui.domElement.style.outline = '';
     } catch (e) {
       // Невалидное значение — подсвечиваем и не применяем
@@ -147,13 +147,13 @@ export class DebugPanel {
 
 const N = 300;
 const SERIES = [
-  { key: 'speed', label: 'скорость, км/ч', color: '#29e0ff', max: 300 },
-  { key: 'rpm', label: 'обороты', color: '#ff2bd6', max: 9000 },
-  { key: 'slip', label: 'угол заноса, °', color: '#ffb02b', max: 90 },
-  { key: 'lf', label: 'нагр. ПЛ', color: '#8cff3a', max: 12000 },
-  { key: 'rf', label: 'нагр. ПП', color: '#5bd46a', max: 12000 },
-  { key: 'lr', label: 'нагр. ЗЛ', color: '#c7a6ff', max: 12000 },
-  { key: 'rr', label: 'нагр. ЗП', color: '#9f86ff', max: 12000 },
+  { key: 'speed', label: 'speed, km/h', color: '#29e0ff', max: 300 },
+  { key: 'rpm', label: 'rpm', color: '#ff2bd6', max: 9000 },
+  { key: 'slip', label: 'slip angle, °', color: '#ffb02b', max: 90 },
+  { key: 'lf', label: 'load FL', color: '#8cff3a', max: 12000 },
+  { key: 'rf', label: 'load FR', color: '#5bd46a', max: 12000 },
+  { key: 'lr', label: 'load RL', color: '#c7a6ff', max: 12000 },
+  { key: 'rr', label: 'load RR', color: '#9f86ff', max: 12000 },
 ] as const;
 
 /** Телеметрия поверх экрана: скорость, обороты, угол заноса, нагрузка на колёса. */
@@ -233,7 +233,7 @@ export class TelemetryGraph {
       g.fillText(`${s.label}: ${Math.round(cur[s.key]!)}`, 6 + col * 180, 14 + row * 14);
     });
     g.fillStyle = '#fff';
-    g.fillText(`передача ${gear}  дрифт ${df.toFixed(2)}`, 6, 56);
+    g.fillText(`gear ${gear}  drift ${df.toFixed(2)}`, 6, 56);
   }
 
   dispose(): void {

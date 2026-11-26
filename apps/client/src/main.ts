@@ -1,14 +1,23 @@
 import { initPhysics } from '@sr/physics';
-import { BRAND } from '@sr/shared';
+import { BRAND, detectLang, setLang, t, type Lang } from '@sr/shared';
 import { getQuality } from './render/quality';
 import { App } from './app';
 
 async function boot() {
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem('sr:lang');
+  } catch {
+    /* без хранилища — по языку браузера */
+  }
+  const lang: Lang = saved === 'ru' || saved === 'en' ? saved : detectLang(navigator.language);
+  setLang(lang);
+  document.documentElement.lang = lang;
   document.title = BRAND.title;
   const root = document.getElementById('app')!;
   const loading = document.createElement('div');
   loading.className = 'loading';
-  loading.textContent = 'ЗАГРУЗКА…';
+  loading.textContent = t('loading');
   root.appendChild(loading);
   const quality = getQuality();
   // Физика (WASM) качается в фоне: меню не ждёт её (PLAN_V2 7.0.5)
