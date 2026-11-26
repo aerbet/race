@@ -1,15 +1,43 @@
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CARS, CarConfigError, parseCarConfig, sampleCurve } from './index';
 import coupe from './era2000_coupe.json';
 
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+
 describe('car config', () => {
   it('all configs are valid', () => {
-    expect(Object.keys(CARS)).toEqual(['era2000_coupe', 'era2026_hatch', 'kaizen_rx34']);
+    expect(Object.keys(CARS)).toEqual([
+      'era2000_coupe',
+      'era2026_hatch',
+      'kaizen_rx34',
+      'takumo_raiden',
+      'hoshi_vortex',
+      'tsurugi_rs4',
+      'voss_kleiner',
+      'brawler_500',
+      'voss_imperator',
+      'falkner_heck',
+      'raijin_tempest',
+      'hoshi_kaze',
+      'nimbus_e1',
+      'ferro_cuneo',
+    ]);
   });
 
   it('glTF model id is optional and matches a published model', () => {
     expect(CARS.era2000_coupe!.model).toBeUndefined();
     expect(CARS.kaizen_rx34!.model).toBe('kaizen_rx34');
+    // У каждой машины с моделью — опубликованный base.glb и киты
+    for (const c of Object.values(CARS)) {
+      if (!c.model) continue;
+      const dir = join(root, 'apps/client/public/cars', c.model);
+      expect(existsSync(join(dir, 'base.glb')), c.id).toBe(true);
+      for (const k of c.kits ?? [])
+        expect(existsSync(join(dir, `kit_${k}.glb`)), `${c.id} ${k}`).toBe(true);
+    }
   });
 
   it('missing field gives a clear error with a path', () => {

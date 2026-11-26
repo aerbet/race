@@ -35,7 +35,7 @@ export const SOCKETS = [
   'socket_plate_rear',
 ] as const;
 /** Узлы, которые могут быть пустыми (без меша). */
-const MAY_BE_EMPTY = new Set(['spoiler']);
+const MAY_BE_EMPTY = new Set(['spoiler', 'exhaust']); // у электромобиля нет выхлопа
 
 export interface Limits {
   lod0Max: number;

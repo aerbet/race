@@ -1,0 +1,167 @@
+{
+  "id": "hoshi_kaze",
+  "displayName": "Hoshi Kaze",
+  "era": "2026",
+  "reference": "Дух горячего хэтча с большим антикрылом (справка). Референс: 4595 × 1890 × 1405, база 2735, колея 1625/1615.",
+  "dimensions": {
+    "length": 4.62,
+    "width": 1.9,
+    "height": 1.4,
+    "wheelbase": 2.76,
+    "frontOverhang": 0.98,
+    "trackFront": 1.62,
+    "trackRear": 1.61,
+    "groundClearance": 0.125,
+    "wheelDiameter": 0.68,
+    "tireWidth": 0.265
+  },
+  "dimensionsNote": "Изменения к референсу: длина +0,5 %, ширина +0,5 %, высота −0,4 %, база +0,9 %, колея −0,3 %.",
+  "profile": {
+    "side": [
+      [0, 0.5],
+      [0.015, 0.55],
+      [0.05, 0.59],
+      [0.2, 0.63],
+      [0.3, 0.655],
+      [0.44, 0.97],
+      [0.5, 1.0],
+      [0.62, 0.985],
+      [0.78, 0.85],
+      [0.9, 0.74],
+      [0.97, 0.72],
+      [0.99, 0.69],
+      [1, 0.62]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.88],
+      [0.02, 0.96],
+      [0.08, 0.995],
+      [0.2, 1.0],
+      [0.8, 1.0],
+      [0.92, 0.99],
+      [0.985, 0.96],
+      [1.0, 0.92]
+    ],
+    "section": {
+      "exponent": 6.0,
+      "tumblehome": 0.2,
+      "shoulder": 0.76
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.3,
+    "roofFront": 0.455,
+    "roofRear": 0.62,
+    "backlightBase": 0.9,
+    "windowLine": 0.61,
+    "quarterKick": 0.02,
+    "bPillar": 0.54,
+    "doorFront": 0.31
+  },
+  "arches": {
+    "front": {
+      "radius": 0.39,
+      "flare": 0.035
+    },
+    "rear": {
+      "radius": 0.39,
+      "flare": 0.03
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "swept",
+      "outer": 0.95,
+      "inner": 0.55,
+      "h": 0.48,
+      "height": 0.07,
+      "rake": 0.03
+    },
+    "grille": {
+      "style": "upper_lower",
+      "width": 0.6,
+      "h": 0.22,
+      "height": 0.14
+    },
+    "intakes": {
+      "style": "side_vertical",
+      "h": 0.2,
+      "width": 0.12,
+      "height": 0.14,
+      "x": 0.8
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "c_shape",
+      "outer": 0.95,
+      "inner": 0.4,
+      "h": 0.65,
+      "height": 0.08
+    },
+    "diffuser": "big",
+    "exhaust": {
+      "style": "twin_oval",
+      "spacing": 0.26
+    },
+    "plateH": 0.38
+  },
+  "hood": {
+    "style": "center_scoop"
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.36
+  },
+  "spoiler": {
+    "style": "wing",
+    "height": 0.2,
+    "chord": 0.24,
+    "span": 0.85
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "выхлоп — два овальных патрубка вместо трёх по центру",
+    "задние фонари — «скобки» вместо «бумерангов»",
+    "решётка — узкая щель и низкая сетка без сот",
+    "капот — короб воздухозаборника по центру",
+    "антикрыло — на стойках от крышки, своя форма торцевых пластин",
+    "фары — узкие стреловидные клинья"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#f2f2ee",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w02_star5",
+    "inches": 19
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

@@ -2,6 +2,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   CARS,
   FixedStepLoop,
+  computePI,
+  piClass,
   InputPlayer,
   InputRecorder,
   RaceTracker,
@@ -32,9 +34,14 @@ interface LapResult {
  * Один круг полигона. driver — бот или воспроизведение; fps — частота «рендера»,
  * которая гоняет FixedStepLoop. Физика всегда 60 Гц.
  */
-function lap(driver: 'bot' | Uint8Array, fps: number, level: BotLevel = 'hard'): LapResult {
+function lap(
+  driver: 'bot' | Uint8Array,
+  fps: number,
+  level: BotLevel = 'hard',
+  cfg = CARS.era2000_coupe!,
+): LapResult {
   const sim = new Sim(R, track);
-  const car = sim.addCar(CARS.era2000_coupe!, 0);
+  const car = sim.addCar(cfg, 0);
   const race = new RaceTracker(track, 1, 0);
   const p0 = car.position;
   race.addRacer('p', p0.x, p0.z);
@@ -79,6 +86,24 @@ describe('bot on polygon', { timeout: 60_000 }, () => {
     const hard = lap('bot', 60, 'hard').lapSteps;
     expect(easy).toBeGreaterThan(0);
     expect(hard).toBeLessThan(easy);
+  });
+});
+
+describe('balance by class (9.6)', { timeout: 300_000 }, () => {
+  it('every car: bot laps the polygon without resets; lap time drops with every class D → S', () => {
+    const times = new Map<string, number[]>();
+    for (const cfg of Object.values(CARS)) {
+      const r = lap('bot', 60, 'hard', cfg);
+      const cls = piClass(computePI(cfg));
+      if (process.env.MEASURE) console.log(cfg.id, cls, r.lapSteps / 60, 'resets', r.resets);
+      expect(r.lapSteps, cfg.id).toBeGreaterThan(0);
+      expect(r.resets, cfg.id).toBe(0);
+      times.set(cls, [...(times.get(cls) ?? []), r.lapSteps / 60]);
+    }
+    const mean = (c: string) => times.get(c)!.reduce((a, b) => a + b, 0) / times.get(c)!.length;
+    // Средний круг строго быстрее с каждым классом: D > C > B > A > S
+    const order = ['D', 'C', 'B', 'A', 'S'].map(mean);
+    for (let i = 1; i < order.length; i++) expect(order[i]).toBeLessThan(order[i - 1]!);
   });
 });
 

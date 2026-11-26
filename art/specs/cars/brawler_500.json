@@ -1,0 +1,171 @@
+{
+  "id": "brawler_500",
+  "displayName": "Brawler 500",
+  "era": "2000",
+  "reference": "Дух американского маслкара (справка). Референс: 4775 × 1880 × 1410, база 2720, колея 1570/1580.",
+  "dimensions": {
+    "length": 4.82,
+    "width": 1.9,
+    "height": 1.39,
+    "wheelbase": 2.75,
+    "frontOverhang": 0.95,
+    "trackFront": 1.58,
+    "trackRear": 1.59,
+    "groundClearance": 0.13,
+    "wheelDiameter": 0.68,
+    "tireWidth": 0.255
+  },
+  "dimensionsNote": "Изменения к референсу: длина +0,9 %, ширина +1,1 %, высота −1,4 %, база +1,1 %, колея +0,6 %.",
+  "profile": {
+    "side": [
+      [0, 0.55],
+      [0.012, 0.6],
+      [0.04, 0.635],
+      [0.2, 0.67],
+      [0.37, 0.69],
+      [0.49, 0.98],
+      [0.55, 1.0],
+      [0.62, 0.99],
+      [0.72, 0.88],
+      [0.83, 0.76],
+      [0.96, 0.75],
+      [0.99, 0.73],
+      [1, 0.66]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.88],
+      [0.02, 0.96],
+      [0.08, 0.995],
+      [0.2, 1.0],
+      [0.8, 1.0],
+      [0.92, 0.99],
+      [0.985, 0.96],
+      [1.0, 0.92]
+    ],
+    "section": {
+      "exponent": 8.0,
+      "tumblehome": 0.16,
+      "shoulder": 0.8
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.37,
+    "roofFront": 0.5,
+    "roofRear": 0.6,
+    "backlightBase": 0.83,
+    "windowLine": 0.66,
+    "quarterKick": 0.03,
+    "bPillar": 0.62,
+    "doorFront": 0.38
+  },
+  "arches": {
+    "front": {
+      "radius": 0.39,
+      "flare": 0.02
+    },
+    "rear": {
+      "radius": 0.4,
+      "flare": 0.035
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "rect_bar",
+      "outer": 0.95,
+      "inner": 0.62,
+      "h": 0.55,
+      "height": 0.09,
+      "rake": 0.0
+    },
+    "grille": {
+      "style": "split_twin",
+      "width": 0.6,
+      "h": 0.4,
+      "height": 0.15
+    },
+    "intakes": {
+      "style": "corner_blades",
+      "h": 0.2,
+      "width": 0.16,
+      "height": 0.06
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "block",
+      "outer": 0.95,
+      "inner": 0.35,
+      "h": 0.63,
+      "height": 0.1,
+      "bridge": true
+    },
+    "diffuser": "subtle",
+    "exhaust": {
+      "style": "quad",
+      "spacing": 1.1
+    },
+    "plateH": 0.43
+  },
+  "hood": {
+    "style": "center_scoop"
+  },
+  "sideIntake": {
+    "u0": 0.66,
+    "u1": 0.71,
+    "h0": 0.25,
+    "h1": 0.38
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.42
+  },
+  "spoiler": {
+    "style": "lip",
+    "height": 0.02
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "решётка — две раздельные прямоугольные щели с полосами, без эмблемы в центре",
+    "фары — прямоугольные с двумя линзами, не круглые",
+    "задние фонари — горизонтальные блоки с перемычкой вместо вертикальных полос",
+    "выхлоп — четыре круглых патрубка по краям бампера",
+    "капот — короб воздухозаборника по центру",
+    "боковой заборник перед задним колесом своей формы"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#c7a41c",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w06_deep6",
+    "inches": 19
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

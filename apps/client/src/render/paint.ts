@@ -330,7 +330,8 @@ export function applyModelPaint(root: THREE.Object3D, opts: CarViewOptions, hi: 
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh || Array.isArray(mesh.material)) return;
     const old = mesh.material as Std;
-    const onBody = underNode(mesh, 'body');
+    // Ливрея есть только у кузова; без неё кузов и детали делят один материал (склейка в один меш)
+    const onBody = !!livery && underNode(mesh, 'body');
     const key = `${old.uuid}|${onBody ? 1 : 0}`;
     let m = made.get(key);
     if (!m) {

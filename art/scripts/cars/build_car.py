@@ -22,7 +22,7 @@ REQUIRED = [
 ]
 
 # Окрашенные части: общий атлас uv0 и запечённый AO
-PAINTED = ('body', 'hood', 'bumper_front', 'bumper_rear', 'skirts', 'spoiler')
+PAINTED = ('body', 'hood', 'bumper_front', 'bumper_rear', 'skirts', 'spoiler', 'popup_L', 'popup_R')
 
 
 def generator(spec):
@@ -56,7 +56,8 @@ def main():
         root = generator(spec)(spec)
         scene.apply_all(root)
         smooth_shading(root)
-        meshes = [o for o in root.children_recursive if o.type == 'MESH']
+        # пустые меши (выхлоп электромобиля, спойлер «none») — без развёртки
+        meshes = [o for o in root.children_recursive if o.type == 'MESH' and len(o.data.polygons)]
         # uv0: окрашенные части — общий атлас (под AO), остальное — отдельно;
         # у колёс своя развёртка шины под карту протектора — не трогаем
         painted = [o for o in meshes if o.name in PAINTED]

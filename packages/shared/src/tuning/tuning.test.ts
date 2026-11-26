@@ -15,8 +15,11 @@ for (const car of Object.keys(CARS)) {
 const fixturePath = new URL('./pi-fixtures.json', import.meta.url);
 
 describe('tuning', () => {
-  it('stock cars are class D; fully tuned: 2000-era reaches A, 2026 reaches B', () => {
-    for (const c of Object.values(CARS)) expect(piClass(computePI(c))).toBe('D');
+  it('stock 2000-era cars are D/C, the stock lineup covers D–S; fully tuned: coupe A, hatch B', () => {
+    // SPEC: «нулевые» — лёгкие, большой запас тюнинга; «2026» — быстрее с завода
+    const cls = (c: (typeof CARS)[string]) => piClass(computePI(c!));
+    for (const c of Object.values(CARS)) if (c.era === '2000') expect(['D', 'C']).toContain(cls(c));
+    expect(new Set(Object.values(CARS).map(cls))).toEqual(new Set(['D', 'C', 'B', 'A', 'S']));
     expect(piClass(computePI(applyTuning(CARS.era2000_coupe!, FULL)))).toBe('A');
     expect(piClass(computePI(applyTuning(CARS.era2026_hatch!, FULL)))).toBe('B');
   });

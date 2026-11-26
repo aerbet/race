@@ -1,0 +1,170 @@
+{
+  "id": "nimbus_e1",
+  "displayName": "Nimbus E1",
+  "era": "2026",
+  "reference": "Электро-гиперкар (собственный типаж, справка: пропорции современных электрических гиперкаров). Ориентир: 4750 × 1990 × 1210, база 2745.",
+  "dimensions": {
+    "length": 4.72,
+    "width": 1.98,
+    "height": 1.2,
+    "wheelbase": 2.74,
+    "frontOverhang": 0.98,
+    "trackFront": 1.69,
+    "trackRear": 1.65,
+    "groundClearance": 0.11,
+    "wheelDiameter": 0.71,
+    "tireWidth": 0.285
+  },
+  "dimensionsNote": "Изменения к ориентиру: длина −0,6 %, ширина −0,5 %, высота −0,8 %, база −0,2 %.",
+  "profile": {
+    "side": [
+      [0, 0.4],
+      [0.015, 0.45],
+      [0.05, 0.49],
+      [0.2, 0.54],
+      [0.3, 0.57],
+      [0.45, 0.96],
+      [0.52, 1.0],
+      [0.6, 0.99],
+      [0.72, 0.85],
+      [0.86, 0.68],
+      [0.96, 0.65],
+      [0.99, 0.63],
+      [1, 0.56]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.78],
+      [0.03, 0.9],
+      [0.12, 0.97],
+      [0.3, 0.99],
+      [0.7, 1.0],
+      [0.9, 0.99],
+      [0.98, 0.95],
+      [1.0, 0.9]
+    ],
+    "section": {
+      "exponent": 5.0,
+      "tumblehome": 0.32,
+      "shoulder": 0.68
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.3,
+    "roofFront": 0.48,
+    "roofRear": 0.6,
+    "backlightBase": 0.82,
+    "windowLine": 0.62,
+    "quarterKick": 0.06,
+    "bPillar": 0.55,
+    "doorFront": 0.31
+  },
+  "arches": {
+    "front": {
+      "radius": 0.39,
+      "flare": 0.045
+    },
+    "rear": {
+      "radius": 0.39,
+      "flare": 0.055
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "led_strip",
+      "outer": 0.9,
+      "inner": 0.5,
+      "h": 0.36,
+      "height": 0.016,
+      "rake": 0.03
+    },
+    "grille": {
+      "style": "closed",
+      "width": 0.5,
+      "h": 0.17,
+      "height": 0.1
+    },
+    "intakes": {
+      "style": "side_vertical",
+      "h": 0.18,
+      "width": 0.16,
+      "height": 0.14,
+      "x": 0.76
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "full_bar",
+      "outer": 0.95,
+      "inner": 0.5,
+      "h": 0.54,
+      "height": 0.03
+    },
+    "diffuser": "big",
+    "exhaust": {
+      "style": "none"
+    },
+    "plateH": 0.33
+  },
+  "hood": {
+    "style": "vents"
+  },
+  "sideIntake": {
+    "u0": 0.62,
+    "u1": 0.69,
+    "h0": 0.28,
+    "h1": 0.45
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.33
+  },
+  "spoiler": {
+    "style": "lip",
+    "height": 0.025
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "фары — одна тонкая светящаяся полоса через весь нос",
+    "перёд — глухая панель без решётки, только щель датчиков",
+    "задний фонарь — сплошная тонкая полоса во всю ширину",
+    "выхлопа нет; большой диффузор",
+    "капот — две решётки вентиляции",
+    "большой боковой заборник перед задним колесом"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#18a39a",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w04_turbine",
+    "inches": 19
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

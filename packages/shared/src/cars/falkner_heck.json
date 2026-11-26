@@ -1,0 +1,142 @@
+{
+  "id": "falkner_heck",
+  "name": "Falkner Heck",
+  "era": "2026",
+  "model": "falkner_heck",
+  "kits": ["street", "track", "drift"],
+  "drive": "rwd",
+  "awdRearShare": 0.6,
+  "mass": 1430,
+  "body": {
+    "width": 1.87,
+    "height": 1.26,
+    "length": 4.61
+  },
+  "centerOfMass": {
+    "y": -0.24,
+    "z": -0.02
+  },
+  "inertiaScale": 1,
+  "wheels": {
+    "radius": 0.345,
+    "width": 0.285,
+    "wheelbase": 2.48,
+    "track": 1.58,
+    "mountY": -0.135
+  },
+  "suspension": {
+    "restLength": 0.38,
+    "travel": 0.21,
+    "stiffness": 46400,
+    "damping": 3950,
+    "antiRoll": 15300
+  },
+  "engine": {
+    "idleRpm": 900,
+    "redlineRpm": 9000,
+    "torqueCurve": [
+      [900, 257],
+      [2961, 454],
+      [5211, 544],
+      [7105, 500],
+      [8289, 431],
+      [9000, 366]
+    ],
+    "engineBrake": 70,
+    "sound": "v6"
+  },
+  "gearbox": {
+    "ratios": [3.83, 2.36, 1.69, 1.31, 1, 0.79],
+    "reverse": 3.4,
+    "final": 4.27,
+    "shiftTime": 0.18,
+    "autoUpRpm": 8550,
+    "autoDownRpm": 4230
+  },
+  "tires": {
+    "longitudinal": [
+      [0, 0],
+      [0.12, 1.25],
+      [0.3, 1.08],
+      [1, 0.9]
+    ],
+    "lateral": [
+      [0, 0],
+      [6, 1.15],
+      [12, 1.2],
+      [30, 1],
+      [90, 0.85]
+    ],
+    "frontGrip": 1.1,
+    "rearGrip": 1.18,
+    "rollingResistance": 0.012
+  },
+  "brakes": {
+    "maxForce": 15300,
+    "frontBias": 0.6,
+    "handbrakeForce": 6000
+  },
+  "aero": {
+    "drag": 0.37,
+    "downforce": 0.9
+  },
+  "steering": {
+    "maxAngleDeg": 33,
+    "keyboardRate": 4.5,
+    "keyboardReturnRate": 6
+  },
+  "assists": {
+    "speedSteer": {
+      "enabled": true,
+      "minAngleDeg": 7,
+      "speedRefKmh": 180
+    },
+    "turnAssist": {
+      "enabled": true,
+      "yawAccel": 1.6
+    },
+    "driftInit": {
+      "enabled": true,
+      "rearGripScale": 0.42,
+      "minSpeedKmh": 35,
+      "attackRate": 5
+    },
+    "driftHold": {
+      "enabled": true,
+      "minAngleDeg": 20,
+      "maxAngleDeg": 50,
+      "strength": 24,
+      "speedKeep": 0.82
+    },
+    "driftExit": {
+      "enabled": true,
+      "recoverRate": 1.6,
+      "yawDamp": 2.5
+    },
+    "airStabilize": {
+      "enabled": true,
+      "strength": 14,
+      "damping": 4
+    },
+    "softWalls": {
+      "enabled": true,
+      "friction": 0.05,
+      "restitution": 0.15
+    },
+    "autoReset": {
+      "enabled": true,
+      "seconds": 3
+    }
+  },
+  "nitro": {
+    "capacity": 2.6,
+    "boost": 0.3,
+    "chargePerDriftSecond": 0.2,
+    "chargePerAirSecond": 0.35,
+    "chargePerOvertake": 0.15
+  },
+  "specs": {
+    "zeroTo100": 3.8,
+    "topSpeedKmh": 310
+  }
+}

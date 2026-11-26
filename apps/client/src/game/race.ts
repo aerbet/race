@@ -10,6 +10,7 @@ import {
   type City,
   type PartLevels,
   applyTuning,
+  computePI,
   type Weather,
   type RaceEvent,
   type RacerState,
@@ -188,10 +189,15 @@ export class RaceController {
     const autoBot = new Bot(pc.vehicle, track, { level: 'medium' });
     pc.controller = () => autoBot.think();
 
+    // Соперники — машины, ближайшие к машине игрока по PI (не гиперкары против хэтча)
+    const pi = computePI(pc.vehicle.cfg);
+    const rivals = [...CAR_IDS]
+      .sort((a, b) => Math.abs(computePI(getCar(a)) - pi) - Math.abs(computePI(getCar(b)) - pi))
+      .slice(0, Math.max(3, Math.min(nBots, 5)));
     let slot = 0;
     for (let i = 0; i < nBots; i++) {
       if (slot === playerSlot) slot++;
-      const carId = CAR_IDS[i % CAR_IDS.length]!;
+      const carId = rivals[i % rivals.length]!;
       const sc = this.session.addCar(getCar(carId), slot, {
         name: BOT_NAMES[i % BOT_NAMES.length],
       });

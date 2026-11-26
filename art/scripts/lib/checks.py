@@ -8,7 +8,7 @@ from mathutils import Vector
 DEFAULT_NAME = re.compile(r'^(Cube|Sphere|Cylinder|Plane|Circle|Empty|Mesh|Object)(\.\d+)?$|\.\d{3}$')
 
 
-def mesh_errors(o, merge_dist=1e-5, min_area=1e-9):
+def mesh_errors(o, merge_dist=1e-5, min_area=1e-9, outer=None):
     errs = []
     bm = bmesh.new()
     bm.from_mesh(o.data)
@@ -30,10 +30,12 @@ def mesh_errors(o, merge_dist=1e-5, min_area=1e-9):
         if vol < 0:
             errs.append(f'{o.name}: нормали внутрь (объём {vol:.4f})')
     else:
-        # Открытые меши: средняя нормаль должна смотреть от центра объекта
+        # Открытые меши: средняя нормаль должна смотреть от центра объекта или от центра машины
+        # (почти плоская крышка капота «от своего центра» неразличима)
+        def score(c):
+            return sum((f.calc_center_median() - c).dot(f.normal) * f.calc_area() for f in bm.faces)
         c = sum((v.co for v in bm.verts), Vector()) / max(len(bm.verts), 1)
-        score = sum((f.calc_center_median() - c).dot(f.normal) * f.calc_area() for f in bm.faces)
-        if score < 0:
+        if bm.faces and score(c) < 0 and (outer is None or score(outer) < 0):
             errs.append(f'{o.name}: нормали, похоже, внутрь')
     bm.free()
     return errs
@@ -44,11 +46,15 @@ def run(root, required=()):
     errs = []
     objs = [root, *root.children_recursive]
     names = {o.name for o in objs}
+    meshes = [o for o in objs if o.type == 'MESH' and len(o.data.vertices)]
+    pts = [Vector(c) for o in meshes for c in o.bound_box]
+    outer = (Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts))) +
+             Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))) / 2 if pts else None
     for o in objs:
         if DEFAULT_NAME.search(o.name):
             errs.append(f'имя по умолчанию: {o.name}')
         if o.type == 'MESH':
-            errs += mesh_errors(o)
+            errs += mesh_errors(o, outer=outer)
             for m in o.data.materials:
                 if m is None or DEFAULT_NAME.search(m.name) or m.name == 'Material':
                     errs.append(f'{o.name}: материал без имени')

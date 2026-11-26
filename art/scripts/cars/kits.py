@@ -192,18 +192,25 @@ def louvred_vents(body, mat_v=DARK, mat_l=TRIM, x0=0.24, x1=0.46, u0=0.1, u1=0.1
 
 
 def ducktail(body, h, ext, x_frac=0.9):
-    """Хвост на кромке крышки багажника: высота h, вынос назад ext."""
+    """Хвост: на кромке крышки багажника (высота h, вынос назад ext) или козырёк крыши у хэтчбеков."""
+    from cars.car import spoiler_mount
     s = body.s
-    u0, u1 = 0.958, 0.994
-    a = s.half_width(0.96) * x_frac
+    mount, u0, u1 = spoiler_mount(body, body.spec)
     y0, y1 = body.y(u0), body.y(u1)
     z0, z1 = s.top(u0), s.top(u1)
-    prof = [(y0, z0 - 0.004), (y1, z1 - 0.01), (y1 - ext, z1 + h), (y1 - ext + 0.03, z1 + h - 0.012),
-            (y0 + 0.02, z0 + 0.006)]
+    if mount == 'roof':
+        a = s.half_width(u0) * 0.8
+        prof = [(y0, z0 - 0.012), (y1, z1 - 0.014), (y1 - 0.08 - ext * 2, z1 - 0.012 + h * 0.6),
+                (y1 - 0.08 - ext * 2, z1 + h * 0.6), (y0 + 0.02, z0 + 0.008)]
+    else:
+        a = s.half_width(0.96) * x_frac
+        prof = [(y0, z0 - 0.004), (y1, z1 - 0.01), (y1 - ext, z1 + h), (y1 - ext + 0.03, z1 + h - 0.012),
+                (y0 + 0.02, z0 + 0.006)]
     return extrude_profile(prof, -a, a, P)
 
 
-def gt_wing(body, an, span=0.725, rise=0.26, chord=0.3):
+def gt_wing(body, an, span=0.725, rise=0.26, chord=0.3, mats=(CARBON, DARK, ACCENT)):
+    """Антикрыло на стойках: mats — (плоскость, стойки, торцевые пластины)."""
     s = body.s
     bm = bmesh.new()
     yw = body.y(0.982)
@@ -211,20 +218,20 @@ def gt_wing(body, an, span=0.725, rise=0.26, chord=0.3):
     c = chord / 2
     foil = [(yw + c, zw), (yw + c * 0.6, zw + 0.024), (yw, zw + 0.032), (yw - c, zw + 0.05),
             (yw - c, zw + 0.04), (yw, zw + 0.006), (yw + c * 0.6, zw - 0.008)]
-    _add_bm(bm, extrude_profile(foil, -span, span, CARBON))
+    _add_bm(bm, extrude_profile(foil, -span, span, mats[0]))
     for sgn in (-1, 1):
         # торцевые пластины
         plate = [(yw + c + 0.03, zw - 0.06), (yw - c - 0.04, zw - 0.04), (yw - c - 0.04, zw + 0.1),
                  (yw + c - 0.02, zw + 0.07)]
         xa, xb = sorted((sgn * (span - 0.004), sgn * (span + 0.008)))
-        _add_bm(bm, extrude_profile(plate, xa, xb, ACCENT))
+        _add_bm(bm, extrude_profile(plate, xa, xb, mats[2]))
         # стойки: от крышки багажника до крыла
         xs = sgn * 0.38
         ya, yb = body.y(0.93), body.y(0.968)
         za, zb = an.top(xs, 0.93) - 0.012, an.top(xs, 0.968) - 0.012
         post = [(ya, za), (yb, zb), (yw - 0.02, zw + 0.01), (yw + 0.07, zw + 0.012)]
         xa, xb = sorted((xs - 0.006, xs + 0.006))
-        _add_bm(bm, extrude_profile(post, xa, xb, DARK))
+        _add_bm(bm, extrude_profile(post, xa, xb, mats[1]))
     return bm
 
 

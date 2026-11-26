@@ -1,0 +1,171 @@
+{
+  "id": "ferro_cuneo",
+  "displayName": "Ferro Cuneo",
+  "era": "2026",
+  "reference": "Дух итальянского клиновидного суперкара (справка). Референс: 4945 × 2030 × 1135, база 2780, колея 1720/1695.",
+  "dimensions": {
+    "length": 4.9,
+    "width": 2.03,
+    "height": 1.13,
+    "wheelbase": 2.75,
+    "frontOverhang": 1.05,
+    "trackFront": 1.72,
+    "trackRear": 1.7,
+    "groundClearance": 0.11,
+    "wheelDiameter": 0.72,
+    "tireWidth": 0.305
+  },
+  "dimensionsNote": "Изменения к референсу: длина −0,9 %, ширина 0 %, высота −0,4 %, база −1,1 %, колея 0 %.",
+  "profile": {
+    "side": [
+      [0, 0.36],
+      [0.015, 0.4],
+      [0.05, 0.43],
+      [0.15, 0.47],
+      [0.24, 0.52],
+      [0.4, 0.95],
+      [0.47, 1.0],
+      [0.55, 0.98],
+      [0.65, 0.85],
+      [0.8, 0.71],
+      [0.95, 0.67],
+      [0.99, 0.645],
+      [1, 0.58]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.78],
+      [0.03, 0.9],
+      [0.12, 0.97],
+      [0.3, 0.99],
+      [0.7, 1.0],
+      [0.9, 0.99],
+      [0.98, 0.95],
+      [1.0, 0.9]
+    ],
+    "section": {
+      "exponent": 6.0,
+      "tumblehome": 0.35,
+      "shoulder": 0.66
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.24,
+    "roofFront": 0.43,
+    "roofRear": 0.53,
+    "backlightBase": 0.66,
+    "windowLine": 0.6,
+    "quarterKick": 0.08,
+    "bPillar": 0.48,
+    "doorFront": 0.25
+  },
+  "arches": {
+    "front": {
+      "radius": 0.4,
+      "flare": 0.04
+    },
+    "rear": {
+      "radius": 0.41,
+      "flare": 0.05
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "swept",
+      "outer": 0.9,
+      "inner": 0.6,
+      "h": 0.32,
+      "height": 0.05,
+      "rake": 0.04
+    },
+    "grille": {
+      "style": "closed",
+      "width": 0.4,
+      "h": 0.16,
+      "height": 0.08
+    },
+    "intakes": {
+      "style": "side_vertical",
+      "h": 0.17,
+      "width": 0.22,
+      "height": 0.12,
+      "x": 0.7
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "block",
+      "outer": 0.95,
+      "inner": 0.55,
+      "h": 0.56,
+      "height": 0.05
+    },
+    "diffuser": "big",
+    "exhaust": {
+      "style": "quad",
+      "spacing": 0.3
+    },
+    "plateH": 0.38
+  },
+  "hood": {
+    "style": "vents"
+  },
+  "sideIntake": {
+    "u0": 0.55,
+    "u1": 0.64,
+    "h0": 0.2,
+    "h1": 0.48
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.3
+  },
+  "spoiler": {
+    "style": "lip",
+    "height": 0.03
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "фары — узкие стреловидные клинья без Y-образных огней",
+    "задние фонари — прямоугольные блоки, не Y-образные",
+    "выхлоп — четыре круглых патрубка вместо шестигранного по центру",
+    "перёд — глухая панель с двумя большими вертикальными проёмами",
+    "капот — две решётки вентиляции",
+    "боковые заборники своей формы, без жалюзи"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#7cc22a",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w06_deep6",
+    "inches": 19
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

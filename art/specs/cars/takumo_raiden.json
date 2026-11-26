@@ -1,0 +1,165 @@
+{
+  "id": "takumo_raiden",
+  "displayName": "Takumo Raiden",
+  "era": "2000",
+  "reference": "Дух японского купе 90-х с огромным запасом мощности (справка, в игру не попадает). Референс: 4520 × 1810 × 1275, база 2550, колея 1520/1525.",
+  "dimensions": {
+    "length": 4.57,
+    "width": 1.83,
+    "height": 1.26,
+    "wheelbase": 2.58,
+    "frontOverhang": 0.96,
+    "trackFront": 1.535,
+    "trackRear": 1.55,
+    "groundClearance": 0.12,
+    "wheelDiameter": 0.65,
+    "tireWidth": 0.255
+  },
+  "dimensionsNote": "Изменения к референсу: длина +1,1 %, ширина +1,1 %, высота −1,2 %, база +1,2 %, колея +1 %.",
+  "profile": {
+    "side": [
+      [0, 0.47],
+      [0.015, 0.52],
+      [0.05, 0.56],
+      [0.2, 0.6],
+      [0.355, 0.635],
+      [0.47, 0.97],
+      [0.53, 1.0],
+      [0.63, 0.99],
+      [0.72, 0.9],
+      [0.86, 0.77],
+      [0.96, 0.765],
+      [0.99, 0.74],
+      [1, 0.66]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.82],
+      [0.03, 0.93],
+      [0.1, 0.99],
+      [0.22, 1.0],
+      [0.78, 1.0],
+      [0.9, 0.985],
+      [0.98, 0.93],
+      [1.0, 0.86]
+    ],
+    "section": {
+      "exponent": 4.5,
+      "tumblehome": 0.28,
+      "shoulder": 0.72
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.355,
+    "roofFront": 0.49,
+    "roofRear": 0.645,
+    "backlightBase": 0.845,
+    "windowLine": 0.63,
+    "quarterKick": 0.0,
+    "bPillar": 0.6,
+    "doorFront": 0.36
+  },
+  "arches": {
+    "front": {
+      "radius": 0.37,
+      "flare": 0.03
+    },
+    "rear": {
+      "radius": 0.38,
+      "flare": 0.045
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "rect_bar",
+      "outer": 0.95,
+      "inner": 0.5,
+      "h": 0.44,
+      "height": 0.09,
+      "rake": 0.015
+    },
+    "grille": {
+      "style": "split_twin",
+      "width": 0.5,
+      "h": 0.24,
+      "height": 0.12
+    },
+    "intakes": {
+      "style": "side_vertical",
+      "h": 0.2,
+      "width": 0.1,
+      "height": 0.12,
+      "x": 0.8
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "c_shape",
+      "outer": 0.95,
+      "inner": 0.45,
+      "h": 0.62,
+      "height": 0.09
+    },
+    "diffuser": "subtle",
+    "exhaust": {
+      "style": "split_round",
+      "spacing": 1.0
+    },
+    "plateH": 0.33
+  },
+  "hood": {
+    "style": "vents"
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.405
+  },
+  "spoiler": {
+    "style": "ducktail_blade",
+    "height": 0.06
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "передние фары — прямоугольные блоки с двумя линзами и светящейся полосой снизу вместо овальных фар",
+    "решётка — две раздельные овальные щели с рёбрами вместо одного большого воздухозаборника",
+    "задние фонари — «скобки» вместо круглых сдвоенных фонарей",
+    "спойлер — утиный хвост на кромке багажника вместо высокого крыла-дуги",
+    "капот — две решётки вентиляции с ламелями",
+    "выхлоп — два круглых патрубка, разнесённых по углам бампера"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#b71c1c",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w02_star5",
+    "inches": 19
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "id": "voss_kleiner",
+  "displayName": "Voss Kleiner",
+  "era": "2000",
+  "reference": "Дух немецкого горячего хэтча (справка). Референс: 4215 × 1760 × 1480, база 2580, колея 1535/1515.",
+  "dimensions": {
+    "length": 4.25,
+    "width": 1.78,
+    "height": 1.46,
+    "wheelbase": 2.6,
+    "frontOverhang": 0.86,
+    "trackFront": 1.53,
+    "trackRear": 1.51,
+    "groundClearance": 0.13,
+    "wheelDiameter": 0.63,
+    "tireWidth": 0.225
+  },
+  "dimensionsNote": "Изменения к референсу: длина +0,8 %, ширина +1,1 %, высота −1,4 %, база +0,8 %, колея −0,3 %.",
+  "profile": {
+    "side": [
+      [0, 0.52],
+      [0.015, 0.57],
+      [0.05, 0.61],
+      [0.18, 0.65],
+      [0.31, 0.68],
+      [0.47, 0.98],
+      [0.53, 1.0],
+      [0.8, 0.985],
+      [0.87, 0.95],
+      [0.93, 0.86],
+      [0.975, 0.8],
+      [0.995, 0.74],
+      [1, 0.66]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.88],
+      [0.02, 0.96],
+      [0.08, 0.995],
+      [0.2, 1.0],
+      [0.8, 1.0],
+      [0.92, 0.99],
+      [0.985, 0.96],
+      [1.0, 0.92]
+    ],
+    "section": {
+      "exponent": 5.0,
+      "tumblehome": 0.18,
+      "shoulder": 0.72
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.31,
+    "roofFront": 0.47,
+    "roofRear": 0.85,
+    "backlightBase": 0.955,
+    "windowLine": 0.6,
+    "quarterKick": 0.0,
+    "bPillar": 0.56,
+    "doorFront": 0.33
+  },
+  "arches": {
+    "front": {
+      "radius": 0.36,
+      "flare": 0.025
+    },
+    "rear": {
+      "radius": 0.36,
+      "flare": 0.025
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "rect_bar",
+      "outer": 0.95,
+      "inner": 0.55,
+      "h": 0.53,
+      "height": 0.1,
+      "rake": 0.0
+    },
+    "grille": {
+      "style": "upper_lower",
+      "width": 0.55,
+      "h": 0.2,
+      "height": 0.13
+    },
+    "intakes": {
+      "style": "corner_blades",
+      "h": 0.17,
+      "width": 0.13,
+      "height": 0.07
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "block",
+      "outer": 0.95,
+      "inner": 0.5,
+      "h": 0.6,
+      "height": 0.09
+    },
+    "diffuser": "subtle",
+    "exhaust": {
+      "style": "twin_oval",
+      "spacing": 0.32
+    },
+    "plateH": 0.38
+  },
+  "hood": {
+    "style": "flat"
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.37
+  },
+  "spoiler": {
+    "style": "roof",
+    "at": "roof",
+    "height": 0.05
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "фары — прямоугольные с двумя линзами и полосой ходового огня, без фирменной рамки",
+    "решётка — узкая щель без цветной окантовки и сетка в бампере, без эмблемы",
+    "задние фонари — простые прямоугольные блоки",
+    "выхлоп — два овальных патрубка по центру",
+    "козырёк над задним стеклом своей формы",
+    "зеркала на тонкой ножке"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#2e7d32",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w03_mesh",
+    "inches": 17
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

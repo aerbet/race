@@ -48,11 +48,9 @@ def slab(body, outline, view, lift, depth, mat=0, steps=0):
     for f in faces:
         f.material_index = mat
     bm.normal_update()
-    c = sum((v.co for v in top), Vector()) / nn
-    avg_n = sum((n for _, n in hits), Vector()).normalized()
-    if faces[0].normal.dot(avg_n) < 0:
+    # Замкнутая накладка: нормали наружу ⇔ объём положительный (надёжнее, чем по нормали лица)
+    if bm.calc_volume(signed=True) < 0:
         bmesh.ops.reverse_faces(bm, faces=faces)
-    _ = c
     return bm
 
 
@@ -195,98 +193,225 @@ def split_body(body, bm, tags):
     return out
 
 
-def face_details(body, spec, parts):
-    """Фары, решётка, воздухозаборники — проекцией на перёд."""
+def _circle(cx, cz, r, n=20):
+    return [(cx + px, cz + pz) for px, pz in superellipse(r, r, 2, n)[:-1]]
+
+
+def _put(dst, b):
+    if b:
+        _add_bm(dst, b)
+
+
+# ---- библиотека элементов лица (spec.face.*.style) ----
+
+def headlights(body, spec, parts, lights):
+    """Фары по стилю: slim_wedge | swept | rect_bar | round_twin | led_strip | popup."""
     s = body.s
-    f = spec['face']
+    hl = spec['face']['headlight']
+    st = hl.get('style', 'slim_wedge')
     a = s.half_width(0.03)
-    lights = bmesh.new()
-    hl = f['headlight']
-    hz = hl['h'] * s.H
+    hz, hh = hl['h'] * s.H, hl['height']
+    rake = hl.get('rake', 0.0)
+    if st == 'led_strip':
+        # Тонкая светящаяся полоса через весь нос + тёмная подложка
+        xo = hl['outer'] * a
+        path = [(-xo, hz + rake), (-xo * 0.5, hz), (xo * 0.5, hz), (xo, hz + rake)]
+        _put(lights, strip_path(body, path, 'front', hh, 0.006, 0.01, 0))
+        _put(parts['bumper_front'], strip_path(body, path, 'front', hh * 2.4, 0.002, 0.01, 2))
+        return
     for sgn in (-1, 1):
         xo, xi = sgn * hl['outer'] * a, sgn * hl['inner'] * a
-        hh = hl['height']
-        wedge = [(xi, hz - hh * 0.25), (xo, hz - hh * 0.5 + hl['rake']), (xo, hz + hh * 0.5 + hl['rake']),
-                 (xi, hz + hh * 0.3)]
-        b = slab_grid(body, wedge, 'front', 0.005, 0.02, 0, nu=10, nv=3)
-        if b:
-            _add_bm(lights, b)
-        led = [(xi, hz - hh * 0.45), (xi + (xo - xi) * 0.85, hz - hh * 0.6 + hl['rake'] * 0.8)]
-        _add_bm(lights, strip_path(body, led, 'front', 0.012, 0.006, 0.01, 0))
-    # Решётка: тёмная накладка + горизонтальные ламели
-    gr = f['grille']
+        if st in ('slim_wedge', 'swept'):
+            k = 0.25 if st == 'slim_wedge' else 0.05
+            wedge = [(xi, hz - hh * k), (xo, hz - hh * 0.5 + rake), (xo, hz + hh * 0.5 + rake), (xi, hz + hh * 0.3)]
+            _put(lights, slab_grid(body, wedge, 'front', 0.005, 0.02, 0, nu=10, nv=3))
+            led = [(xi, hz - hh * 0.45), (xi + (xo - xi) * 0.85, hz - hh * 0.6 + rake * 0.8)]
+            _put(lights, strip_path(body, led, 'front', 0.012, 0.006, 0.01, 0))
+        elif st == 'rect_bar':
+            q = [(xi, hz - hh / 2), (xo, hz - hh / 2 + rake), (xo, hz + hh / 2 + rake), (xi, hz + hh / 2)]
+            _put(parts['bumper_front'], slab_grid(body, q, 'front', 0.003, 0.02, 2, nu=8, nv=2))
+            # две линзы внутри тёмной рамки
+            for t in (0.3, 0.7):
+                cx = xi + (xo - xi) * t
+                _put(lights, slab(body, _circle(cx, hz + rake * t, hh * 0.32), 'front', 0.008, 0.01, 0))
+            _put(lights, strip_path(body, [(xi, hz - hh * 0.62), (xo, hz - hh * 0.62 + rake)], 'front',
+                                    0.01, 0.006, 0.01, 0))
+        elif st == 'round_twin':
+            r = hh / 2
+            for t in (0.25, 0.75):
+                cx = xi + (xo - xi) * t
+                _put(parts['bumper_front'], slab(body, _circle(cx, hz, r * 1.25), 'front', 0.003, 0.02, 2))
+                _put(lights, slab(body, _circle(cx, hz, r), 'front', 0.008, 0.01, 0))
+        elif st == 'popup':
+            # Подъёмные фары в закрытом положении: крышки в цвет кузова на капоте с тёмным зазором,
+            # ниже в бампере — узкий ходовой огонь
+            u0, u1 = hl.get('u0', 0.035), hl.get('u1', 0.1)
+            xa, xb = sorted((xi, xo))
+            lid = [(xa, u0), (xb, u0), (xb, u1), (xa, u1)]
+            _put(parts['hood'], slab_grid(body, [(xa - sgn * 0.0, u0 - 0.006), (xb, u0 - 0.006), (xb, u1 + 0.006),
+                                                  (xa, u1 + 0.006)], 'top', 0.001, 0.01, 2, nu=4, nv=2))
+            # Крышка — отдельный узел popup_L / popup_R (клиент поднимает её на петле у задней кромки);
+            # под крышкой — фара, которая смотрит вперёд, когда крышка поднята
+            pop = slab_grid(body, lid, 'top', 0.004, 0.01, 0, nu=6, nv=3) or bmesh.new()
+            lamp = slab_grid(body, [(xa + 0.02, u0 + 0.008), (xb - 0.02, u0 + 0.008), (xb - 0.02, u1 - 0.008),
+                                    (xa + 0.02, u1 - 0.008)], 'top', -0.006, 0.014, 3, nu=4, nv=2)
+            _put(pop, lamp)
+            parts.setdefault('popups', {})['popup_L' if sgn < 0 else 'popup_R'] = (pop, (xa + xb) / 2, u1)
+            _put(lights, strip_path(body, [(xi, hz), (xo, hz + rake)], 'front', hh * 0.35, 0.006, 0.01, 0))
+
+
+def grille(body, spec, parts):
+    """Решётка: low_mesh_wide | split_twin | trapezoid | upper_lower | closed."""
+    s = body.s
+    gr = spec['face']['grille']
+    st = gr.get('style', 'low_mesh_wide')
     gw, gz, gh = gr['width'] * s.W / 2, gr['h'] * s.H, gr['height']
-    out = superellipse(gw, gh / 2, 5, 40)[:-1]
-    b = slab(body, [(x, gz + z) for x, z in out], 'front', 0.002, 0.03, 2)
-    if b:
-        _add_bm(parts['bumper_front'], b)
-    for k in range(-9, 10):
-        x0 = k * gw / 10
-        bar = [(x0 - 0.035, gz - gh * 0.32), (x0 - 0.02, gz - gh * 0.32), (x0 + 0.035, gz + gh * 0.32),
-               (x0 + 0.02, gz + gh * 0.32)]
-        b = slab(body, bar, 'front', 0.006, 0.005, 1)
-        if b:
-            _add_bm(parts['bumper_front'], b)
-    # Угловые воздухозаборники с лопатками
-    it = f['intakes']
+    fb = parts['bumper_front']
+
+    def bars(x0, x1, z, h, n):
+        for k in range(n):
+            x = x0 + (x1 - x0) * (k + 0.5) / n
+            _put(fb, slab(body, [(x - 0.008, z - h * 0.35), (x + 0.008, z - h * 0.35), (x + 0.008, z + h * 0.35),
+                                 (x - 0.008, z + h * 0.35)], 'front', 0.006, 0.004, 1))
+
+    if st == 'low_mesh_wide':
+        out = superellipse(gw, gh / 2, 5, 40)[:-1]
+        _put(fb, slab(body, [(x, gz + z) for x, z in out], 'front', 0.002, 0.03, 2))
+        for k in range(-9, 10):
+            x0 = k * gw / 10
+            bar = [(x0 - 0.035, gz - gh * 0.32), (x0 - 0.02, gz - gh * 0.32), (x0 + 0.035, gz + gh * 0.32),
+                   (x0 + 0.02, gz + gh * 0.32)]
+            _put(fb, slab(body, bar, 'front', 0.006, 0.005, 1))
+    elif st == 'split_twin':
+        for sgn in (-1, 1):
+            cx = sgn * gw * 0.52
+            out = superellipse(gw * 0.44, gh / 2, 4, 32)[:-1]
+            _put(fb, slab(body, [(cx + x, gz + z) for x, z in out], 'front', 0.002, 0.03, 2))
+            for k in range(3):
+                z = gz - gh * 0.25 + gh * 0.25 * k
+                _put(fb, strip_path(body, [(cx - gw * 0.38, z), (cx + gw * 0.38, z)], 'front', 0.01, 0.006, 0.004, 1))
+    elif st == 'trapezoid':
+        poly = [(-gw, gz - gh / 2), (gw, gz - gh / 2), (gw * 0.82, gz + gh / 2), (-gw * 0.82, gz + gh / 2)]
+        _put(fb, slab_grid(body, poly, 'front', 0.002, 0.03, 2, nu=8, nv=2))
+        for k in range(4):
+            z = gz - gh * 0.36 + gh * 0.24 * k
+            w = gw * (0.96 - 0.16 * k / 3)
+            _put(fb, strip_path(body, [(-w, z), (w, z)], 'front', 0.012, 0.006, 0.004, 1))
+    elif st == 'upper_lower':
+        # Узкая верхняя щель между фарами + низкая сетка
+        hz = spec['face']['headlight']['h'] * s.H
+        iw = spec['face']['headlight']['inner'] * s.half_width(0.03)
+        _put(fb, strip_path(body, [(-iw * 0.95, hz), (iw * 0.95, hz)], 'front', 0.035, 0.003, 0.02, 2))
+        out = superellipse(gw, gh / 2, 6, 40)[:-1]
+        _put(fb, slab(body, [(x, gz + z) for x, z in out], 'front', 0.002, 0.03, 2))
+        bars(-gw * 0.9, gw * 0.9, gz, gh, 14)
+    elif st == 'closed':
+        # Глухая панель: только тонкая щель датчиков и узкий нижний воздуховод
+        _put(fb, strip_path(body, [(-gw * 0.5, gz + gh * 0.2), (gw * 0.5, gz + gh * 0.2)], 'front', 0.012, 0.002,
+                            0.01, 2))
+        _put(fb, strip_path(body, [(-gw, gz - gh * 0.3), (gw, gz - gh * 0.3)], 'front', 0.035, 0.002, 0.02, 2))
+
+
+def intakes(body, spec, parts):
+    """Боковые воздухозаборники бампера: corner_blades | side_vertical | none."""
+    s = body.s
+    it = spec['face'].get('intakes', {})
+    st = it.get('style', 'corner_blades')
+    if st == 'none':
+        return
+    a = s.half_width(0.03)
     iz, iw, ih = it['h'] * s.H, it['width'], it['height']
     for sgn in (-1, 1):
-        cx = sgn * a * 0.74
+        cx = sgn * a * it.get('x', 0.74)
+        if st == 'side_vertical':
+            # Высокий проём-«клык» с наклоном наружу
+            rect = [(cx - iw / 2, iz - ih / 2), (cx + iw / 2, iz - ih / 2), (cx + iw / 2 + sgn * 0.03, iz + ih / 2),
+                    (cx - iw / 2 + sgn * 0.03, iz + ih / 2)]
+            _put(parts['bumper_front'], slab_grid(body, rect, 'front', 0.002, 0.03, 2, nu=3, nv=4))
+            _put(parts['bumper_front'], strip_path(body, [(cx - iw / 2, iz), (cx + iw / 2, iz)], 'front', 0.012,
+                                                   0.006, 0.004, 1))
+            continue
         rect = [(cx - iw / 2, iz - ih / 2), (cx + iw / 2, iz - ih / 2), (cx + iw / 2, iz + ih / 2),
                 (cx - iw / 2, iz + ih / 2)]
-        b = slab_grid(body, rect, 'front', 0.002, 0.03, 2, nu=4, nv=2)
-        if b:
-            _add_bm(parts['bumper_front'], b)
+        _put(parts['bumper_front'], slab_grid(body, rect, 'front', 0.002, 0.03, 2, nu=4, nv=2))
         for k in range(1, 4):
             x = cx - iw / 2 + iw * k / 4
-            b = slab(body, [(x - 0.006, iz - ih / 2), (x + 0.006, iz - ih / 2), (x + 0.006, iz + ih / 2),
-                            (x - 0.006, iz + ih / 2)], 'front', 0.006, 0.004, 1)
-            if b:
-                _add_bm(parts['bumper_front'], b)
-    # Губа сплиттера
+            _put(parts['bumper_front'], slab(body, [(x - 0.006, iz - ih / 2), (x + 0.006, iz - ih / 2),
+                                                    (x + 0.006, iz + ih / 2), (x - 0.006, iz + ih / 2)],
+                                             'front', 0.006, 0.004, 1))
+
+
+def face_details(body, spec, parts):
+    """Фары, решётка, воздухозаборники, губа — проекцией на перёд."""
+    s = body.s
+    lights = bmesh.new()
+    headlights(body, spec, parts, lights)
+    grille(body, spec, parts)
+    intakes(body, spec, parts)
+    a = s.half_width(0.03)
     lip = [(-a * 0.85, s.bottom_raw(0.02) + 0.005), (a * 0.85, s.bottom_raw(0.02) + 0.005),
            (a * 0.8, s.bottom_raw(0.02) + 0.03), (-a * 0.8, s.bottom_raw(0.02) + 0.03)]
-    b = slab(body, lip, 'front', 0.02, 0.01, 2)
-    if b:
-        _add_bm(parts['bumper_front'], b)
+    _put(parts['bumper_front'], slab(body, lip, 'front', 0.02, 0.01, 2))
     return lights
+
+
+def taillights(body, spec, lights):
+    """Фонари: split_bar | full_bar | round_twin | block | c_shape."""
+    s = body.s
+    tl = spec['rear']['taillight']
+    st = tl.get('style', 'split_bar')
+    a = s.half_width(0.985)
+    tz, th = tl['h'] * s.H, tl['height']
+    if st == 'full_bar':
+        xo = tl['outer'] * a
+        _put(lights, strip_path(body, [(-xo, tz), (xo, tz)], 'rear', th, 0.005, 0.01, 0))
+        return
+    for sgn in (-1, 1):
+        xo, xi = sgn * tl['outer'] * a, sgn * tl['inner'] * a
+        if st == 'split_bar':
+            xm = xi + (xo - xi) * 0.42
+            for x0, x1 in ((xi, xm - sgn * 0.02), (xm + sgn * 0.02, xo)):
+                lo, hi = sorted((x0, x1))
+                _put(lights, slab_grid(body, [(lo, tz - th / 2), (hi, tz - th / 2), (hi, tz + th / 2), (lo, tz + th / 2)],
+                                       'rear', 0.005, 0.02, 0, nu=6, nv=2))
+        elif st == 'round_twin':
+            r = th / 2
+            for t in (0.3, 0.75):
+                _put(lights, slab(body, _circle(xi + (xo - xi) * t, tz, r), 'rear', 0.006, 0.01, 0))
+        elif st == 'block':
+            lo, hi = sorted((xi, xo))
+            _put(lights, slab_grid(body, [(lo, tz - th / 2), (hi, tz - th / 2), (hi, tz + th / 2), (lo, tz + th / 2)],
+                                   'rear', 0.005, 0.02, 0, nu=6, nv=2))
+        elif st == 'c_shape':
+            # «Скобка»: верхняя и нижняя полосы, соединённые у внешнего края
+            for z in (tz + th / 2, tz - th / 2):
+                _put(lights, strip_path(body, [(xi, z), (xo, z)], 'rear', 0.018, 0.005, 0.01, 0))
+            _put(lights, strip_path(body, [(xo - sgn * 0.009, tz - th / 2 - 0.0085), (xo - sgn * 0.009, tz + th / 2 + 0.0085)],
+                                    'rear', 0.017, 0.0052, 0.01, 0))
+    if tl.get('bridge'):
+        xi = tl['inner'] * a
+        _put(lights, strip_path(body, [(-xi, tz), (xi, tz)], 'rear', 0.014, 0.004, 0.01, 0))
 
 
 def rear_details(body, spec, parts):
     s = body.s
-    r = spec['rear']
     a = s.half_width(0.985)
     lights = bmesh.new()
-    tl = r['taillight']
-    tz, th = tl['h'] * s.H, tl['height']
-    for sgn in (-1, 1):
-        xo, xi = sgn * tl['outer'] * a, sgn * tl['inner'] * a
-        xm = xi + (xo - xi) * 0.42
-        for x0, x1 in ((xi, xm - sgn * 0.02), (xm + sgn * 0.02, xo)):
-            lo, hi = sorted((x0, x1))
-            b = slab_grid(body, [(lo, tz - th / 2), (hi, tz - th / 2), (hi, tz + th / 2), (lo, tz + th / 2)],
-                          'rear', 0.005, 0.02, 0, nu=6, nv=2)
-            if b:
-                _add_bm(lights, b)
-    if tl.get('bridge'):
-        xi = tl['inner'] * a
-        _add_bm(lights, strip_path(body, [(-xi, tz), (xi, tz)], 'rear', 0.014, 0.004, 0.01, 0))
+    taillights(body, spec, lights)
     # Диффузор и рёбра
     zb = s.bottom_raw(0.99)
-    diff = [(-a * 0.62, zb + 0.01), (a * 0.62, zb + 0.01), (a * 0.55, zb + 0.11), (-a * 0.55, zb + 0.11)]
-    b = slab(body, diff, 'rear', 0.003, 0.03, 2)
-    if b:
-        _add_bm(parts['bumper_rear'], b)
-    for k in range(-3, 4):
-        x = k * a * 0.14
-        b = slab(body, [(x - 0.006, zb + 0.01), (x + 0.006, zb + 0.01), (x + 0.006, zb + 0.1),
-                        (x - 0.006, zb + 0.1)], 'rear', 0.03, 0.004, 1)
-        if b:
-            _add_bm(parts['bumper_rear'], b)
+    style = spec['rear'].get('diffuser', 'subtle')
+    k = 1.0 if style == 'subtle' else 1.3
+    diff = [(-a * 0.62, zb + 0.01), (a * 0.62, zb + 0.01), (a * 0.55, zb + 0.11 * k), (-a * 0.55, zb + 0.11 * k)]
+    _put(parts['bumper_rear'], slab(body, diff, 'rear', 0.003, 0.03, 2))
+    for i in range(-3, 4):
+        x = i * a * 0.14
+        _put(parts['bumper_rear'], slab(body, [(x - 0.006, zb + 0.01), (x + 0.006, zb + 0.01), (x + 0.006, zb + 0.1 * k),
+                                               (x - 0.006, zb + 0.1 * k)], 'rear', 0.03, 0.004, 1))
     # Ниша номера
-    b = slab(body, [(-0.27, 0.42), (0.27, 0.42), (0.27, 0.54), (-0.27, 0.54)], 'rear', 0.001, 0.02, 2)
-    if b:
-        _add_bm(parts['bumper_rear'], b)
+    pz = spec['rear'].get('plateH', 0.42 / s.H) * s.H
+    _put(parts['bumper_rear'], slab(body, [(-0.27, pz), (0.27, pz), (0.27, pz + 0.12), (-0.27, pz + 0.12)], 'rear',
+                                    0.001, 0.02, 2))
     return lights
 
 
@@ -294,15 +419,14 @@ def side_details(body, spec, parts):
     """Воздухозаборник перед задним колесом, зазоры дверей, ручки, щели на капоте."""
     s, g = body.s, body.g
     zw = s.window_z()
-    si = spec['sideIntake']
+    si = spec.get('sideIntake')
     for view in ('side_r', 'side_l'):
-        poly = [(si['u0'], si['h0'] * s.H), (si['u1'], si['h0'] * s.H + 0.02),
-                (si['u1'] - 0.008, si['h1'] * s.H), (si['u0'] + 0.012, si['h1'] * s.H - 0.03)]
-        if view == 'side_l':
-            poly.reverse()
-        b = slab(body, poly, view, 0.001, 0.03, 2)
-        if b:
-            _add_bm(parts['body'], b)
+        if si:
+            poly = [(si['u0'], si['h0'] * s.H), (si['u1'], si['h0'] * s.H + 0.02),
+                    (si['u1'] - 0.008, si['h1'] * s.H), (si['u0'] + 0.012, si['h1'] * s.H - 0.03)]
+            if view == 'side_l':
+                poly.reverse()
+            _put(parts['body'], slab(body, poly, view, 0.001, 0.03, 2))
         # Зазоры: передняя кромка двери и задняя (у средней стойки)
         ud, ub = body.u_door, body.ub + 0.008
         for path in ([(ud, zw - 0.01), (ud - 0.001, 0.33), (ud + 0.01, s.bottom(ud + 0.01) + 0.03)],
@@ -314,15 +438,37 @@ def side_details(body, spec, parts):
                         (hu, zw - 0.055)][::(1 if view == 'side_r' else -1)], view, 0.006, 0.004, 1)
         if b:
             _add_bm(parts['body'], b)
-    # Щели на горбу капота
-    for sgn in (-1, 1):
-        slot = [(sgn * 0.09, 0.12), (sgn * 0.12, 0.22), (sgn * 0.17, 0.22), (sgn * 0.13, 0.12)]
-        if sgn < 0:
-            slot.reverse()
-        b = slab(body, slot, 'top', 0.001, 0.02, 2)
-        if b:
-            _add_bm(parts['hood'], b)
+    hood_details(body, spec, parts)
     _ = g
+
+
+def hood_details(body, spec, parts):
+    """Капот: power_bulge_slots (щели на горбу) | center_scoop | vents | bulge | flat."""
+    st = spec.get('hood', {}).get('style', 'flat')
+    ws = body.g['windshieldBase']
+    hood = parts['hood']
+    if st == 'power_bulge_slots':
+        for sgn in (-1, 1):
+            slot = [(sgn * 0.09, 0.12), (sgn * 0.12, 0.22), (sgn * 0.17, 0.22), (sgn * 0.13, 0.12)]
+            if sgn < 0:
+                slot.reverse()
+            _put(hood, slab(body, slot, 'top', 0.001, 0.02, 2))
+    elif st == 'center_scoop':
+        # Воздухозаборник на горбу: короб в цвет кузова и тёмный проём спереди
+        u0, u1 = ws * 0.45, ws * 0.62
+        _put(hood, slab_grid(body, [(-0.2, u0), (0.2, u0), (0.17, u1), (-0.17, u1)], 'top', 0.035, 0.01, 0,
+                             nu=6, nv=3))
+        _put(hood, slab_grid(body, [(-0.17, u0 - 0.004), (0.17, u0 - 0.004), (0.15, u0 + 0.012),
+                                    (-0.15, u0 + 0.012)], 'top', 0.038, 0.004, 2, nu=4, nv=1))
+    elif st == 'vents':
+        for sgn in (-1, 1):
+            xa, xb = sorted((sgn * 0.22, sgn * 0.44))
+            u0, u1 = ws * 0.35, ws * 0.62
+            _put(hood, slab_grid(body, [(xa, u0), (xb, u0), (xb, u1), (xa, u1)], 'top', 0.002, 0.02, 2, nu=4, nv=3))
+            for k in range(5):
+                uu = u0 + (u1 - u0) * (k + 0.5) / 5
+                _put(hood, slab(body, [(xa + 0.01, uu - 0.004), (xb - 0.01, uu - 0.004), (xb - 0.01, uu + 0.004),
+                                       (xa + 0.01, uu + 0.004)], 'top', 0.007, 0.004, 1))
 
 
 def mirrors(body, spec):
@@ -395,44 +541,83 @@ def skirts(body):
     return bm
 
 
+def spoiler_mount(body, spec):
+    """Где стоит спойлер: кромка крышки багажника (deck) или задняя кромка крыши (roof)."""
+    if spec.get('spoiler', {}).get('at') == 'roof':
+        rr = body.g['roofRear']
+        return 'roof', rr - 0.035, rr + 0.004
+    return 'deck', 0.958, 0.994
+
+
 def spoiler(body, spec):
-    """Утиный хвост-лезвие на кромке крышки багажника."""
+    """Спойлер: ducktail_blade | lip | roof | wing | none."""
     s = body.s
-    h = spec['spoiler']['height']
-    u0, u1 = 0.958, 0.994
-    a = s.half_width(0.96) * 0.9
+    sp = spec.get('spoiler', {})
+    st = sp.get('style', 'ducktail_blade')
+    if st == 'none':
+        return bmesh.new()
+    if st == 'wing':
+        from cars.kits import Anchors, gt_wing
+        return gt_wing(body, Anchors(body), span=s.half_width(0.95) * sp.get('span', 0.82),
+                       rise=sp.get('height', 0.2), chord=sp.get('chord', 0.24), mats=(0, 2, 0))
+    h = sp.get('height', 0.02 if st == 'lip' else 0.05)
+    mount, u0, u1 = spoiler_mount(body, spec)
+    a = s.half_width(u0) * (0.9 if mount == 'deck' else 0.78)
     y0, y1 = body.y(u0), body.y(u1)
     z0, z1 = s.top(u0), s.top(u1)
-    prof = [(y0, z0 - 0.004), (y1, z1 - 0.01), (y1 - 0.01, z1 + h), (y1 + 0.02, z1 + h - 0.012),
-            (y0 + 0.02, z0 + 0.006)]
+    if mount == 'roof':
+        # Козырёк над задним стеклом: продолжает крышу назад
+        prof = [(y0, z0 - 0.012), (y1, z1 - 0.014), (y1 - 0.1, z1 - 0.012 + h * 0.3), (y1 - 0.1, z1 + h * 0.3),
+                (y0 + 0.02, z0 + 0.008)]
+    else:
+        prof = [(y0, z0 - 0.004), (y1, z1 - 0.01), (y1 - 0.01, z1 + h), (y1 + 0.02, z1 + h - 0.012),
+                (y0 + 0.02, z0 + 0.006)]
     # профиль (y, z) — порядок против часовой при взгляде с +X
     return extrude_profile(prof, -a, a, 0)
 
 
+def _tip(bm, cx, z, y, rx, rz, n=2.4):
+    """Патрубок: наружная труба, внутренняя, торец и заглушка."""
+    prof = [(cx + px, z + pz) for px, pz in superellipse(rx, rz, n, 20)[:-1]]
+    inner = [(cx + px, z + pz) for px, pz in superellipse(rx * 0.78, rz * 0.7, n, 20)[:-1]]
+    ring_o = [bm.verts.new((x, y, zz)) for x, zz in prof]
+    ring_o2 = [bm.verts.new((x, y + 0.14, zz)) for x, zz in prof]
+    ring_i = [bm.verts.new((x, y, zz)) for x, zz in inner]
+    ring_i2 = [bm.verts.new((x, y + 0.1, zz)) for x, zz in inner]
+    nn = len(prof)
+    fs = []
+    for i in range(nn):
+        j = (i + 1) % nn
+        fs.append(bm.faces.new((ring_o[i], ring_o[j], ring_o2[j], ring_o2[i])))  # наружная труба
+        fs.append(bm.faces.new((ring_i[j], ring_i[i], ring_i2[i], ring_i2[j])))  # внутренняя
+        fs.append(bm.faces.new((ring_o[j], ring_o[i], ring_i[i], ring_i[j])))  # торец
+        fs.append(bm.faces.new((ring_o2[i], ring_o2[j], ring_i2[j], ring_i2[i])))  # заглушка сзади
+    bmesh.ops.recalc_face_normals(bm, faces=fs)
+    for f in fs:
+        f.material_index = 0
+
+
 def exhaust(body, spec):
+    """Выхлоп: twin_oval | quad | single_center | split_round | none (электромобиль)."""
     s = body.s
     bm = bmesh.new()
-    sp = spec['rear']['exhaust']['spacing'] / 2
+    ex = spec['rear']['exhaust']
+    st = ex.get('style', 'twin_oval')
+    sp = ex.get('spacing', 0.32) / 2
     y = body.y(1.0) - 0.03
-    z = s.bottom_raw(0.99) + 0.075
-    for sgn in (-1, 1):
-        prof = [(sgn * sp + px, z + pz) for px, pz in superellipse(0.055, 0.032, 2.4, 20)[:-1]]
-        inner = [(sgn * sp + px, z + pz) for px, pz in superellipse(0.042, 0.022, 2.4, 20)[:-1]]
-        ring_o = [bm.verts.new((x, y - 0.0, zz)) for x, zz in prof]
-        ring_o2 = [bm.verts.new((x, y + 0.14, zz)) for x, zz in prof]
-        ring_i = [bm.verts.new((x, y - 0.0, zz)) for x, zz in inner]
-        ring_i2 = [bm.verts.new((x, y + 0.1, zz)) for x, zz in inner]
-        n = len(prof)
-        fs = []
-        for i in range(n):
-            j = (i + 1) % n
-            fs.append(bm.faces.new((ring_o[i], ring_o[j], ring_o2[j], ring_o2[i])))  # наружная труба
-            fs.append(bm.faces.new((ring_i[j], ring_i[i], ring_i2[i], ring_i2[j])))  # внутренняя
-            fs.append(bm.faces.new((ring_o[j], ring_o[i], ring_i[i], ring_i[j])))  # торец
-            fs.append(bm.faces.new((ring_o2[i], ring_o2[j], ring_i2[j], ring_i2[i])))  # заглушка сзади
-        bmesh.ops.recalc_face_normals(bm, faces=fs)
-        for f in fs:
-            f.material_index = 0
+    z = s.bottom_raw(0.99) + ex.get('lift', 0.075)
+    if st == 'twin_oval':
+        for sgn in (-1, 1):
+            _tip(bm, sgn * sp, z, y, 0.055, 0.032)
+    elif st == 'quad':
+        for sgn in (-1, 1):
+            for d in (-0.055, 0.055):
+                _tip(bm, sgn * sp + d, z, y, 0.042, 0.042, 2.0)
+    elif st == 'single_center':
+        _tip(bm, 0.0, z, y, 0.085, 0.045, 3.0)
+    elif st == 'split_round':
+        for sgn in (-1, 1):
+            _tip(bm, sgn * sp, z, y, 0.048, 0.048, 2.0)
     return bm
 
 
@@ -446,7 +631,10 @@ def interior(body):
         box(cx - 0.24, cx + 0.24, yc - 0.25, yc + 0.25, zf, zf + 0.14, 0, bm)  # подушка
         box(cx - 0.23, cx + 0.23, yc - 0.33, yc - 0.21, zf + 0.1, zf + 0.68, 0, bm)  # спинка
     yd = body.y(0.40)
-    box(-0.78, 0.78, yd - 0.12, yd + 0.18, s.window_z() - 0.2, s.window_z() - 0.02, 0, bm)  # панель
+    # панель — не дальше основания лобового стекла и не выше капота у стекла (иначе проступает сквозь капот)
+    ws = body.g['windshieldBase']
+    dz = min(s.window_z() - 0.02, s.top(ws) - 0.02)
+    box(-0.78, 0.78, yd - 0.12, min(yd + 0.18, body.y(ws) - 0.03), dz - 0.18, dz, 0, bm)  # панель
     box(-0.1, 0.1, body.y(0.6), body.y(0.42), zf, zf + 0.22, 0, bm)  # тоннель
     # руль: кольцо
     res = bmesh.ops.create_circle(bm, cap_ends=False, segments=16, radius=0.18)
@@ -493,9 +681,20 @@ def build(spec):
     objs['lights_front'] = obj('lights_front', lights_f, [mats['headlight']])
     objs['lights_rear'] = obj('lights_rear', lights_r, [mats['taillight']])
     objs['skirts'] = obj('skirts', skirts(body), [mats['paint']])
-    objs['spoiler'] = obj('spoiler', spoiler(body, spec), [mats['dark']])
+    # слоты спойлера: 0 — основной (тёмный у лезвия, в цвет у крыла), 1 — trim, 2 — dark
+    wing = spec.get('spoiler', {}).get('style') == 'wing'
+    objs['spoiler'] = obj('spoiler', spoiler(body, spec), [mats['paint'] if wing else mats['dark'],
+                                                           mats['trim'], mats['dark']])
     objs['exhaust'] = obj('exhaust', exhaust(body, spec), [mats['chrome']])
     objs['interior_low'] = obj('interior_low', interior(body), [mats['interior']])
+    # Подъёмные фары: начало узла — на петле (задняя кромка крышки), ось вращения — X
+    for name, (pbm, cx, uh) in parts.get('popups', {}).items():
+        hinge = Vector((0.0, body.y(uh), body.hit((cx, body.y(uh), 10.0), (0, 0, -1))[0].z))
+        bmesh.ops.translate(pbm, verts=pbm.verts, vec=-hinge)
+        o = obj(name, pbm, body_mats + [mats['headlight']])
+        o.location = hinge
+        # пустой узел петли: у пустых узлов сжатие meshopt не сдвигает начало координат
+        scene.empty(f'hinge_{name}', root, hinge)
 
     # Колёса из библиотеки (утверждённые диски), масштаб под диаметр машины
     k = s.R / (common['tire']['outerDiameter'] / 2)
@@ -513,8 +712,9 @@ def build(spec):
                 o.scale = (-k if left else k, k, k)  # левые — зеркально (суппорт остаётся сзади)
                 o.location = (x, y, s.R)
     # Сокеты
-    scene.empty('socket_spoiler', root, (0, body.y(0.96), s.top(0.96) + 0.01))
+    _, su0, su1 = spoiler_mount(body, spec)
+    scene.empty('socket_spoiler', root, (0, body.y((su0 + su1) / 2), s.top((su0 + su1) / 2) + 0.01))
     scene.empty('socket_exhaust', root, (0, body.y(1.0), s.bottom_raw(0.99) + 0.075))
     scene.empty('socket_plate_front', root, (0, body.y(0.0), s.spec['face']['grille']['h'] * s.H))
-    scene.empty('socket_plate_rear', root, (0, body.y(1.0), 0.48))
+    scene.empty('socket_plate_rear', root, (0, body.y(1.0), spec['rear'].get('plateH', 0.42 / s.H) * s.H + 0.06))
     return root

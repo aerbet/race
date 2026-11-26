@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const WHEEL_NODES = ['wheel_FL', 'wheel_FR', 'wheel_RL', 'wheel_RR'] as const;
 export const BRAKE_NODES = ['brake_FL', 'brake_FR', 'brake_RL', 'brake_RR'] as const;
@@ -122,11 +123,73 @@ export function applyKit(root: THREE.Object3D, kitScene: THREE.Object3D, kit: st
   return true;
 }
 
+/** Геометрия с атрибутами Float32 (сжатие meshopt хранит позиции и UV целыми числами). */
+function dequantize(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  const out = new THREE.BufferGeometry();
+  for (const [name, attr] of Object.entries(g.attributes)) {
+    const a = attr as THREE.BufferAttribute;
+    const arr = new Float32Array(a.count * a.itemSize);
+    for (let i = 0; i < a.count; i++)
+      for (let k = 0; k < a.itemSize; k++) arr[i * a.itemSize + k] = a.getComponent(i, k);
+    out.setAttribute(name, new THREE.BufferAttribute(arr, a.itemSize));
+  }
+  if (g.index) out.setIndex(Array.from(g.index.array));
+  return out;
+}
+
+/**
+ * Склеить неподвижные части кузова по материалу на каждом уровне LOD: ~25 мешей → ~10
+ * (бюджет draw calls, PLAN_V2 10.5). Колёса и тормоза уже отделены; подъёмные фары
+ * (popup_*) двигаются — не склеиваются. Вызывать после покраски: кузов с ливреей имеет
+ * свой материал и остаётся отдельным мешем.
+ */
+export function mergeStatic(root: THREE.Object3D, keep: Set<THREE.Object3D> = new Set()): void {
+  root.updateMatrixWorld(true);
+  const inv = root.matrixWorld.clone().invert();
+  const groups = new Map<string, { level: number; mat: THREE.Material; meshes: THREE.Mesh[] }>();
+  const parts: THREE.Object3D[] = [];
+  for (const c of [...root.children]) {
+    if (/^(popup_|hinge_|socket_)/.test(c.name) || keep.has(c)) continue;
+    const level = Number(lodName(c.name)?.[2] ?? 0);
+    let has = false;
+    c.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || Array.isArray(m.material)) return;
+      has = true;
+      const sig =
+        Object.keys(m.geometry.attributes).sort().join(',') + (m.geometry.index ? '|i' : '');
+      const key = `${level}|${m.material.uuid}|${sig}`;
+      const g = groups.get(key) ?? { level, mat: m.material, meshes: [] };
+      g.meshes.push(m);
+      groups.set(key, g);
+    });
+    if (has) parts.push(c);
+  }
+  const merged: THREE.Mesh[] = [];
+  const names = new Map<string, number>();
+  for (const g of groups.values()) {
+    const geo = mergeGeometries(
+      g.meshes.map((m) => dequantize(m.geometry).applyMatrix4(inv.clone().multiply(m.matrixWorld))),
+    );
+    if (!geo) return; // разные наборы атрибутов — оставляем как есть
+    const base = `part_${g.mat.name || 'mat'}`;
+    const n = names.get(`${base}|${g.level}`) ?? 0;
+    names.set(`${base}|${g.level}`, n + 1);
+    const mesh = new THREE.Mesh(geo, g.mat);
+    mesh.name = `${base}${n ? `_${n}` : ''}${g.level ? `_LOD${g.level}` : ''}`;
+    merged.push(mesh);
+  }
+  for (const p of parts) p.removeFromParent();
+  for (const m of merged) root.add(m);
+}
+
 /** Разобрать копию модели (+ кит) на кузов и колёса (геометрия и материалы общие с кэшем). */
 export function splitCarModel(
   scene: THREE.Object3D,
   kitScene?: THREE.Object3D | null,
   kit?: string | null,
+  /** Покраска до склейки частей (см. mergeStatic); без неё части не склеиваются. */
+  paint?: (root: THREE.Object3D) => void,
 ): CarModelParts {
   const copy = scene.clone(true);
   const root = copy.getObjectByName('car_root') ?? copy;
@@ -148,6 +211,8 @@ export function splitCarModel(
       g.add(o);
     }
     if (!g.children.length) return null;
+    // Колесо жёсткое: части одного LOD — в один меш на материал
+    if (paint) mergeStatic(g);
     groupLods(g);
     return g;
   };
@@ -160,15 +225,25 @@ export function splitCarModel(
     wheels.push(detach(name, c)!);
     brakes.push(detach(BRAKE_NODES[i]!, c));
   });
-  groupLods(root);
 
+  // Стоп-сигнал: свой экземпляр материала фонарей (до склейки — фонари останутся отдельным мешем)
   let tailMaterial: THREE.MeshStandardMaterial | null = null;
-  const tail = root.getObjectByName('lights_rear');
-  tail?.traverse((o) => {
-    const m = (o as THREE.Mesh).material;
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (
+      !mesh.isMesh ||
+      (!/^lights_rear/.test(mesh.name) && !/^lights_rear/.test(mesh.parent?.name ?? ''))
+    )
+      return;
+    const m = mesh.material;
     if (!tailMaterial && m instanceof THREE.MeshStandardMaterial) tailMaterial = m.clone();
-    if (tailMaterial && (o as THREE.Mesh).isMesh) (o as THREE.Mesh).material = tailMaterial;
+    if (tailMaterial) mesh.material = tailMaterial;
   });
+  if (paint) {
+    paint(root);
+    mergeStatic(root);
+  }
+  groupLods(root);
   return { body: root, wheels, brakes, tailMaterial, kit: kitOk ? kit! : null };
 }
 

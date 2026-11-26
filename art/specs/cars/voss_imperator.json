@@ -1,0 +1,165 @@
+{
+  "id": "voss_imperator",
+  "displayName": "Voss Imperator",
+  "era": "2026",
+  "reference": "Дух немецкого бизнес-седана на 600+ л. с. (справка). Референс: 5060 × 1970 × 1510, база 3005, колея 1630/1640.",
+  "dimensions": {
+    "length": 5.11,
+    "width": 1.98,
+    "height": 1.49,
+    "wheelbase": 3.03,
+    "frontOverhang": 0.95,
+    "trackFront": 1.65,
+    "trackRear": 1.66,
+    "groundClearance": 0.13,
+    "wheelDiameter": 0.72,
+    "tireWidth": 0.285
+  },
+  "dimensionsNote": "Изменения к референсу: длина +1 %, ширина +0,5 %, высота −1,3 %, база +0,8 %, колея +1,2 %.",
+  "profile": {
+    "side": [
+      [0, 0.5],
+      [0.012, 0.55],
+      [0.04, 0.59],
+      [0.2, 0.635],
+      [0.31, 0.66],
+      [0.43, 0.97],
+      [0.48, 1.0],
+      [0.66, 0.99],
+      [0.74, 0.9],
+      [0.83, 0.76],
+      [0.96, 0.75],
+      [0.99, 0.73],
+      [1, 0.66]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.88],
+      [0.02, 0.96],
+      [0.08, 0.995],
+      [0.2, 1.0],
+      [0.8, 1.0],
+      [0.92, 0.99],
+      [0.985, 0.96],
+      [1.0, 0.92]
+    ],
+    "section": {
+      "exponent": 6.5,
+      "tumblehome": 0.2,
+      "shoulder": 0.78
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.31,
+    "roofFront": 0.455,
+    "roofRear": 0.69,
+    "backlightBase": 0.825,
+    "windowLine": 0.62,
+    "quarterKick": 0.02,
+    "bPillar": 0.535,
+    "doorFront": 0.32
+  },
+  "arches": {
+    "front": {
+      "radius": 0.405,
+      "flare": 0.02
+    },
+    "rear": {
+      "radius": 0.41,
+      "flare": 0.025
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "swept",
+      "outer": 0.95,
+      "inner": 0.55,
+      "h": 0.5,
+      "height": 0.07,
+      "rake": 0.02
+    },
+    "grille": {
+      "style": "trapezoid",
+      "width": 0.42,
+      "h": 0.33,
+      "height": 0.17
+    },
+    "intakes": {
+      "style": "side_vertical",
+      "h": 0.2,
+      "width": 0.14,
+      "height": 0.14,
+      "x": 0.78
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "c_shape",
+      "outer": 0.95,
+      "inner": 0.5,
+      "h": 0.64,
+      "height": 0.09
+    },
+    "diffuser": "big",
+    "exhaust": {
+      "style": "quad",
+      "spacing": 1.1
+    },
+    "plateH": 0.42
+  },
+  "hood": {
+    "style": "bulge"
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.37
+  },
+  "spoiler": {
+    "style": "lip",
+    "height": 0.02
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "решётка — единая трапеция с горизонтальными планками, никаких сдвоенных «ноздрей»",
+    "фары — узкие стреловидные клинья",
+    "задние фонари — «скобки»",
+    "воздухозаборники бампера — вертикальные «клыки»",
+    "выхлоп — четыре патрубка по краям",
+    "зеркала на тонкой ножке"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#3a4a3f",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w05_multi10",
+    "inches": 19
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

@@ -1,5 +1,10 @@
 import type { Rapier } from '@sr/physics';
 import { CAR_IDS } from '@sr/shared';
+
+/** Слепой тест — три машины разных схем привода (rwd / fwd / awd), а не весь автопарк. */
+const BLIND_IDS = ['era2000_coupe', 'era2026_hatch', 'kaizen_rx34'].filter((id) =>
+  CAR_IDS.includes(id),
+);
 import { App } from '../app';
 import type { Quality } from '../render/quality';
 import { escapeHtml } from './menu';
@@ -98,7 +103,7 @@ export class BlindTest {
     const all = loadResults();
     const el = this.show(`
       <p class="big" style="font:900 italic 34px var(--font);margin:0">Слепой тест управления</p>
-      <p class="sub">Вы прокатитесь на ${CAR_IDS.length} машинах под буквами. После каждой — 5 вопросов по шкале 1–5.
+      <p class="sub">Вы прокатитесь на ${BLIND_IDS.length} машинах под буквами. После каждой — 5 вопросов по шкале 1–5.
       Мин. ${MIN_DRIVE_SECONDS} с езды на машину. Полигон: прямая с трамплином, шпилька, S-повороты, дрифт-круг.</p>
       <h2>Имя или номер тестера</h2>
       <input type="text" maxlength="24" data-k="name" placeholder="например, Т-07" />
@@ -112,7 +117,7 @@ export class BlindTest {
     (el.querySelector('[data-k="go"]') as HTMLElement).onclick = () => {
       this.tester = name.value.trim() || `T-${Date.now().toString(36)}`;
       // Случайный порядок машин для каждого тестера
-      this.order = [...CAR_IDS].sort(() => Math.random() - 0.5);
+      this.order = [...BLIND_IDS].sort(() => Math.random() - 0.5);
       this.idx = 0;
       this.drive();
     };

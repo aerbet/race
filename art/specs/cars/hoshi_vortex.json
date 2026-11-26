@@ -1,0 +1,166 @@
+{
+  "id": "hoshi_vortex",
+  "displayName": "Hoshi Vortex",
+  "era": "2000",
+  "reference": "Дух лёгкого роторного купе 90-х с подъёмными фарами (справка). Референс: 4285 × 1760 × 1230, база 2425, колея 1460/1460.",
+  "dimensions": {
+    "length": 4.33,
+    "width": 1.78,
+    "height": 1.21,
+    "wheelbase": 2.45,
+    "frontOverhang": 0.88,
+    "trackFront": 1.46,
+    "trackRear": 1.45,
+    "groundClearance": 0.115,
+    "wheelDiameter": 0.63,
+    "tireWidth": 0.235
+  },
+  "dimensionsNote": "Изменения к референсу: длина +1 %, ширина +1,1 %, высота −1,6 %, база +1 %, колея ±0,7 %.",
+  "profile": {
+    "side": [
+      [0, 0.4],
+      [0.015, 0.45],
+      [0.05, 0.49],
+      [0.2, 0.54],
+      [0.37, 0.6],
+      [0.49, 0.97],
+      [0.55, 1.0],
+      [0.63, 0.98],
+      [0.74, 0.86],
+      [0.86, 0.76],
+      [0.96, 0.75],
+      [0.99, 0.72],
+      [1, 0.64]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.82],
+      [0.03, 0.93],
+      [0.1, 0.99],
+      [0.22, 1.0],
+      [0.78, 1.0],
+      [0.9, 0.985],
+      [0.98, 0.93],
+      [1.0, 0.86]
+    ],
+    "section": {
+      "exponent": 3.6,
+      "tumblehome": 0.3,
+      "shoulder": 0.7
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.37,
+    "roofFront": 0.5,
+    "roofRear": 0.63,
+    "backlightBase": 0.86,
+    "windowLine": 0.63,
+    "quarterKick": 0.0,
+    "bPillar": 0.6,
+    "doorFront": 0.37
+  },
+  "arches": {
+    "front": {
+      "radius": 0.355,
+      "flare": 0.035
+    },
+    "rear": {
+      "radius": 0.36,
+      "flare": 0.05
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "popup",
+      "outer": 0.85,
+      "inner": 0.5,
+      "h": 0.33,
+      "height": 0.03,
+      "rake": 0.0,
+      "u0": 0.03,
+      "u1": 0.09
+    },
+    "grille": {
+      "style": "low_mesh_wide",
+      "width": 0.5,
+      "h": 0.2,
+      "height": 0.09
+    },
+    "intakes": {
+      "style": "corner_blades",
+      "h": 0.18,
+      "width": 0.14,
+      "height": 0.06
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "block",
+      "outer": 0.95,
+      "inner": 0.55,
+      "h": 0.62,
+      "height": 0.07
+    },
+    "diffuser": "subtle",
+    "exhaust": {
+      "style": "split_round",
+      "spacing": 0.9
+    },
+    "plateH": 0.35
+  },
+  "hood": {
+    "style": "flat"
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.42
+  },
+  "spoiler": {
+    "style": "lip",
+    "height": 0.025
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "подъёмные фары — прямоугольные крышки с тёмным зазором и полосой ходового огня под ними",
+    "решётка — широкая прямоугольная сетка вместо овального «рта»",
+    "задние фонари — прямоугольные блоки вместо круглых",
+    "выхлоп — круглые патрубки по углам вместо пары по центру",
+    "антикрыло — низкая губа на кромке багажника вместо крыла-дуги",
+    "зеркала на тонкой ножке"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#e8e8e3",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w01_split5",
+    "inches": 17
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

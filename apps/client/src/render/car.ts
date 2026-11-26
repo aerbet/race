@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 import type { CarConfig } from '@sr/shared';
-import { carKitParam, carModelParam, loadCarKit, loadCarModel, splitCarModel } from './car-model';
+import {
+  carKitParam,
+  carModelParam,
+  loadCarKit,
+  loadCarModel,
+  mergeStatic,
+  splitCarModel,
+} from './car-model';
 import { applyModelPaint, paintMaterial } from './paint';
 
 /**
@@ -324,6 +331,10 @@ export class CarView {
   private readonly hi: boolean;
   /** Кит, который стоит на glTF-модели (null — сток). */
   kit: string | null = null;
+  /** Крышки подъёмных фар (узлы popup_L / popup_R) и их подъём 0…1. */
+  private popups: THREE.Object3D[] = [];
+  private popupOpen = 0;
+  private popupAt = 0;
   /** Промис загрузки glTF-модели (для гаража и тестов); null — процедурный кузов. */
   readonly ready: Promise<void> | null = null;
 
@@ -561,13 +572,21 @@ export class CarView {
       ])
         .then(([m, k]) => this.useModel(m, k, kit))
         .catch((e: unknown) => console.warn(`модель ${modelId} не загрузилась`, e));
+    } else {
+      // Процедурный кузов: неподвижные детали — по мешу на материал (бюджет draw calls 10.5)
+      mergeStatic(this.body, new Set(this.nitroFlames));
+      for (const wg of this.wheels) {
+        const spin = wg.getObjectByName('spin');
+        if (spin) mergeStatic(spin);
+      }
     }
   }
 
   /** Заменить процедурный кузов и колёса на glTF-модель (ART_BRIEF: узлы body…wheel_RR) + кит. */
   useModel(scene: THREE.Object3D, kitScene?: THREE.Object3D | null, kit?: string | null): void {
-    const parts = splitCarModel(scene, kitScene, kit);
-    applyModelPaint(parts.body, this.opts, this.hi);
+    const parts = splitCarModel(scene, kitScene, kit, (root) =>
+      applyModelPaint(root, this.opts, this.hi),
+    );
     this.kit = parts.kit;
     // Неон и пламя нитро остаются, процедурный кузов прячется
     for (const c of this.body.children)
@@ -584,6 +603,21 @@ export class CarView {
     });
     this.modelTail = parts.tailMaterial;
     this.wheelInset = 0;
+    // Подъёмные фары: ночь в каждом городе — крышки поднимаются через секунду после появления машины
+    this.popups = [];
+    for (const n of ['popup_L', 'popup_R']) {
+      const lid = parts.body.getObjectByName(n);
+      const hinge = parts.body.getObjectByName(`hinge_${n}`);
+      if (!lid || !hinge) continue;
+      // Ось — петля у задней кромки крышки: крышка переезжает в группу с началом в петле
+      const pivot = new THREE.Group();
+      pivot.position.copy(hinge.position);
+      lid.parent!.add(pivot);
+      lid.position.sub(hinge.position);
+      pivot.add(lid);
+      this.popups.push(pivot);
+    }
+    this.popupAt = performance.now() / 1000 + 1;
   }
 
   /** Мигнуть фарами: ярче на `seconds` секунд (через bloom выглядит как вспышка). */
@@ -603,7 +637,18 @@ export class CarView {
     if (this.modelTail) this.modelTail.emissiveIntensity = on ? 3 : 1;
   }
 
+  /** Крышки фар: плавный подъём на петле (ось X) до 62°. */
+  private animatePopups(): void {
+    if (!this.popups.length || this.popupOpen >= 1) return;
+    const now = performance.now() / 1000;
+    if (now < this.popupAt) return;
+    this.popupOpen = Math.min(1, (now - this.popupAt) / 0.45);
+    const e = this.popupOpen * this.popupOpen * (3 - 2 * this.popupOpen);
+    for (const p of this.popups) p.rotation.x = e * THREE.MathUtils.degToRad(62);
+  }
+
   setNitro(on: boolean, t: number): void {
+    this.animatePopups();
     for (const f of this.nitroFlames) {
       f.visible = on;
       if (on) f.scale.set(1, 0.7 + Math.sin(t * 60) * 0.3, 1);

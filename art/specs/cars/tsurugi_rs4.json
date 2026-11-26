@@ -1,0 +1,166 @@
+{
+  "id": "tsurugi_rs4",
+  "displayName": "Tsurugi RS-4",
+  "era": "2000",
+  "reference": "Дух раллийного седана 4WD (справка). Референс: 4490 × 1770 × 1450, база 2625, колея 1515/1515.",
+  "dimensions": {
+    "length": 4.53,
+    "width": 1.79,
+    "height": 1.43,
+    "wheelbase": 2.65,
+    "frontOverhang": 0.92,
+    "trackFront": 1.52,
+    "trackRear": 1.52,
+    "groundClearance": 0.14,
+    "wheelDiameter": 0.64,
+    "tireWidth": 0.235
+  },
+  "dimensionsNote": "Изменения к референсу: длина +0,9 %, ширина +1,1 %, высота −1,4 %, база +1 %, колея +0,3 %.",
+  "profile": {
+    "side": [
+      [0, 0.5],
+      [0.015, 0.55],
+      [0.05, 0.585],
+      [0.2, 0.63],
+      [0.3, 0.655],
+      [0.42, 0.97],
+      [0.47, 1.0],
+      [0.66, 0.99],
+      [0.72, 0.93],
+      [0.82, 0.76],
+      [0.96, 0.755],
+      [0.99, 0.73],
+      [1, 0.66]
+    ],
+    "bottom": [
+      [0.0, 0.2],
+      [0.02, 0.13],
+      [0.07, 0.105],
+      [0.12, 0.093],
+      [0.88, 0.093],
+      [0.95, 0.125],
+      [0.99, 0.2],
+      [1.0, 0.3]
+    ],
+    "plan": [
+      [0.0, 0.88],
+      [0.02, 0.96],
+      [0.08, 0.995],
+      [0.2, 1.0],
+      [0.8, 1.0],
+      [0.92, 0.99],
+      [0.985, 0.96],
+      [1.0, 0.92]
+    ],
+    "section": {
+      "exponent": 6.0,
+      "tumblehome": 0.18,
+      "shoulder": 0.74
+    }
+  },
+  "greenhouse": {
+    "roofThickness": 0.05,
+    "windshieldBase": 0.3,
+    "roofFront": 0.445,
+    "roofRear": 0.68,
+    "backlightBase": 0.815,
+    "windowLine": 0.6,
+    "quarterKick": 0.0,
+    "bPillar": 0.53,
+    "doorFront": 0.305
+  },
+  "arches": {
+    "front": {
+      "radius": 0.37,
+      "flare": 0.03
+    },
+    "rear": {
+      "radius": 0.37,
+      "flare": 0.03
+    }
+  },
+  "face": {
+    "headlight": {
+      "style": "swept",
+      "outer": 0.95,
+      "inner": 0.5,
+      "h": 0.5,
+      "height": 0.09,
+      "rake": 0.03
+    },
+    "grille": {
+      "style": "upper_lower",
+      "width": 0.6,
+      "h": 0.22,
+      "height": 0.12
+    },
+    "intakes": {
+      "style": "side_vertical",
+      "h": 0.2,
+      "width": 0.12,
+      "height": 0.12,
+      "x": 0.78
+    }
+  },
+  "rear": {
+    "taillight": {
+      "style": "block",
+      "outer": 0.95,
+      "inner": 0.55,
+      "h": 0.64,
+      "height": 0.085
+    },
+    "diffuser": "subtle",
+    "exhaust": {
+      "style": "single_center"
+    },
+    "plateH": 0.4
+  },
+  "hood": {
+    "style": "center_scoop"
+  },
+  "mirrors": {
+    "style": "aero_stalk",
+    "u": 0.36
+  },
+  "spoiler": {
+    "style": "wing",
+    "height": 0.17,
+    "chord": 0.22,
+    "span": 0.8
+  },
+  "lines": ["shoulder_crease"],
+  "differences": [
+    "фары — стреловидные клинья вместо больших прямоугольных",
+    "решётка — узкая верхняя щель и низкая сетка вместо большой трапеции",
+    "воздухозаборники бампера — вертикальные «клыки» по углам",
+    "задние фонари — прямоугольные блоки другой пропорции",
+    "капот — короб воздухозаборника по центру",
+    "выхлоп — один широкий овальный патрубок по центру"
+  ],
+  "budget": {
+    "lod0": 40000
+  },
+  "paint": {
+    "default": "#1d3f8f",
+    "finish": "metallic"
+  },
+  "wheels": {
+    "rim": "w05_multi10",
+    "inches": 17
+  },
+  "kits": {
+    "street": {
+      "name": "Уличный",
+      "accent": "#d8202a"
+    },
+    "track": {
+      "name": "Трековый",
+      "accent": "#d8202a"
+    },
+    "drift": {
+      "name": "Дрифт",
+      "accent": "#f2c230"
+    }
+  }
+}

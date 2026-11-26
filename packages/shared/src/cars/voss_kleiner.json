@@ -1,0 +1,142 @@
+{
+  "id": "voss_kleiner",
+  "name": "Voss Kleiner",
+  "era": "2000",
+  "model": "voss_kleiner",
+  "kits": ["street", "track", "drift"],
+  "drive": "fwd",
+  "awdRearShare": 0.5,
+  "mass": 1330,
+  "body": {
+    "width": 1.78,
+    "height": 1.46,
+    "length": 4.25
+  },
+  "centerOfMass": {
+    "y": -0.27,
+    "z": 0.04
+  },
+  "inertiaScale": 1,
+  "wheels": {
+    "radius": 0.315,
+    "width": 0.225,
+    "wheelbase": 2.6,
+    "track": 1.52,
+    "mountY": -0.265
+  },
+  "suspension": {
+    "restLength": 0.38,
+    "travel": 0.21,
+    "stiffness": 43200,
+    "damping": 3810,
+    "antiRoll": 14200
+  },
+  "engine": {
+    "idleRpm": 900,
+    "redlineRpm": 6800,
+    "torqueCurve": [
+      [900, 136],
+      [2237, 240],
+      [3937, 288],
+      [5368, 265],
+      [6263, 228],
+      [6800, 194]
+    ],
+    "engineBrake": 65,
+    "sound": "i4"
+  },
+  "gearbox": {
+    "ratios": [3.83, 2.36, 1.69, 1.31, 1, 0.79],
+    "reverse": 3.4,
+    "final": 4.15,
+    "shiftTime": 0.18,
+    "autoUpRpm": 6460,
+    "autoDownRpm": 3196
+  },
+  "tires": {
+    "longitudinal": [
+      [0, 0],
+      [0.12, 1.25],
+      [0.3, 1.08],
+      [1, 0.9]
+    ],
+    "lateral": [
+      [0, 0],
+      [6, 1.15],
+      [12, 1.2],
+      [30, 1],
+      [90, 0.85]
+    ],
+    "frontGrip": 1.04,
+    "rearGrip": 1.0,
+    "rollingResistance": 0.012
+  },
+  "brakes": {
+    "maxForce": 14200,
+    "frontBias": 0.6,
+    "handbrakeForce": 6000
+  },
+  "aero": {
+    "drag": 0.42,
+    "downforce": 0.9
+  },
+  "steering": {
+    "maxAngleDeg": 33,
+    "keyboardRate": 4.5,
+    "keyboardReturnRate": 6
+  },
+  "assists": {
+    "speedSteer": {
+      "enabled": true,
+      "minAngleDeg": 7,
+      "speedRefKmh": 180
+    },
+    "turnAssist": {
+      "enabled": true,
+      "yawAccel": 1.6
+    },
+    "driftInit": {
+      "enabled": true,
+      "rearGripScale": 0.42,
+      "minSpeedKmh": 35,
+      "attackRate": 5
+    },
+    "driftHold": {
+      "enabled": true,
+      "minAngleDeg": 20,
+      "maxAngleDeg": 50,
+      "strength": 24,
+      "speedKeep": 0.82
+    },
+    "driftExit": {
+      "enabled": true,
+      "recoverRate": 1.6,
+      "yawDamp": 2.5
+    },
+    "airStabilize": {
+      "enabled": true,
+      "strength": 14,
+      "damping": 4
+    },
+    "softWalls": {
+      "enabled": true,
+      "friction": 0.05,
+      "restitution": 0.15
+    },
+    "autoReset": {
+      "enabled": true,
+      "seconds": 3
+    }
+  },
+  "nitro": {
+    "capacity": 2.6,
+    "boost": 0.3,
+    "chargePerDriftSecond": 0.2,
+    "chargePerAirSecond": 0.35,
+    "chargePerOvertake": 0.15
+  },
+  "specs": {
+    "zeroTo100": 6.8,
+    "topSpeedKmh": 220
+  }
+}

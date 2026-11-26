@@ -1,0 +1,140 @@
+{
+  "id": "nimbus_e1",
+  "name": "Nimbus E1",
+  "era": "2026",
+  "model": "nimbus_e1",
+  "kits": ["street", "track", "drift"],
+  "drive": "awd",
+  "awdRearShare": 0.68,
+  "mass": 2100,
+  "body": {
+    "width": 1.98,
+    "height": 1.2,
+    "length": 4.72
+  },
+  "centerOfMass": {
+    "y": -0.22,
+    "z": 0.04
+  },
+  "inertiaScale": 1,
+  "wheels": {
+    "radius": 0.355,
+    "width": 0.285,
+    "wheelbase": 2.74,
+    "track": 1.67,
+    "mountY": -0.095
+  },
+  "suspension": {
+    "restLength": 0.38,
+    "travel": 0.21,
+    "stiffness": 68200,
+    "damping": 4790,
+    "antiRoll": 22500
+  },
+  "engine": {
+    "idleRpm": 600,
+    "redlineRpm": 12000,
+    "torqueCurve": [
+      [600, 1114],
+      [6000, 1114],
+      [9000, 802],
+      [12000, 557]
+    ],
+    "engineBrake": 60,
+    "sound": "electric"
+  },
+  "gearbox": {
+    "ratios": [2.6, 1.6, 1.1],
+    "reverse": 3.4,
+    "final": 3.48,
+    "shiftTime": 0.18,
+    "autoUpRpm": 11400,
+    "autoDownRpm": 5640
+  },
+  "tires": {
+    "longitudinal": [
+      [0, 0],
+      [0.12, 1.25],
+      [0.3, 1.08],
+      [1, 0.9]
+    ],
+    "lateral": [
+      [0, 0],
+      [6, 1.15],
+      [12, 1.2],
+      [30, 1],
+      [90, 0.85]
+    ],
+    "frontGrip": 1.3,
+    "rearGrip": 1.3,
+    "rollingResistance": 0.012
+  },
+  "brakes": {
+    "maxForce": 22500,
+    "frontBias": 0.6,
+    "handbrakeForce": 6000
+  },
+  "aero": {
+    "drag": 0.34,
+    "downforce": 0.9
+  },
+  "steering": {
+    "maxAngleDeg": 33,
+    "keyboardRate": 4.5,
+    "keyboardReturnRate": 6
+  },
+  "assists": {
+    "speedSteer": {
+      "enabled": true,
+      "minAngleDeg": 7,
+      "speedRefKmh": 180
+    },
+    "turnAssist": {
+      "enabled": true,
+      "yawAccel": 1.6
+    },
+    "driftInit": {
+      "enabled": true,
+      "rearGripScale": 0.42,
+      "minSpeedKmh": 35,
+      "attackRate": 5
+    },
+    "driftHold": {
+      "enabled": true,
+      "minAngleDeg": 20,
+      "maxAngleDeg": 50,
+      "strength": 24,
+      "speedKeep": 0.82
+    },
+    "driftExit": {
+      "enabled": true,
+      "recoverRate": 1.6,
+      "yawDamp": 2.5
+    },
+    "airStabilize": {
+      "enabled": true,
+      "strength": 14,
+      "damping": 4
+    },
+    "softWalls": {
+      "enabled": true,
+      "friction": 0.05,
+      "restitution": 0.15
+    },
+    "autoReset": {
+      "enabled": true,
+      "seconds": 3
+    }
+  },
+  "nitro": {
+    "capacity": 2.6,
+    "boost": 0.3,
+    "chargePerDriftSecond": 0.2,
+    "chargePerAirSecond": 0.35,
+    "chargePerOvertake": 0.15
+  },
+  "specs": {
+    "zeroTo100": 2.5,
+    "topSpeedKmh": 375
+  }
+}

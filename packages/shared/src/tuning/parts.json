@@ -51,5 +51,20 @@
     { "id": "A", "min": 600 },
     { "id": "S", "min": 700 }
   ],
-  "carPrices": { "era2000_coupe": 0, "era2026_hatch": 40000, "kaizen_rx34": 60000 }
+  "carPrices": {
+    "era2000_coupe": 0,
+    "era2026_hatch": 40000,
+    "kaizen_rx34": 60000,
+    "voss_kleiner": 30000,
+    "hoshi_vortex": 50000,
+    "tsurugi_rs4": 55000,
+    "takumo_raiden": 70000,
+    "brawler_500": 75000,
+    "hoshi_kaze": 80000,
+    "voss_imperator": 120000,
+    "raijin_tempest": 140000,
+    "falkner_heck": 160000,
+    "nimbus_e1": 220000,
+    "ferro_cuneo": 240000
+  }
 }

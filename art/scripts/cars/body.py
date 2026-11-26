@@ -77,7 +77,7 @@ class Body:
     def bulge(self, u, x):
         """Силовой горб капота."""
         b = self.spec.get('hood', {})
-        if b.get('style') != 'power_bulge_slots':
+        if b.get('style') not in ('power_bulge_slots', 'bulge', 'center_scoop'):
             return 0.0
         ws = self.g['windshieldBase']
         return 0.032 * smooth(0.06, 0.1, u) * (1 - smooth(ws - 0.07, ws - 0.01, u)) * (1 - smooth(0.18, 0.27, abs(x)))
