@@ -72,5 +72,42 @@
       "weight": 4
     },
     "pi": 566
+  },
+  {
+    "car": "kaizen_rx34",
+    "parts": {},
+    "pi": 351
+  },
+  {
+    "car": "kaizen_rx34",
+    "parts": {
+      "engine": 2,
+      "tires": 1
+    },
+    "pi": 396
+  },
+  {
+    "car": "kaizen_rx34",
+    "parts": {
+      "engine": 4,
+      "turbo": 3,
+      "weight": 2,
+      "nitro": 1
+    },
+    "pi": 483
+  },
+  {
+    "car": "kaizen_rx34",
+    "parts": {
+      "engine": 4,
+      "turbo": 4,
+      "transmission": 4,
+      "suspension": 4,
+      "tires": 4,
+      "brakes": 4,
+      "nitro": 4,
+      "weight": 4
+    },
+    "pi": 634
   }
 ]

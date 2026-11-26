@@ -3,8 +3,13 @@ import { CARS, CarConfigError, parseCarConfig, sampleCurve } from './index';
 import coupe from './era2000_coupe.json';
 
 describe('car config', () => {
-  it('both starter configs are valid', () => {
-    expect(Object.keys(CARS)).toEqual(['era2000_coupe', 'era2026_hatch']);
+  it('all configs are valid', () => {
+    expect(Object.keys(CARS)).toEqual(['era2000_coupe', 'era2026_hatch', 'kaizen_rx34']);
+  });
+
+  it('glTF model id is optional and matches a published model', () => {
+    expect(CARS.era2000_coupe!.model).toBeUndefined();
+    expect(CARS.kaizen_rx34!.model).toBe('kaizen_rx34');
   });
 
   it('missing field gives a clear error with a path', () => {

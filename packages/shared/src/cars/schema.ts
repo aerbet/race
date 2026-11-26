@@ -70,6 +70,11 @@ export const CarConfigSchema = z.object({
   /** Вымышленное название (никаких реальных марок). */
   name: z.string().min(1),
   era: z.enum(['2000', '2026']),
+  /** glTF-модель из Блендера: apps/client/public/cars/<model>/base.glb (нет — процедурный кузов). */
+  model: z
+    .string()
+    .regex(/^[a-z0-9_]+$/)
+    .optional(),
   drive: z.enum(['rwd', 'fwd', 'awd']),
   /** Доля момента на заднюю ось для awd. */
   awdRearShare: unit.default(0.6),

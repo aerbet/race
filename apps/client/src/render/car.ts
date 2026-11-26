@@ -428,6 +428,8 @@ export class CarView {
   /** Высота центра колеса над началом root (для посадки glTF-модели). */
   private wheelY = 0;
   private modelTail: THREE.MeshStandardMaterial | null = null;
+  /** Сдвиг колёс внутрь под процедурный кузов; у glTF-модели колёса стоят по колее, как в арках. */
+  private wheelInset = 0.04;
 
   constructor(cfg: CarConfig, opts: CarViewOptions) {
     this.cfg = cfg;
@@ -644,8 +646,8 @@ export class CarView {
       this.root.add(wg);
     }
 
-    // Модель из Блендера вместо процедурной (этап B0, `?carModel=<id>`)
-    const modelId = carModelParam();
+    // Модель из Блендера вместо процедурной: из конфига (`model`) или `?carModel=<id>` для проверки
+    const modelId = carModelParam() ?? cfg.model;
     if (modelId && !ghost)
       loadCarModel(modelId)
         .then((m) => this.useModel(m))
@@ -668,6 +670,7 @@ export class CarView {
       if (brake) wg.add(brake);
     });
     this.modelTail = parts.tailMaterial;
+    this.wheelInset = 0;
   }
 
   /** Мигнуть фарами: ярче на `seconds` секунд (через bloom выглядит как вспышка). */
@@ -711,7 +714,11 @@ export class CarView {
     left: boolean,
   ): void {
     const wg = this.wheels[i]!;
-    wg.position.set(local.x + (left ? 0.04 : -0.04), local.y - suspensionLength, local.z);
+    wg.position.set(
+      local.x + (left ? this.wheelInset : -this.wheelInset),
+      local.y - suspensionLength,
+      local.z,
+    );
     wg.rotation.set(0, -steer, 0);
     const sp = wg.getObjectByName('spin')!;
     sp.rotation.x = -spin;

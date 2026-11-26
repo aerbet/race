@@ -51,5 +51,5 @@
     { "id": "A", "min": 600 },
     { "id": "S", "min": 700 }
   ],
-  "carPrices": { "era2000_coupe": 0, "era2026_hatch": 40000 }
+  "carPrices": { "era2000_coupe": 0, "era2026_hatch": 40000, "kaizen_rx34": 60000 }
 }
