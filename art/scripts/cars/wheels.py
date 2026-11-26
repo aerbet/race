@@ -412,4 +412,5 @@ def main():
         raise SystemExit(f'ошибки проверок: {", ".join(failed)}')
 
 
-main()
+if __name__ == '__main__':
+    main()

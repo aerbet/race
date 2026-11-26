@@ -16,11 +16,13 @@ def mesh_errors(o, merge_dist=1e-5, min_area=1e-9):
     # Дубли вершин
     dup = bmesh.ops.find_doubles(bm, verts=bm.verts, dist=merge_dist)['targetmap']
     if dup:
-        errs.append(f'{o.name}: {len(dup)} дублирующихся вершин')
+        v = next(iter(dup))
+        errs.append(f'{o.name}: {len(dup)} дублирующихся вершин (например, у {v.co.x:.3f}, {v.co.y:.3f}, {v.co.z:.3f})')
     # Вырожденные грани
-    degen = sum(1 for f in bm.faces if f.calc_area() < min_area)
+    degen = [f for f in bm.faces if f.calc_area() < min_area]
     if degen:
-        errs.append(f'{o.name}: {degen} вырожденных граней')
+        c = degen[0].calc_center_median()
+        errs.append(f'{o.name}: {len(degen)} вырожденных граней (например, у {c.x:.3f}, {c.y:.3f}, {c.z:.3f})')
     # Нормали наружу: для замкнутых частей объём через знаковую сумму > 0
     closed = all(e.is_manifold for e in bm.edges) and len(bm.faces) > 0
     if closed:

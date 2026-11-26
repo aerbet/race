@@ -21,7 +21,8 @@ def make_lods(root, skip=('glass',), drop_lod2=('interior_low',)):
     пустой объект-заглушка, чтобы клиент не искал узел.
     """
     src = [o for o in root.children_recursive
-           if o.type == 'MESH' and '_LOD' not in o.name and not o.name.endswith('_collision')]
+           if o.type == 'MESH' and '_LOD' not in o.name and not o.name.endswith('_collision')
+           and not bpy.data.objects.get(o.name + '_LOD1')]  # уже есть свои LOD (колёса из генератора дисков)
     made = []
     for o in src:
         for suffix, ratio in RATIOS.items():

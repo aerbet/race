@@ -27,7 +27,18 @@ def generator(spec):
     if g == 'test_rig':
         from cars import test_rig
         return test_rig.build
-    raise SystemExit(f'генератор «{g}» ещё не написан (этап B2)')
+    from cars import car
+    return car.build
+
+
+def smooth_shading(root):
+    """Кузовные панели — гладкие с острыми гранями по углу 32°; колёса сглажены в генераторе."""
+    import math
+    objs = [o for o in root.children_recursive if o.type == 'MESH'
+            and not o.name.startswith(('wheel_', 'brake_', 'interior', 'lights_'))]
+    scene.select_only(objs)
+    if objs:
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(32))
 
 
 def main():
@@ -41,6 +52,7 @@ def main():
         scene.reset()
         root = generator(spec)(spec)
         scene.apply_all(root)
+        smooth_shading(root)
         meshes = [o for o in root.children_recursive if o.type == 'MESH']
         uv.smart_uv0(meshes)
         uv.livery_uv1(bpy.data.objects['body'])
