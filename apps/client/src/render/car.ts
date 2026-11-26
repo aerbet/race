@@ -9,6 +9,7 @@ import {
   splitCarModel,
 } from './car-model';
 import { applyModelPaint, paintMaterial } from './paint';
+import { getQuality } from './quality';
 
 /**
  * Процедурная модель машины (собственная, без внешних ассетов).
@@ -342,9 +343,7 @@ export class CarView {
     this.cfg = cfg;
     this.opts = opts;
     const ghost = !!opts.ghost;
-    const hi =
-      !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) &&
-      !location.search.includes('q=low');
+    const hi = getQuality().name === 'high';
     this.hi = hi;
     const { width: W, height: H, length: L } = cfg.body;
     const shape = SHAPES[cfg.era] ?? SHAPES['2000']!;

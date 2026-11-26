@@ -138,6 +138,7 @@ export function startOnline(app: App): void {
 
     // Машина из гаража (если вошли) — тюнинг и окраска
     const garageCar = await activeCar().catch(() => null);
+    await app.rapier; // физика грузится в фоне с меню
     if (garageCar) account.ownedCarId = garageCar.id;
     const makeRace = (players: LobbyMsg['players']) => {
       const w = welcome!;

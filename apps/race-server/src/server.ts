@@ -141,15 +141,40 @@ export class RoomManager {
   }
 }
 
+const DEV_JWT = 'dev-only-secret-change-me-0123456789abcdef';
+const DEV_INTERNAL = 'dev-internal-key';
+
+/**
+ * Секреты сервера. В продакшене (NODE_ENV=production) — только из окружения и не dev-значения:
+ * иначе по значению из репозитория можно подделать вход (PLAN_V2 7.0.2).
+ */
+export function resolveSecrets(
+  env: Record<string, string | undefined>,
+  opts: { internalKey?: string; jwtSecret?: string } = {},
+): { internalKey: string; jwtSecret: string } {
+  const prod = env.NODE_ENV === 'production';
+  const internalKey = opts.internalKey ?? env.INTERNAL_KEY ?? (prod ? '' : DEV_INTERNAL);
+  const jwtSecret = opts.jwtSecret ?? env.JWT_SECRET ?? (prod ? '' : DEV_JWT);
+  if (prod) {
+    if (Buffer.byteLength(jwtSecret) < 32 || jwtSecret === DEV_JWT)
+      throw new Error(
+        'JWT_SECRET не задан или это значение для разработки — в production запуск запрещён',
+      );
+    if (internalKey.length < 16 || internalKey === DEV_INTERNAL)
+      throw new Error(
+        'INTERNAL_KEY не задан или это значение для разработки — в production запуск запрещён',
+      );
+  }
+  return { internalKey, jwtSecret };
+}
+
 export function startServer(
   R: Rapier,
   opts: ServerOptions,
 ): { http: Server; wss: WebSocketServer; manager: RoomManager; stop: () => void } {
   const log = opts.log ?? ((m: string) => console.log(`[race-server] ${m}`));
   const apiUrl = opts.apiUrl ?? process.env.API_URL;
-  const internalKey = opts.internalKey ?? process.env.INTERNAL_KEY ?? 'dev-internal-key';
-  const jwtSecret =
-    opts.jwtSecret ?? process.env.JWT_SECRET ?? 'dev-only-secret-change-me-0123456789abcdef';
+  const { internalKey, jwtSecret } = resolveSecrets(process.env, opts);
   const report = (r: RaceReport) => {
     if (!apiUrl) return;
     fetch(`${apiUrl}/internal/race-results`, {

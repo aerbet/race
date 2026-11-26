@@ -11,16 +11,18 @@ async function boot() {
   loading.textContent = 'ЗАГРУЗКА…';
   root.appendChild(loading);
   const quality = getQuality();
-  const R = await initPhysics();
+  // Физика (WASM) качается в фоне: меню не ждёт её (PLAN_V2 7.0.5)
+  const rapier = initPhysics();
   const params = new URLSearchParams(location.search);
-  loading.remove();
 
   if (params.has('blind')) {
-    const { BlindTest } = await import('./ui/blind-test');
+    const [R, { BlindTest }] = await Promise.all([rapier, import('./ui/blind-test')]);
+    loading.remove();
     new BlindTest(R, root, quality).start();
     return;
   }
-  const app = new App(R, root, quality);
+  loading.remove();
+  const app = new App(rapier, root, quality);
   app.onOnline = async () => {
     const { startOnline } = await import('./net/online');
     startOnline(app);

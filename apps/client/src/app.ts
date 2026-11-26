@@ -2,7 +2,7 @@ import type { Rapier } from '@sr/physics';
 import { formatTime, toBase64, type City, type RaceEvent } from '@sr/shared';
 import { loadCity } from './city/city-view';
 import { RaceController, type RaceResults, type RaceSetup } from './game/race';
-import type { Quality } from './render/quality';
+import { getQuality, type Quality } from './render/quality';
 import { FpsCounter } from './render/fps';
 import { InputManager } from './input/input';
 import { Hud, type MinimapDot } from './ui/hud';
@@ -43,13 +43,19 @@ export class App {
   /** Внешний хук для онлайн-режима. */
   onOnline: () => void = () => {};
 
+  /** Физика: грузится в фоне, пока игрок в меню; доступна после rapier. */
+  R!: Rapier;
+
   constructor(
-    readonly R: Rapier,
+    readonly rapier: Promise<Rapier>,
     readonly root: HTMLElement,
-    readonly quality: Quality,
+    public quality: Quality,
   ) {
+    void rapier.then((r) => (this.R = r));
     this.input = new InputManager(root);
     this.fps = new FpsCounter(root);
+    // Строка fps · мс · draw calls — только для отладки (PLAN_V2 7.2)
+    this.fps.el.style.display = new URLSearchParams(location.search).has('debug') ? '' : 'none';
     if (new URLSearchParams(location.search).has('debug'))
       this.inputDebug = new InputDebug(root, this.input);
     this.pauseBtn = document.createElement('button');
@@ -150,7 +156,10 @@ export class App {
     }
     this.lastSetup = setup;
     const city = setup.cityId ? await this.loadCityCached(setup.cityId) : null;
-    const race = new RaceController(this.R, setup, this.quality, this.root, this.input, city);
+    // Качество графики могли поменять в меню — берём актуальное на каждую гонку
+    this.quality = getQuality();
+    const R = await this.rapier;
+    const race = new RaceController(R, setup, this.quality, this.root, this.input, city);
     this.race = race;
     this.attach(race);
     race.session.start();

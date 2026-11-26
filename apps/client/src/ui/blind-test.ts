@@ -79,7 +79,7 @@ export class BlindTest {
     readonly root: HTMLElement,
     quality: Quality,
   ) {
-    this.app = new App(R, root, quality);
+    this.app = new App(Promise.resolve(R), root, quality);
   }
 
   start(): void {

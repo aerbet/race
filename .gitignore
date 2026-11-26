@@ -12,3 +12,6 @@ apps/api/target/
 art/source/
 art/export/
 __pycache__/
+
+# Дампы Redis (могут содержать данные игроков)
+*.rdb

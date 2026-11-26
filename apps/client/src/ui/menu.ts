@@ -1,5 +1,6 @@
 import { BRAND, CARS, WEATHER_NAMES, formatTime, type Weather } from '@sr/shared';
 import { CITIES } from '../city/city-view';
+import { loadQualitySetting, saveQualitySetting } from '../render/quality';
 import { account } from '../meta/account';
 import type { BotLevel } from '@sr/physics';
 import { MODES, type ModeId, type RaceResults, type RaceSetup } from '../game/race';
@@ -159,6 +160,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
       <div class="row" data-k="level" style="margin-top:8px"></div>
     </div>
     <h2>Коробка</h2><div class="row" data-k="gear"></div>
+    <h2>Графика</h2><div class="row" data-k="quality"></div>
     <h2>Имя</h2><input type="text" maxlength="16" data-k="name" />
     <button class="btn primary" data-k="go">Поехали</button>
     <button class="btn" data-k="online" style="width:100%;margin-top:8px;text-align:center">Онлайн-гонка</button>
@@ -167,7 +169,7 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
       <span class="kbd">Пробел</span> резкий тормоз (с газом и рулём — занос) · <span class="kbd">Shift</span> нитро · <span class="kbd">C</span> камера ·
       <span class="kbd">R</span> сброс · <span class="kbd">Esc</span> пауза · <span class="kbd">Q/E</span> передачи (ручная)<br/>
       Геймпад: стик — руль, R2/L2 — газ/тормоз, A — резкий тормоз / занос с газом, B — нитро. На телефоне — экранные кнопки, газ автоматический.<br/>
-      <a href="?blind" style="color:var(--accent)">Слепой тест управления</a> · <a href="?q=low" style="color:var(--muted)">низкое качество</a> · <a href="?q=high" style="color:var(--muted)">высокое</a>
+      <a href="?blind" style="color:var(--accent)">Слепой тест управления</a>
     </p>
   </div></div>`);
   root.appendChild(el);
@@ -274,6 +276,22 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
         render();
       };
       gear.appendChild(b);
+    }
+    // Качество графики — здесь, а не ссылками в подсказке (PLAN_V2 7.0.6)
+    const qBox = q('quality');
+    qBox.innerHTML = '';
+    const cur = loadQualitySetting();
+    for (const [v, t] of [
+      ['auto', 'Авто'],
+      ['low', 'Низкое'],
+      ['high', 'Высокое'],
+    ] as const) {
+      const b = h(`<button class="btn ${cur === v ? 'sel' : ''}">${t}</button>`);
+      b.onclick = () => {
+        saveQualitySetting(v);
+        render();
+      };
+      qBox.appendChild(b);
     }
   };
   render();

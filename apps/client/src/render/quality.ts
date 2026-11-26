@@ -14,11 +14,42 @@ export interface Quality {
   drawDistance: number;
 }
 
+const QUALITY_KEY = 'sr:quality';
+export type QualitySetting = 'auto' | QualityName;
+
+/** Выбор игрока в меню (сохраняется в браузере). */
+export function loadQualitySetting(): QualitySetting {
+  try {
+    const v = localStorage.getItem(QUALITY_KEY);
+    return v === 'low' || v === 'high' ? v : 'auto';
+  } catch {
+    return 'auto';
+  }
+}
+
+export function saveQualitySetting(v: QualitySetting): void {
+  try {
+    localStorage.setItem(QUALITY_KEY, v);
+  } catch {
+    /* нет хранилища */
+  }
+}
+
+/**
+ * Телефон или планшет. iPad и «полная версия сайта» в Safari выдают себя за Mac —
+ * их выдаёт сенсорный экран (PLAN_V2 7.1а).
+ */
+export function isMobileDevice(): boolean {
+  return /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
+}
+
 export function getQuality(): Quality {
+  // ?q=low|high — для отладки; иначе выбор игрока; иначе по устройству
   const url = new URLSearchParams(location.search);
   const q = url.get('q');
-  const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-  const name: QualityName = q === 'low' || q === 'high' ? q : mobile ? 'low' : 'high';
+  const set = loadQualitySetting();
+  const name: QualityName =
+    q === 'low' || q === 'high' ? q : set !== 'auto' ? set : isMobileDevice() ? 'low' : 'high';
   if (name === 'low') {
     return {
       name,
