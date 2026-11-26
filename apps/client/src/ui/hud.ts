@@ -93,10 +93,10 @@ export class Hud {
     this.map = q('.hud-map');
   }
 
-  setTrack(t: BuiltTrack, city: City | null = null): void {
+  setTrack(track: BuiltTrack, city: City | null = null): void {
     const size = 180;
     const pad = 12;
-    const bb = t.bounds;
+    const bb = track.bounds;
     const w = bb.maxX - bb.minX;
     const h = bb.maxZ - bb.minZ;
     this.mapScale = (size - pad * 2) / Math.max(w, h);
@@ -133,13 +133,13 @@ export class Hud {
     g.lineJoin = 'round';
     const path = () => {
       g.beginPath();
-      t.samples.forEach((s, i) => {
+      track.samples.forEach((s, i) => {
         const x = this.mapOx + s.x * this.mapScale,
           y = this.mapOz + s.z * this.mapScale;
         if (i === 0) g.moveTo(x, y);
         else g.lineTo(x, y);
       });
-      if (t.def.closed) g.closePath();
+      if (track.def.closed) g.closePath();
     };
     g.strokeStyle = 'rgba(41,224,255,0.25)';
     g.lineWidth = 7;
@@ -150,7 +150,7 @@ export class Hud {
     path();
     g.stroke();
     // Финиш
-    const fin = t.checkpoints[t.checkpoints.length - 1]!;
+    const fin = track.checkpoints[track.checkpoints.length - 1]!;
     g.fillStyle = '#ff2bd6';
     g.fillRect(
       this.mapOx + fin.x * this.mapScale - 3,

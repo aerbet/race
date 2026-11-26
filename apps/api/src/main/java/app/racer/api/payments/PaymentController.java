@@ -22,11 +22,13 @@ public class PaymentController {
   private static final Logger log = LoggerFactory.getLogger(PaymentController.class);
   private final PaymentService payments;
   private final CryptoPayProvider cryptoPay;
+  private final StarsProvider stars;
   private final ObjectMapper om;
 
-  public PaymentController(PaymentService payments, CryptoPayProvider cryptoPay, ObjectMapper om) {
+  public PaymentController(PaymentService payments, CryptoPayProvider cryptoPay, StarsProvider stars, ObjectMapper om) {
     this.payments = payments;
     this.cryptoPay = cryptoPay;
+    this.stars = stars;
     this.om = om;
   }
 
@@ -71,6 +73,35 @@ public class PaymentController {
       }
     } catch (Exception e) {
       log.warn("вебхук Crypto Pay: {}", e.toString());
+      return ResponseEntity.status(500).body("retry");
+    }
+    return ResponseEntity.ok("ok");
+  }
+
+  /**
+   * Вебхук бота (Telegram Stars). Подлинность — секрет из setWebhook в заголовке.
+   * pre_checkout_query: подтверждаем, только если платёж наш, ждёт оплаты и сумма совпала.
+   * successful_payment: телу не верим — confirm() сверяет транзакцию через getStarTransactions.
+   */
+  @PostMapping("/webhooks/telegram")
+  public ResponseEntity<String> telegram(@RequestHeader(value = "X-Telegram-Bot-Api-Secret-Token", required = false) String secret, @RequestBody byte[] body) {
+    if (!stars.verifySecret(secret)) return ResponseEntity.status(401).body("bad secret");
+    try {
+      JsonNode u = om.readTree(body);
+      JsonNode q = u.path("pre_checkout_query");
+      if (!q.isMissingNode()) {
+        Payment p = payments.byProvider("stars", q.path("invoice_payload").asText());
+        boolean ok = p != null && "pending".equals(p.status) && "XTR".equals(q.path("currency").asText())
+            && p.amount.longValue() == q.path("total_amount").asLong();
+        stars.answerPreCheckout(q.path("id").asText(), ok, ok ? null : "Счёт устарел. Открой магазин ещё раз.");
+      }
+      JsonNode paid = u.path("message").path("successful_payment");
+      if (!paid.isMissingNode()) {
+        Payment p = payments.byProvider("stars", paid.path("invoice_payload").asText());
+        if (p != null) payments.confirm(p.id);
+      }
+    } catch (Exception e) {
+      log.warn("вебхук Telegram: {}", e.toString());
       return ResponseEntity.status(500).body("retry");
     }
     return ResponseEntity.ok("ok");

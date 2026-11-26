@@ -31,6 +31,12 @@ class PaymentsTest extends TestBase {
   static final java.util.concurrent.atomic.AtomicInteger seq = new java.util.concurrent.atomic.AtomicInteger(1000);
   static final AtomicReference<String> lastInvoice = new AtomicReference<>("");
   static final AtomicReference<String> lastYk = new AtomicReference<>("");
+  static final String BOT = "42:test-bot";
+  static final String TG_SECRET = "tg-webhook-secret";
+  /** Транзакции Stars, которые «видит» Telegram: payload → сумма. */
+  static final Map<String, Integer> starTx = new java.util.concurrent.ConcurrentHashMap<>();
+  static final AtomicReference<String> lastStarsInvoice = new AtomicReference<>("");
+  static final AtomicReference<String> lastPreCheckout = new AtomicReference<>("");
 
   static void reply(HttpExchange ex, String json) throws IOException {
     byte[] out = json.getBytes(StandardCharsets.UTF_8);
@@ -66,6 +72,23 @@ class PaymentsTest extends TestBase {
             + "\",\"currency\":\"RUB\"},\"metadata\":{\"paymentId\":\"" + ykMeta.get() + "\"}}");
       }
     });
+    stub.createContext("/bot" + BOT + "/createInvoiceLink", ex -> {
+      String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+      lastStarsInvoice.set(body);
+      reply(ex, "{\"ok\":true,\"result\":\"https://t.me/$inv" + seq.incrementAndGet() + "\"}");
+    });
+    stub.createContext("/bot" + BOT + "/getStarTransactions", ex -> {
+      ex.getRequestBody().readAllBytes();
+      StringBuilder sb = new StringBuilder();
+      starTx.forEach((payload, amount) -> sb.append(sb.isEmpty() ? "" : ",")
+          .append("{\"id\":\"ch-").append(payload).append("\",\"amount\":").append(amount)
+          .append(",\"date\":1,\"source\":{\"type\":\"user\",\"invoice_payload\":\"").append(payload).append("\"}}"));
+      reply(ex, "{\"ok\":true,\"result\":{\"transactions\":[" + sb + "]}}");
+    });
+    stub.createContext("/bot" + BOT + "/answerPreCheckoutQuery", ex -> {
+      lastPreCheckout.set(new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+      reply(ex, "{\"ok\":true,\"result\":true}");
+    });
     stub.start();
     String base = "http://127.0.0.1:" + stub.getAddress().getPort();
     r.add("payments.cryptopay.token", () -> CRYPTO_TOKEN);
@@ -73,6 +96,9 @@ class PaymentsTest extends TestBase {
     r.add("payments.yookassa.shop-id", () -> "100500");
     r.add("payments.yookassa.secret-key", () -> "test_secret");
     r.add("payments.yookassa.base-url", () -> base);
+    r.add("payments.stars.bot-token", () -> BOT);
+    r.add("payments.stars.webhook-secret", () -> TG_SECRET);
+    r.add("payments.stars.base-url", () -> base);
   }
 
   @org.junit.jupiter.api.BeforeEach
@@ -98,6 +124,46 @@ class PaymentsTest extends TestBase {
     assertThat(p.size()).isEqualTo(3);
     assertThat(p.get(0).get("prices").get("cryptobot").get("amount").asText()).isEqualTo("1.10");
     assertThat(p.get(0).get("prices").get("sbp").get("amount").asText()).isEqualTo("99.00");
+    assertThat(p.get(0).get("prices").get("stars").get("amount").asText()).isEqualTo("75");
+    assertThat(p.get(0).get("prices").get("stars").get("currency").asText()).isEqualTo("XTR");
+  }
+
+  private org.springframework.test.web.servlet.RequestBuilder tgHook(String json, String secret) {
+    var b = MockMvcRequestBuilders.post("/webhooks/telegram").contentType(MediaType.APPLICATION_JSON).content(json);
+    return secret == null ? b : b.header("X-Telegram-Bot-Api-Secret-Token", secret);
+  }
+
+  @Test
+  void starsFlow() throws Exception {
+    String t = register("pay5@test.ru");
+    var created = json(post("/api/payments", Map.of("productId", "tokens_100", "provider", "stars"), t).header("Idempotency-Key", "st1"), 200);
+    String id = created.get("id").asText();
+    assertThat(created.get("payUrl").asText()).startsWith("https://t.me/$inv");
+    assertThat(created.get("currency").asText()).isEqualTo("XTR");
+    assertThat(lastStarsInvoice.get()).contains("\"currency\":\"XTR\"").contains("\"payload\":\"" + id + "\"").contains("\"amount\":75");
+
+    // Без секрета — 401
+    String pre = "{\"update_id\":1,\"pre_checkout_query\":{\"id\":\"q1\",\"currency\":\"XTR\",\"total_amount\":%d,\"invoice_payload\":\"" + id + "\"}}";
+    assertThat(mvc.perform(tgHook(pre.formatted(75), "wrong")).andReturn().getResponse().getStatus()).isEqualTo(401);
+    // Сумма не та — отказ в pre_checkout
+    mvc.perform(tgHook(pre.formatted(1), TG_SECRET));
+    assertThat(lastPreCheckout.get()).contains("\"ok\":false");
+    mvc.perform(tgHook(pre.formatted(75), TG_SECRET));
+    assertThat(lastPreCheckout.get()).contains("\"ok\":true");
+
+    // successful_payment без транзакции у Telegram — не начисляем
+    String paidMsg = "{\"update_id\":2,\"message\":{\"message_id\":5,\"successful_payment\":{\"currency\":\"XTR\",\"total_amount\":75,\"invoice_payload\":\"" + id + "\",\"telegram_payment_charge_id\":\"ch1\"}}}";
+    mvc.perform(tgHook(paidMsg, TG_SECRET));
+    assertThat(tokens(t)).isZero();
+    // Транзакция есть — +100, повтор — без второго начисления
+    starTx.put(id, 75);
+    mvc.perform(tgHook(paidMsg, TG_SECRET));
+    mvc.perform(tgHook(paidMsg, TG_SECRET));
+    assertThat(tokens(t)).isEqualTo(100);
+    assertThat(json(get("/api/payments/" + id, t), 200).get("status").asText()).isEqualTo("paid");
+    // Оплаченный счёт больше не подтверждается
+    mvc.perform(tgHook(pre.formatted(75), TG_SECRET));
+    assertThat(lastPreCheckout.get()).contains("\"ok\":false");
   }
 
   @Test

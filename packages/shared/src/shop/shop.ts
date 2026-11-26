@@ -6,6 +6,8 @@ export interface TokenPack {
   tokens: number;
   rub: number;
   usdt: number;
+  /** Цена в Telegram Stars. */
+  stars: number;
   badge?: string;
 }
 

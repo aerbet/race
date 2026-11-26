@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 /** Каталог магазина — общий JSON с клиентом (packages/shared/src/shop/shop.json). */
 @Component
 public class ShopCatalog {
-  public record Pack(String id, String name, int tokens, BigDecimal rub, BigDecimal usdt, String badge) {}
+  public record Pack(String id, String name, int tokens, BigDecimal rub, BigDecimal usdt, int stars, String badge) {}
 
   public record Cosmetic(String id, String slot, String value, String name, int price) {}
 
@@ -28,7 +28,7 @@ public class ShopCatalog {
     }
     for (JsonNode p : root.path("packs"))
       packs.add(new Pack(p.get("id").asText(), p.get("name").asText(), p.get("tokens").asInt(),
-          new BigDecimal(p.get("rub").asText()), new BigDecimal(p.get("usdt").asText()), p.path("badge").asText(null)));
+          new BigDecimal(p.get("rub").asText()), new BigDecimal(p.get("usdt").asText()), p.path("stars").asInt(0), p.path("badge").asText(null)));
     for (JsonNode c : root.path("cosmetics"))
       cosmetics.add(new Cosmetic(c.get("id").asText(), c.get("slot").asText(), c.get("value").asText(), c.get("name").asText(), c.get("price").asInt()));
   }

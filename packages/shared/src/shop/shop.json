@@ -1,14 +1,24 @@
 {
-  "currency": { "token": "жетоны" },
+  "currency": {
+    "token": "жетоны"
+  },
   "packs": [
-    { "id": "tokens_100", "name": "100 жетонов", "tokens": 100, "rub": 99, "usdt": 1.1 },
+    {
+      "id": "tokens_100",
+      "name": "100 жетонов",
+      "tokens": 100,
+      "rub": 99,
+      "usdt": 1.1,
+      "stars": 75
+    },
     {
       "id": "tokens_550",
       "name": "550 жетонов",
       "tokens": 550,
       "rub": 499,
       "usdt": 5.5,
-      "badge": "+10%"
+      "badge": "+10%",
+      "stars": 375
     },
     {
       "id": "tokens_1200",
@@ -16,12 +26,25 @@
       "tokens": 1200,
       "rub": 999,
       "usdt": 11,
-      "badge": "+20%"
+      "badge": "+20%",
+      "stars": 750
     }
   ],
   "cosmetics": [
-    { "id": "paint_chrome", "slot": "paint", "value": "chrome", "name": "Хром", "price": 150 },
-    { "id": "paint_pearl", "slot": "paint", "value": "pearl", "name": "Перламутр", "price": 120 },
+    {
+      "id": "paint_chrome",
+      "slot": "paint",
+      "value": "chrome",
+      "name": "Хром",
+      "price": 150
+    },
+    {
+      "id": "paint_pearl",
+      "slot": "paint",
+      "value": "pearl",
+      "name": "Перламутр",
+      "price": 120
+    },
     {
       "id": "paint_matte_black",
       "slot": "paint",
@@ -43,7 +66,13 @@
       "name": "Неон «Радуга»",
       "price": 200
     },
-    { "id": "neon_pulse", "slot": "neon", "value": "pulse", "name": "Неон «Пульс»", "price": 150 },
+    {
+      "id": "neon_pulse",
+      "slot": "neon",
+      "value": "pulse",
+      "name": "Неон «Пульс»",
+      "price": 150
+    },
     {
       "id": "vinyl_stripes",
       "slot": "vinyl",
@@ -72,10 +101,40 @@
       "name": "Диски «Турбина»",
       "price": 90
     },
-    { "id": "rims_mesh", "slot": "rims", "value": "mesh", "name": "Диски «Сетка»", "price": 90 },
-    { "id": "spoiler_gt", "slot": "spoiler", "value": "gt", "name": "Антикрыло GT", "price": 110 },
-    { "id": "kit_street", "slot": "kit", "value": "street", "name": "Кит «Уличный»", "price": 220 },
-    { "id": "kit_track", "slot": "kit", "value": "track", "name": "Кит «Трековый»", "price": 320 },
-    { "id": "kit_drift", "slot": "kit", "value": "drift", "name": "Кит «Дрифт»", "price": 300 }
+    {
+      "id": "rims_mesh",
+      "slot": "rims",
+      "value": "mesh",
+      "name": "Диски «Сетка»",
+      "price": 90
+    },
+    {
+      "id": "spoiler_gt",
+      "slot": "spoiler",
+      "value": "gt",
+      "name": "Антикрыло GT",
+      "price": 110
+    },
+    {
+      "id": "kit_street",
+      "slot": "kit",
+      "value": "street",
+      "name": "Кит «Уличный»",
+      "price": 220
+    },
+    {
+      "id": "kit_track",
+      "slot": "kit",
+      "value": "track",
+      "name": "Кит «Трековый»",
+      "price": 320
+    },
+    {
+      "id": "kit_drift",
+      "slot": "kit",
+      "value": "drift",
+      "name": "Кит «Дрифт»",
+      "price": 300
+    }
   ]
 }

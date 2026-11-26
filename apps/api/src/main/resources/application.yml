@@ -38,6 +38,11 @@ payments:
     # Тестовая сеть: https://testnet-pay.crypt.bot
     base-url: ${CRYPTOPAY_URL:https://pay.crypt.bot}
     assets: ${CRYPTOPAY_ASSETS:USDT,TON}
+  stars:
+    # Тот же бот, что и для входа через Telegram; без секрета вебхука провайдер выключен
+    bot-token: ${TELEGRAM_BOT_TOKEN:}
+    webhook-secret: ${TELEGRAM_WEBHOOK_SECRET:}
+    base-url: ${TELEGRAM_API_URL:https://api.telegram.org}
   yookassa:
     shop-id: ${YOOKASSA_SHOP_ID:}
     secret-key: ${YOOKASSA_SECRET_KEY:}
