@@ -14,6 +14,8 @@ export interface LevelBox {
   yaw: number;
   /** Наклон вдоль длинной оси (серпантин), рад. */
   pitch?: number;
+  /** Видимая часть стены (если коллайдер больше видимого): центр по Y и полувысота. */
+  visual?: { y: number; hy: number };
 }
 
 export interface LevelWedge {
@@ -43,6 +45,12 @@ export function yawPitchQuat(
 
 export const WALL_HEIGHT = 1.4;
 export const WALL_THICKNESS = 1.2;
+/**
+ * Серпантин: за отбойником пустота. Коллайдер выше видимого (машину на ударе не перебрасывает)
+ * и заходит под полотно (не проскальзывает снизу на стыках секций).
+ */
+export const ELEVATED_WALL_HEIGHT = 2.8;
+export const ELEVATED_WALL_BELOW = 1.5;
 
 /** Описание статической геометрии уровня — общее для физики и рендера. */
 export function levelGeometry(track: BuiltTrack): LevelGeometry {
@@ -71,16 +79,20 @@ export function levelGeometry(track: BuiltTrack): LevelGeometry {
         const len = Math.hypot(bx - ax, bz - az);
         if (len < 0.01) continue;
         const dy = b.y - a.y;
+        const midY = (a.y + b.y) / 2;
+        const up = track.elevated ? ELEVATED_WALL_HEIGHT : WALL_HEIGHT;
+        const below = track.elevated ? ELEVATED_WALL_BELOW : 0;
         boxes.push({
           kind: 'wall',
           x: (ax + bx) / 2,
-          y: (a.y + b.y) / 2 + WALL_HEIGHT / 2,
+          y: midY + (up - below) / 2,
           z: (az + bz) / 2,
           hx: WALL_THICKNESS / 2,
-          hy: WALL_HEIGHT / 2,
+          hy: (up + below) / 2,
           hz: Math.hypot(len, dy) / 2 + 0.35,
           yaw: Math.atan2(bx - ax, bz - az),
           pitch: -Math.atan2(dy, len),
+          ...(track.elevated ? { visual: { y: midY + WALL_HEIGHT / 2, hy: WALL_HEIGHT / 2 } } : {}),
         });
       }
     }

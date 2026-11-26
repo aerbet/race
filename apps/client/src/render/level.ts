@@ -446,7 +446,9 @@ export class LevelView {
     );
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
-    walls.forEach((b, i) => {
+    walls.forEach((w, i) => {
+      // На серпантине коллайдер выше видимой стены — рисуем видимую часть
+      const b = w.visual ? { ...w, y: w.visual.y, hy: w.visual.hy } : w;
       q.setFromEuler(new THREE.Euler(b.pitch ?? 0, b.yaw, 0, 'YXZ'));
       m.compose(
         new THREE.Vector3(b.x, b.y, b.z),

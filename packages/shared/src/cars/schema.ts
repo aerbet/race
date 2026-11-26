@@ -32,7 +32,7 @@ export const AssistsSchema = z.object({
       /** Добавка к кинематическому углу (°) — шине нужен угол увода, чтобы тянуть. */
       extraDeg: nonneg,
     })
-    .default({ enabled: true, latG: 1.0, extraDeg: 2.5 }),
+    .default({ enabled: true, latG: 2.0, extraDeg: 2.5 }),
   /** Стабилизация вне дрифта (как ESP): рыскание к ожидаемому по рулю, предел скольжения. */
   stability: z
     .object({
@@ -43,8 +43,13 @@ export const AssistsSchema = z.object({
       maxSlipDeg: pos,
       /** Как быстро гасится лишняя боковая скорость, 1/с. */
       slipRate: nonneg,
+      /**
+       * Аркадное сцепление: траектория подтягивается к направлению кузова, 1/с
+       * (машина едет туда, куда смотрит нос, а не уползает боком).
+       */
+      gripRate: nonneg.default(3),
     })
-    .default({ enabled: true, yawGain: 7, maxSlipDeg: 9, slipRate: 5 }),
+    .default({ enabled: true, yawGain: 7, maxSlipDeg: 9, slipRate: 5, gripRate: 3 }),
   /** Ручник: без руля — тормоз по прямой, с рулём — занос с пределом угла. */
   handbrake: z
     .object({

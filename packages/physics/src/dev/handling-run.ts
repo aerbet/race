@@ -14,6 +14,8 @@ export type Step = {
   yaw: number;
   x: number;
   head: number;
+  /** Направление скорости (траектории), °. */
+  path: number;
   drift: number;
 };
 
@@ -79,12 +81,15 @@ export function run(
       yaw: car.body.angvel().y,
       x: car.position.x,
       head: (car.yaw * 180) / Math.PI,
+      path: (Math.atan2(-car.body.linvel().x, -car.body.linvel().z) * 180) / Math.PI,
       drift: tel.driftFactor,
     });
   }
   sim.dispose();
   return log;
 }
+
+const wrap = (d: number) => (d > 180 ? d - 360 : d < -180 ? d + 360 : d);
 
 export const sum = (log: Step[]) => {
   const peak = Math.max(...log.map((l) => Math.abs(l.slip)));
@@ -104,6 +109,8 @@ export const sum = (log: Step[]) => {
     slipFlips: flips,
     slipSettledAt: +settle.toFixed(2),
     turned1s: +Math.abs(d).toFixed(0),
+    /** Поворот траектории за 1 с, °. */
+    path1s: +Math.abs(wrap(log[59]!.path - log[0]!.path)).toFixed(0),
     latG: +latG.toFixed(2),
   };
 };

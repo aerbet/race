@@ -108,10 +108,14 @@ export class TouchInput {
     return this.held.size > 0;
   }
 
-  sample(dt: number): Partial<InputFrame> {
+  /** rate / returnRate — из конфига машины (1/с), как у клавиатуры. */
+  sample(dt: number, rate = 7, returnRate = 10): Partial<InputFrame> {
     let target = (this.held.has('right') ? 1 : 0) - (this.held.has('left') ? 1 : 0);
     if (this.tilt) target = this.tiltValue;
-    const rate = 4;
+    // Отпустил или повёл в другую сторону — руль возвращается быстрее
+    const back =
+      Math.abs(target) < Math.abs(this.steer) || Math.sign(target) !== Math.sign(this.steer);
+    if (back && this.steer !== 0) rate = returnRate;
     this.steer +=
       Math.sign(target - this.steer) * Math.min(Math.abs(target - this.steer), rate * dt);
     const brake = this.held.has('brake');

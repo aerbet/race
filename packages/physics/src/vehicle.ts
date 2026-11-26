@@ -640,11 +640,13 @@ export class Vehicle {
         const g = 1 - clamp(this.driftFactor / 0.5, 0, 1);
         if (g > 0) {
           const wb = cfg.wheels.wheelbase;
-          const lim = aLatMax / Math.max(speed, 1);
+          const lim = (aLatMax * A.gripSteer.latG) / Math.max(speed, 1);
           const target = clamp(-(fwdSpeed * Math.tan(this.steerAngle)) / wb, -lim, lim);
           torqueYaw(-(yawRate - target) * A.stability.yawGain * g);
           const maxSlip = (A.stability.maxSlipDeg * Math.PI) / 180;
           const allowed = Math.abs(fwdSpeed) * Math.tan(maxSlip);
+          // Аркадное сцепление: боковая скорость гасится всегда — траектория идёт за носом
+          body.addForce(scale(right, -latSpeed * m * A.stability.gripRate * g), true);
           const excess = Math.abs(latSpeed) - allowed;
           if (excess > 0)
             body.addForce(

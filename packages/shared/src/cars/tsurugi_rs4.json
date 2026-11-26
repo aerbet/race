@@ -82,8 +82,8 @@
   },
   "steering": {
     "maxAngleDeg": 33,
-    "keyboardRate": 4.5,
-    "keyboardReturnRate": 6
+    "keyboardRate": 7,
+    "keyboardReturnRate": 10
   },
   "assists": {
     "speedSteer": {
@@ -93,14 +93,15 @@
     },
     "gripSteer": {
       "enabled": true,
-      "latG": 1,
+      "latG": 2,
       "extraDeg": 2.5
     },
     "stability": {
       "enabled": true,
       "yawGain": 7,
       "maxSlipDeg": 9,
-      "slipRate": 5
+      "slipRate": 5,
+      "gripRate": 3
     },
     "handbrake": {
       "enabled": true,
@@ -128,7 +129,7 @@
     },
     "driftExit": {
       "enabled": true,
-      "recoverRate": 1.6,
+      "recoverRate": 5,
       "yawDamp": 2.5
     },
     "airStabilize": {

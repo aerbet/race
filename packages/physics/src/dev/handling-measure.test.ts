@@ -46,6 +46,42 @@ describe.skipIf(!process.env.MEASURE)('что вызывает занос в о�
   });
 });
 
+describe.skipIf(!process.env.MEASURE)('выход из дрифта', () => {
+  it('ручник+руль 0,6 с, держим занос до 2 с, затем руль прямо и газ', () => {
+    for (const id of ['era2000_coupe', 'kaizen_rx34', 'voss_kleiner', 'falkner_heck']) {
+      const log = run(
+        CARS[id]!,
+        100,
+        (t) => ({ handbrake: t < 0.6 ? 1 : 0, throttle: t < 0.6 ? 0 : 0.8, key: t < 2 ? 1 : 0 }),
+        5,
+      );
+      const peak = Math.max(...log.filter((l) => l.t < 2).map((l) => Math.abs(l.slip)));
+      const out = log.find((l) => l.t > 2 && Math.abs(l.slip) < 5 && l.drift < 0.2);
+      console.log(
+        'EXIT',
+        id,
+        JSON.stringify({
+          driftPeak: +peak.toFixed(0),
+          exitS: out ? +(out.t - 2).toFixed(2) : null,
+        }),
+      );
+    }
+  });
+});
+
+describe.skipIf(!process.env.MEASURE)('манёвр на скорости', () => {
+  it('поворот за 1 с полного руля', () => {
+    for (const id of ['era2000_coupe', 'kaizen_rx34', 'voss_imperator', 'ferro_cuneo']) {
+      const out: Record<string, unknown> = {};
+      for (const v of [60, 100, 150, 200]) {
+        const s = sum(run(CARS[id]!, v, (t) => ({ throttle: 1, key: t < 1.2 ? 1 : 0 }), 3));
+        out[v] = `кузов ${s.turned1s}° путь ${s.path1s}° слип ${s.peakSlip}°`;
+      }
+      console.log('AGILITY', id, JSON.stringify(out));
+    }
+  });
+});
+
 describe.skipIf(!process.env.MEASURE)('замеры управляемости', () => {
   for (const id of ['era2000_coupe', 'kaizen_rx34', 'voss_kleiner', 'falkner_heck']) {
     it(id, () => {

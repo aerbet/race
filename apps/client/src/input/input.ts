@@ -13,8 +13,8 @@ export class InputManager {
   device: DeviceName = 'keyboard';
   /** Последние сырые значения каждого устройства (для отладочной панели). */
   readonly raw: Record<DeviceName, Partial<InputFrame>> = { keyboard: {}, gamepad: {}, touch: {} };
-  steerRate = 4.5;
-  steerReturn = 6;
+  steerRate = 7;
+  steerReturn = 10;
 
   constructor(uiRoot: HTMLElement) {
     this.keyboard = new KeyboardInput();
@@ -27,7 +27,7 @@ export class InputManager {
   sample(dt: number): InputFrame {
     this.raw.keyboard = this.keyboard.sample(dt, this.steerRate, this.steerReturn);
     this.raw.gamepad = this.gamepad.sample() ?? {};
-    this.raw.touch = this.touch.sample(dt);
+    this.raw.touch = this.touch.sample(dt, this.steerRate, this.steerReturn);
     if (this.keyboard.active) this.device = 'keyboard';
     else if (this.gamepad.active) this.device = 'gamepad';
     else if (this.touch.active) this.device = 'touch';

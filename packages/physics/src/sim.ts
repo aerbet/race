@@ -5,6 +5,10 @@ import { createLevel, type PhysicsLevel } from './world';
 import { Vehicle, type VehicleOptions } from './vehicle';
 import type { Collider, RigidBody } from '@dimforge/rapier3d-compat';
 import { GROUP_CAR, GROUP_STATIC, groups } from './world';
+import { WALL_THICKNESS } from './level';
+
+/** Наибольшая скорость вверх при касании стены, м/с. */
+const WALL_MAX_RISE = 1.5;
 
 /** Чужая машина, положение которой задаётся извне (сеть): кинематическое тело. */
 export interface ProxyCar {
@@ -156,13 +160,23 @@ export class Sim {
         if (this.level.wallHandles.has(other.handle)) car.wallContact = true;
         else if (other.parent()?.isDynamic()) car.carContact = true;
       });
+      // Удар о стену не подбрасывает машину (иначе на серпантине её перекидывает через отбойник)
+      if (car.wallContact) {
+        const v = car.body.linvel();
+        if (v.y > WALL_MAX_RISE) car.body.setLinvel({ x: v.x, y: WALL_MAX_RISE, z: v.z }, true);
+      }
       const p = car.position;
       const c = trackCoords(this.track, p.x, p.z, this.hints[i]);
       this.hints[i] = c.i;
       const sm = this.track.samples[c.i]!;
       if (Math.abs(c.lateral) < sm.width / 2 && car.grounded >= 3 && car.up().y > 0.9)
         this.lastSafeS[i] = c.s;
-      if (car.needsReset || p.y < this.track.minY - 20) this.resetCar(i);
+      // Серпантин: за отбойником или ниже полотна — сразу на трассу, без долгого падения
+      const fellOff =
+        this.track.elevated &&
+        (p.y < sm.y - 3 ||
+          Math.abs(c.lateral) > sm.width / 2 + this.track.def.wallOffset + WALL_THICKNESS + 2);
+      if (car.needsReset || fellOff || p.y < this.track.minY - 20) this.resetCar(i);
     }
     this.step++;
   }
