@@ -19,7 +19,15 @@ const safeStorage = (): Store | null => {
 
 /** Свои плейлисты YouTube (8.2): до 10, хранятся в браузере игрока. */
 export class PlaylistStore {
+  /** Список изменил игрок (добавил/убрал) — синхронизация с профилем (meta/settings-sync). */
+  static onChange: ((list: SavedPlaylist[]) => void) | null = null;
+
   constructor(private store: Store | null = safeStorage()) {}
+
+  /** Заменить список целиком (настройки из профиля); onChange не вызывается. */
+  replace(list: SavedPlaylist[]): void {
+    this.write(list.slice(0, MAX_PLAYLISTS));
+  }
 
   list(): SavedPlaylist[] {
     try {
@@ -31,6 +39,11 @@ export class PlaylistStore {
   }
 
   private save(v: SavedPlaylist[]): void {
+    this.write(v);
+    PlaylistStore.onChange?.(v);
+  }
+
+  private write(v: SavedPlaylist[]): void {
     try {
       this.store?.setItem(KEY, JSON.stringify(v));
     } catch {

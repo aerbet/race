@@ -109,15 +109,24 @@ export async function loginTelegramWebApp(initData: string): Promise<void> {
     '/api/auth/telegram-webapp',
     { body: { initData }, auth: false },
   );
-  setSession(r);
+  setSession(r, false);
 }
 
-function setSession(r: { token: string; userId: string; name: string }): void {
+/** После входа — настройки из профиля; сменился язык — пересобрать страницу. */
+function afterLogin(): void {
+  void import('./settings-sync').then(async ({ pullSettings }) => {
+    if (await pullSettings()) location.reload();
+  });
+}
+
+/** sync = false — вход при запуске (Telegram): настройки заберёт сам запуск (main.ts). */
+function setSession(r: { token: string; userId: string; name: string }, sync = true): void {
   account.token = r.token;
   account.userId = r.userId;
   account.name = r.name;
   account.ownedCarId = null;
   saveAccount();
+  if (sync) afterLogin();
 }
 
 export const garageList = () => api<OwnedCar[]>('/api/garage');

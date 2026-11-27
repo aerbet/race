@@ -1,8 +1,9 @@
 import { initPhysics } from '@sr/physics';
-import { BRAND, detectLang, setLang, t, type Lang } from '@sr/shared';
+import { BRAND, detectLang, getLang, setLang, t, type Lang } from '@sr/shared';
 import { getQuality } from './render/quality';
 import { App } from './app';
 import { initTelegram, telegramLang } from './meta/telegram';
+import { initSettingsSync, pullSettings } from './meta/settings-sync';
 
 async function boot() {
   let saved: string | null = null;
@@ -38,6 +39,10 @@ async function boot() {
     setLang(tgLang);
     document.documentElement.lang = tgLang;
   }
+  // Настройки из профиля (язык, стример, плейлисты) — до первого экрана
+  initSettingsSync();
+  await pullSettings();
+  document.documentElement.lang = getLang();
   loading.remove();
   const app = new App(rapier, root, quality);
   app.onOnline = async () => {

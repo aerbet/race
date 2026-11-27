@@ -103,7 +103,11 @@ export class MusicHub {
     this.playRadio();
   }
 
-  setStreamer(on: boolean): void {
+  /** Игрок переключил режим стримера — синхронизация с профилем. */
+  onStreamerChange: ((on: boolean) => void) | null = null;
+
+  setStreamer(on: boolean, fromProfile = false): void {
+    if (!fromProfile && on !== this.streamer) this.onStreamerChange?.(on);
     this.streamer = on;
     write(STREAMER_KEY, on ? '1' : '0');
     if (on && this.source === 'youtube') this.fallback();

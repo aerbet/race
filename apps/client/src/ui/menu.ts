@@ -12,6 +12,7 @@ import {
 import { CITIES } from '../city/city-view';
 import { loadQualitySetting, saveQualitySetting } from '../render/quality';
 import { account } from '../meta/account';
+import { pushSettings } from '../meta/settings-sync';
 import type { BotLevel } from '@sr/physics';
 import { MODES, type ModeId, type RaceResults, type RaceSetup } from '../game/race';
 import { loadGhost } from '../game/ghost';
@@ -340,7 +341,11 @@ export function showMenu(root: HTMLElement, actions: MenuActions): () => void {
         setLang(l);
         document.documentElement.lang = l;
         // Шаблон меню собран на старом языке — пересобираем экран целиком
-        location.reload();
+        // (сначала язык уходит в профиль, но не дольше 1,5 с)
+        void Promise.race([
+          pushSettings({ lang: l }),
+          new Promise((r) => setTimeout(r, 1500)),
+        ]).finally(() => location.reload());
       };
       langBox.appendChild(b);
     }
