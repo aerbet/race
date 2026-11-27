@@ -10,7 +10,7 @@ PLAN_V2 и этапы Блендера B0–B7 закрыты (см. `docs/HANDO
   - `deploy/.env.example` со всеми переменными без значений-секретов;
   - `docs/DEPLOY.md` — инструкция для владельца.
   - Клиент в продакшене обращается к API и серверу гонок через тот же домен (без портов 8080 и 2567).
-- [ ] **11.2 CI** (GitHub Actions):
+- [x] **11.2 CI** (GitHub Actions):
   - lint, prettier, typecheck, тесты TS;
   - Java-тесты с PostgreSQL и Redis в services;
   - сборка клиента;

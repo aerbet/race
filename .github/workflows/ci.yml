@@ -1,0 +1,75 @@
+# Проверки на каждый пуш и pull request (PLAN_V3 11.2)
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ts:
+    name: TS — линтер, типы, тесты, сборка
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npx eslint .
+      - run: npx prettier --check --end-of-line auto .
+      - run: pnpm -s typecheck
+      - run: pnpm test
+      - run: pnpm --filter client build
+        env:
+          VITE_API_URL: same-origin
+          VITE_SERVER_URL: same-origin
+
+  api:
+    name: API — JUnit с PostgreSQL и Redis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: racer_test
+          POSTGRES_USER: racer
+          POSTGRES_PASSWORD: racer
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U racer -d racer_test" --health-interval 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - run: mvn -q -B test
+        working-directory: apps/api
+
+  e2e:
+    name: Дымовые тесты клиента (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npx playwright install --with-deps chromium
+      - run: pnpm e2e
