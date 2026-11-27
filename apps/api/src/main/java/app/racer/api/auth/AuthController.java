@@ -95,12 +95,35 @@ public class AuthController {
   public TokenResponse telegram(@RequestBody Map<String, String> data) {
     if (!TelegramVerifier.verify(data, props.telegram().botToken(), 86400))
       throw new ApiException(HttpStatus.UNAUTHORIZED, "bad_signature", "подпись Telegram не прошла проверку");
-    long tgId = Long.parseLong(data.get("id"));
+    return telegramUser(Long.parseLong(data.get("id")), data.getOrDefault("username", data.getOrDefault("first_name", "Гонщик")));
+  }
+
+  public record WebAppLogin(String initData) {}
+
+  /** Вход из Telegram Mini App: initData от Telegram.WebApp (поле user — JSON с id и именем). */
+  @PostMapping("/api/auth/telegram-webapp")
+  @Transactional
+  public TokenResponse telegramWebApp(@RequestBody WebAppLogin body) {
+    var data = TelegramVerifier.verifyWebApp(body == null ? null : body.initData(), props.telegram().botToken(), 86400);
+    if (data == null || data.get("user") == null)
+      throw new ApiException(HttpStatus.UNAUTHORIZED, "bad_signature", "подпись Telegram не прошла проверку");
+    com.fasterxml.jackson.databind.JsonNode user;
+    try {
+      user = new com.fasterxml.jackson.databind.ObjectMapper().readTree(data.get("user"));
+    } catch (Exception e) {
+      throw ApiException.bad("bad_user", "нет данных игрока");
+    }
+    String name = user.path("username").asText(user.path("first_name").asText("Гонщик"));
+    return telegramUser(user.path("id").asLong(), name.isBlank() ? "Гонщик" : name);
+  }
+
+  private TokenResponse telegramUser(long tgId, String displayName) {
+    if (tgId <= 0) throw ApiException.bad("bad_user", "нет данных игрока");
     User u =
         users.findByTelegramId(tgId)
             .orElseGet(
                 () -> {
-                  String name = data.getOrDefault("username", data.getOrDefault("first_name", "Гонщик"));
+                  String name = displayName;
                   User nu = create(name.length() > 32 ? name.substring(0, 32) : name);
                   nu.telegramId = tgId;
                   users.save(nu);

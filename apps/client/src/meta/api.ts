@@ -103,6 +103,15 @@ export async function register(email: string, password: string, name: string): P
   setSession(r);
 }
 
+/** Вход из Telegram Mini App по initData (подпись проверяет API). */
+export async function loginTelegramWebApp(initData: string): Promise<void> {
+  const r = await api<{ token: string; userId: string; name: string }>(
+    '/api/auth/telegram-webapp',
+    { body: { initData }, auth: false },
+  );
+  setSession(r);
+}
+
 function setSession(r: { token: string; userId: string; name: string }): void {
   account.token = r.token;
   account.userId = r.userId;

@@ -2,6 +2,7 @@ import { initPhysics } from '@sr/physics';
 import { BRAND, detectLang, setLang, t, type Lang } from '@sr/shared';
 import { getQuality } from './render/quality';
 import { App } from './app';
+import { initTelegram, telegramLang } from './meta/telegram';
 
 async function boot() {
   let saved: string | null = null;
@@ -29,6 +30,13 @@ async function boot() {
     loading.remove();
     new BlindTest(R, root, quality).start();
     return;
+  }
+  // Внутри Telegram Mini App: SDK, вход по initData, язык Telegram (если не выбран свой)
+  const tgApp = await initTelegram(root);
+  const tgLang = telegramLang(tgApp);
+  if (!saved && tgLang) {
+    setLang(tgLang);
+    document.documentElement.lang = tgLang;
   }
   loading.remove();
   const app = new App(rapier, root, quality);

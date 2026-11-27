@@ -49,4 +49,22 @@ class AuthTest extends TestBase {
     data.put("first_name", "Подделка");
     json(post("/api/auth/telegram", data, null), 401);
   }
+
+  @Test
+  void telegramMiniAppLogin() throws Exception {
+    Map<String, String> f = new java.util.LinkedHashMap<>();
+    f.put("query_id", "AAHdF6IQAAAAAN0XohDhrOrc");
+    f.put("user", "{\"id\":515151,\"first_name\":\"Кира\",\"username\":\"kira_drift\",\"language_code\":\"ru\"}");
+    f.put("auth_date", String.valueOf(Instant.now().getEpochSecond()));
+    String initData = TelegramVerifier.signWebApp(f, "test-bot-token");
+    var ok = json(post("/api/auth/telegram-webapp", Map.of("initData", initData), null), 200);
+    assertThat(ok.get("name").asText()).isEqualTo("kira_drift");
+    assertThat(json(post("/api/auth/telegram-webapp", Map.of("initData", initData), null), 200).get("userId")).isEqualTo(ok.get("userId"));
+    // Подпись виджета входа (другой ключ) или подмена данных — отказ
+    json(post("/api/auth/telegram-webapp", Map.of("initData", initData.replace("515151", "515152")), null), 401);
+    json(post("/api/auth/telegram-webapp", Map.of("initData", TelegramVerifier.signWebApp(f, "other-bot")), null), 401);
+    // Устаревшие данные — отказ
+    f.put("auth_date", String.valueOf(Instant.now().getEpochSecond() - 90000));
+    json(post("/api/auth/telegram-webapp", Map.of("initData", TelegramVerifier.signWebApp(f, "test-bot-token")), null), 401);
+  }
 }

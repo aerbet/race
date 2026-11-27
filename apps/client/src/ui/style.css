@@ -989,3 +989,19 @@ body.photo-mode .speedlines {
 .photo-ui .sub {
   margin: 2px 0;
 }
+
+/* Telegram Mini App (11.3): отступы безопасной зоны (вырез, шапка Telegram) */
+body.tg-app .hud-tl {
+  top: calc(40px + var(--safe-top, 0px));
+}
+body.tg-app .hud-map,
+body.tg-app .pause-btn {
+  margin-top: var(--safe-top, 0px);
+}
+body.tg-app .touch-controls {
+  bottom: var(--safe-bottom, 0px);
+}
+body.tg-app .screen {
+  padding-top: var(--safe-top, 0px);
+  padding-bottom: var(--safe-bottom, 0px);
+}

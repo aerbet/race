@@ -15,7 +15,7 @@ PLAN_V2 и этапы Блендера B0–B7 закрыты (см. `docs/HANDO
   - Java-тесты с PostgreSQL и Redis в services;
   - сборка клиента;
   - дымовые e2e.
-- [ ] **11.3 Telegram Mini App:**
+- [x] **11.3 Telegram Mini App:**
   - официальный скрипт `telegram-web-app.js`;
   - вход по `initData` (проверка HMAC по правилам Mini App) — `POST /api/auth/telegram-webapp`;
   - автоматический вход при запуске внутри Telegram;
