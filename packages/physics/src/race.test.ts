@@ -90,16 +90,22 @@ describe('bot on polygon', { timeout: 60_000 }, () => {
 });
 
 describe('balance by class (9.6)', { timeout: 300_000 }, () => {
-  it('every car: bot laps the polygon without resets; lap time drops with every class D → S', () => {
-    const times = new Map<string, number[]>();
-    for (const cfg of Object.values(CARS)) {
+  // По тесту на машину: длинный синхронный прогон всех машин подряд блокировал воркер
+  // Vitest дольше минуты (на медленном CI — «Timeout calling onTaskUpdate»)
+  const times = new Map<string, number[]>();
+  it.each(Object.values(CARS).map((c) => [c.id, c] as const))(
+    '%s: bot laps the polygon without resets',
+    (_id, cfg) => {
       const r = lap('bot', 60, 'hard', cfg);
       const cls = piClass(computePI(cfg));
       if (process.env.MEASURE) console.log(cfg.id, cls, r.lapSteps / 60, 'resets', r.resets);
       expect(r.lapSteps, cfg.id).toBeGreaterThan(0);
       expect(r.resets, cfg.id).toBe(0);
       times.set(cls, [...(times.get(cls) ?? []), r.lapSteps / 60]);
-    }
+    },
+  );
+
+  it('lap time drops with every class D → S', () => {
     const mean = (c: string) => times.get(c)!.reduce((a, b) => a + b, 0) / times.get(c)!.length;
     // Средний круг строго быстрее с каждым классом: D > C > B > A > S
     const order = ['D', 'C', 'B', 'A', 'S'].map(mean);
