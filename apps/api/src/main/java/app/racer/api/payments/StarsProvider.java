@@ -22,10 +22,14 @@ import org.springframework.web.client.RestClient;
 @Component
 public class StarsProvider implements PaymentProvider {
   private final PaymentProperties props;
+  private final PaymentRepository payments;
   private final RestClient http = Http.client();
+  /** Запасная сверка: сколько страниц getStarTransactions просматривать (по 100). */
+  static final int MAX_PAGES = 20;
 
-  public StarsProvider(PaymentProperties props) {
+  public StarsProvider(PaymentProperties props, PaymentRepository payments) {
     this.props = props;
+    this.payments = payments;
   }
 
   private PaymentProperties.Stars cfg() {
@@ -90,14 +94,26 @@ public class StarsProvider implements PaymentProvider {
     return new Created(p.id.toString(), link.asText());
   }
 
+  /**
+   * Сверка оплаты. Основной путь — сохранённый successful_payment из вебхука бота
+   * (подлинность — секрет вебхука): там id списания и сумма. Запасной — поиск транзакции
+   * с нашим payload в getStarTransactions. Telegram отдаёт транзакции по порядку времени,
+   * поэтому просматриваются страницы подряд (до MAX_PAGES × 100), а не только первые 100.
+   */
   @Override
   public Remote fetch(String ourPaymentId) {
-    // Последние транзакции бота; входящая оплата — source.type = user с нашим invoice_payload
-    JsonNode res = call("getStarTransactions", Map.of("offset", 0, "limit", 100));
-    for (JsonNode tr : res.path("transactions")) {
-      JsonNode src = tr.path("source");
-      if ("user".equals(src.path("type").asText()) && ourPaymentId.equals(src.path("invoice_payload").asText()))
-        return new Remote("paid", BigDecimal.valueOf(tr.path("amount").asLong()), "XTR", ourPaymentId);
+    var stored =
+        payments.findByProviderAndProviderPaymentId("stars", ourPaymentId).filter(p -> p.chargeId != null);
+    if (stored.isPresent()) return new Remote("paid", stored.get().chargeAmount, "XTR", ourPaymentId);
+    for (int page = 0; page < MAX_PAGES; page++) {
+      JsonNode res = call("getStarTransactions", Map.of("offset", page * 100, "limit", 100));
+      JsonNode list = res.path("transactions");
+      for (JsonNode tr : list) {
+        JsonNode src = tr.path("source");
+        if ("user".equals(src.path("type").asText()) && ourPaymentId.equals(src.path("invoice_payload").asText()))
+          return new Remote("paid", BigDecimal.valueOf(tr.path("amount").asLong()), "XTR", ourPaymentId);
+      }
+      if (list.size() < 100) break;
     }
     return new Remote("pending", BigDecimal.ZERO, "XTR", ourPaymentId);
   }

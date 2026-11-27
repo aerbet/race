@@ -99,6 +99,17 @@ public class PaymentService {
     return payments.save(p);
   }
 
+  /** Запомнить списание Stars из successful_payment (один раз; повтор вебхука не перезаписывает). */
+  @Transactional
+  public void recordCharge(UUID paymentId, String chargeId, long amount) {
+    if (chargeId == null || chargeId.isBlank() || chargeId.length() > 128) return;
+    Payment p = payments.lockById(paymentId).orElse(null);
+    if (p == null || p.chargeId != null) return;
+    p.chargeId = chargeId;
+    p.chargeAmount = java.math.BigDecimal.valueOf(amount);
+    payments.save(p);
+  }
+
   /** Перепроверить у провайдера и, если оплачено, начислить жетоны (один раз). */
   @Transactional
   public Payment confirm(UUID paymentId) {

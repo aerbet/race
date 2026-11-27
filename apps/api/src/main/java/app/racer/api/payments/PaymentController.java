@@ -96,9 +96,12 @@ public class PaymentController {
         stars.answerPreCheckout(q.path("id").asText(), ok, ok ? null : "Счёт устарел. Открой магазин ещё раз.");
       }
       JsonNode paid = u.path("message").path("successful_payment");
-      if (!paid.isMissingNode()) {
+      if (!paid.isMissingNode() && "XTR".equals(paid.path("currency").asText())) {
         Payment p = payments.byProvider("stars", paid.path("invoice_payload").asText());
-        if (p != null) payments.confirm(p.id);
+        if (p != null) {
+          payments.recordCharge(p.id, paid.path("telegram_payment_charge_id").asText(), paid.path("total_amount").asLong());
+          payments.confirm(p.id);
+        }
       }
     } catch (Exception e) {
       log.warn("вебхук Telegram: {}", e.toString());

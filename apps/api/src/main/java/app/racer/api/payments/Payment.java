@@ -39,6 +39,13 @@ public class Payment {
   @Column(name = "created_at")
   public Instant createdAt = Instant.now();
 
+  /** Telegram Stars: telegram_payment_charge_id из successful_payment (для сверки и возвратов). */
+  @Column(name = "charge_id")
+  public String chargeId;
+
+  @Column(name = "charge_amount")
+  public BigDecimal chargeAmount;
+
   @Column(name = "paid_at")
   public Instant paidAt;
 }

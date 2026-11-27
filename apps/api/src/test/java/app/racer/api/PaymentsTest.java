@@ -34,7 +34,7 @@ class PaymentsTest extends TestBase {
   static final String BOT = "42:test-bot";
   static final String TG_SECRET = "tg-webhook-secret";
   /** Транзакции Stars, которые «видит» Telegram: payload → сумма. */
-  static final Map<String, Integer> starTx = new java.util.concurrent.ConcurrentHashMap<>();
+  static final Map<String, Integer> starTx = java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
   static final AtomicReference<String> lastStarsInvoice = new AtomicReference<>("");
   static final AtomicReference<String> lastPreCheckout = new AtomicReference<>("");
 
@@ -78,11 +78,17 @@ class PaymentsTest extends TestBase {
       reply(ex, "{\"ok\":true,\"result\":\"https://t.me/$inv" + seq.incrementAndGet() + "\"}");
     });
     stub.createContext("/bot" + BOT + "/getStarTransactions", ex -> {
-      ex.getRequestBody().readAllBytes();
+      String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+      int offset = Integer.parseInt(body.replaceAll(".*\"offset\":(\\d+).*", "$1"));
+      // Как у Telegram: по порядку времени, страницы по 100
+      var all = new java.util.ArrayList<>(starTx.entrySet());
       StringBuilder sb = new StringBuilder();
-      starTx.forEach((payload, amount) -> sb.append(sb.isEmpty() ? "" : ",")
-          .append("{\"id\":\"ch-").append(payload).append("\",\"amount\":").append(amount)
-          .append(",\"date\":1,\"source\":{\"type\":\"user\",\"invoice_payload\":\"").append(payload).append("\"}}"));
+      for (int i = offset; i < Math.min(all.size(), offset + 100); i++) {
+        var e = all.get(i);
+        sb.append(sb.isEmpty() ? "" : ",")
+            .append("{\"id\":\"ch-").append(e.getKey()).append("\",\"amount\":").append(e.getValue())
+            .append(",\"date\":1,\"source\":{\"type\":\"user\",\"invoice_payload\":\"").append(e.getKey()).append("\"}}");
+      }
       reply(ex, "{\"ok\":true,\"result\":{\"transactions\":[" + sb + "]}}");
     });
     stub.createContext("/bot" + BOT + "/answerPreCheckoutQuery", ex -> {
@@ -151,12 +157,10 @@ class PaymentsTest extends TestBase {
     mvc.perform(tgHook(pre.formatted(75), TG_SECRET));
     assertThat(lastPreCheckout.get()).contains("\"ok\":true");
 
-    // successful_payment без транзакции у Telegram — не начисляем
+    // successful_payment из вебхука бота (подлинный: секрет) — начисляем, повтор — без второго начисления
     String paidMsg = "{\"update_id\":2,\"message\":{\"message_id\":5,\"successful_payment\":{\"currency\":\"XTR\",\"total_amount\":75,\"invoice_payload\":\"" + id + "\",\"telegram_payment_charge_id\":\"ch1\"}}}";
-    mvc.perform(tgHook(paidMsg, TG_SECRET));
+    assertThat(mvc.perform(tgHook(paidMsg, "wrong")).andReturn().getResponse().getStatus()).isEqualTo(401);
     assertThat(tokens(t)).isZero();
-    // Транзакция есть — +100, повтор — без второго начисления
-    starTx.put(id, 75);
     mvc.perform(tgHook(paidMsg, TG_SECRET));
     mvc.perform(tgHook(paidMsg, TG_SECRET));
     assertThat(tokens(t)).isEqualTo(100);
@@ -164,6 +168,19 @@ class PaymentsTest extends TestBase {
     // Оплаченный счёт больше не подтверждается
     mvc.perform(tgHook(pre.formatted(75), TG_SECRET));
     assertThat(lastPreCheckout.get()).contains("\"ok\":false");
+  }
+
+  @Test
+  void starsPollFindsOldTransactionsBeyondFirstPage() throws Exception {
+    // Вебхук потерялся: сверка по getStarTransactions; наша оплата — на второй странице
+    String t = register("pay6@test.ru");
+    var created = json(post("/api/payments", Map.of("productId", "tokens_100", "provider", "stars"), t).header("Idempotency-Key", "st2"), 200);
+    String id = created.get("id").asText();
+    for (int i = 0; i < 140; i++) starTx.put("other-" + i, 75);
+    starTx.put(id, 75);
+    Thread.sleep(5100);
+    assertThat(json(get("/api/payments/" + id, t), 200).get("status").asText()).isEqualTo("paid");
+    assertThat(tokens(t)).isEqualTo(100);
   }
 
   @Test
