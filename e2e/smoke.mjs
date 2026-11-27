@@ -70,7 +70,17 @@ try {
   // 2. Гонка с ботами
   await page.click('[data-k="go"]');
   await page.keyboard.down('KeyW');
-  await page.waitForTimeout(7000);
+  // Физика идёт шагами по кадрам: на медленной машине (CI без GPU) отсчёт и разгон дольше
+  await page
+    .waitForFunction(
+      () => {
+        const r = globalThis.__app.current;
+        return r?.tracker.phase === 'racing' && r.player.vehicle.telemetry().speedKmh > 10;
+      },
+      null,
+      { timeout: 40000, polling: 500 },
+    )
+    .catch(() => {});
   const race = await page.evaluate(() => {
     const r = window.__app.current;
     return {
@@ -103,7 +113,20 @@ try {
     }),
   );
   await page.keyboard.down('KeyW');
-  await page.waitForTimeout(7000);
+  await page
+    .waitForFunction(
+      () => {
+        const r = globalThis.__app.current;
+        return (
+          (r?.session.cityView?.loadedCount ?? 0) > 4 &&
+          r.session.sim.tileKeys.length > 0 &&
+          r.player.vehicle.telemetry().speedKmh > 10
+        );
+      },
+      null,
+      { timeout: 40000, polling: 500 },
+    )
+    .catch(() => {});
   const city = await page.evaluate(() => {
     const r = window.__app.current;
     return {
