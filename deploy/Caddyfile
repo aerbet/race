@@ -1,0 +1,5 @@
+# HTTPS-сертификат Let's Encrypt выпускается сам; всё проксируется в nginx (контейнер web)
+{$DOMAIN} {
+  encode zstd gzip
+  reverse_proxy web:80
+}

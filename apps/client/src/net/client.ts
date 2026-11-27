@@ -13,8 +13,10 @@ export function serverUrl(): string {
   const env = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SERVER_URL;
   const q = new URLSearchParams(location.search).get('server');
   if (q) return q;
-  if (env) return env;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  // same-origin — сервер гонок за тем же доменом по пути /ws (deploy/nginx.conf)
+  if (env === 'same-origin') return `${proto}://${location.host}/ws`;
+  if (env) return env;
   return `${proto}://${location.hostname}:2567`;
 }
 

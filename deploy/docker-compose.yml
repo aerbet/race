@@ -1,0 +1,84 @@
+# Продакшен на одном сервере: docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+# Снаружи открыты только 80/443 (Caddy: автоматический HTTPS для DOMAIN).
+name: street-racer
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    environment:
+      DOMAIN: ${DOMAIN:?укажи DOMAIN в deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [web]
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        VITE_YT_API_KEY: ${VITE_YT_API_KEY:-}
+    restart: unless-stopped
+    depends_on: [api, race-server]
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/racer
+      DB_USER: racer
+      DB_PASSWORD: ${DB_PASSWORD:?укажи DB_PASSWORD}
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:?укажи JWT_SECRET (не короче 32 символов)}
+      INTERNAL_KEY: ${INTERNAL_KEY:?укажи INTERNAL_KEY}
+      VERIFIER_URL: http://race-server:2567/verify
+      PUBLIC_URL: https://${DOMAIN}
+      CORS_ORIGINS: https://${DOMAIN}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      CRYPTOPAY_TOKEN: ${CRYPTOPAY_TOKEN:-}
+      CRYPTOPAY_URL: ${CRYPTOPAY_URL:-https://pay.crypt.bot}
+      YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
+      YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
+      YOOKASSA_RECEIPTS: ${YOOKASSA_RECEIPTS:-false}
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+
+  race-server:
+    build:
+      context: ..
+      dockerfile: deploy/race-server.Dockerfile
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:8080
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_KEY: ${INTERNAL_KEY}
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: racer
+      POSTGRES_USER: racer
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes: [db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U racer -d racer']
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes: [redis-data:/data]
+
+volumes:
+  db-data:
+  redis-data:
+  caddy-data:

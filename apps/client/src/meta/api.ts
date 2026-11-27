@@ -4,6 +4,8 @@ import { account, saveAccount, logout } from './account';
 export function apiUrl(): string {
   const q = new URLSearchParams(location.search).get('api');
   const env = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_URL;
+  // same-origin — продакшен за одним доменом: nginx проксирует /api и /webhooks (deploy/)
+  if (env === 'same-origin') return q ?? '';
   return q ?? env ?? `${location.protocol}//${location.hostname}:8080`;
 }
 

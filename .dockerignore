@@ -1,0 +1,12 @@
+**/node_modules
+.git
+**/dist
+apps/api/target
+art/renders
+art/export
+art/.cache
+**/*.blend
+**/*.blend1
+dump.rdb
+apps/api/dump.rdb
+tools/osm-to-city/data
